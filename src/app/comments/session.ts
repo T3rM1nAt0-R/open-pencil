@@ -136,14 +136,17 @@ export function mutate(change: (current: CommentThread[]) => CommentThread[]) {
   const target = backend.value
   const store = boundStore
   if (!target || !store) return
-  writeChain = writeChain.then(() => persist(target, store.state.documentName))
+  // Keep this document's comments now: by the time the write runs, another design may be open.
+  const local = threads.value
+  const documentName = store.state.documentName
+  writeChain = writeChain.then(() => persist(target, local, documentName))
 }
 
-async function persist(target: CommentsBackend, documentName: string) {
+async function persist(target: CommentsBackend, local: CommentThread[], documentName: string) {
   status.value = 'saving'
   try {
     const remote = await target.load()
-    const merged = mergeThreads(threads.value, remote)
+    const merged = mergeThreads(local, remote)
     await target.save(merged, documentName)
     if (backend.value?.key === target.key) threads.value = mergeThreads(threads.value, merged)
     status.value = 'idle'
