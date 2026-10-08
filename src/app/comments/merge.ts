@@ -1,4 +1,4 @@
-import type { CommentReply, CommentThread, CommentsFile } from './types'
+import type { CommentReply, CommentThread } from './types'
 
 function mergeReplies(first: CommentReply[], second: CommentReply[]): CommentReply[] {
   const byId = new Map<string, CommentReply>()
@@ -40,9 +40,10 @@ export function mergeThreads(local: CommentThread[], remote: CommentThread[]): C
 export function parseCommentsFile(bytes: Uint8Array | null): CommentThread[] {
   if (!bytes || bytes.byteLength === 0) return []
   try {
-    const parsed = JSON.parse(new TextDecoder().decode(bytes)) as Partial<CommentsFile>
+    // Hand-edited files (Claude answers comments by editing JSON) may be missing fields.
+    const parsed = JSON.parse(new TextDecoder().decode(bytes)) as { threads?: unknown }
     if (!Array.isArray(parsed.threads)) return []
-    return parsed.threads
+    return (parsed.threads as (Partial<CommentThread> | null)[])
       .filter(
         (thread): thread is CommentThread =>
           !!thread && typeof thread.id === 'string' && typeof thread.pageId === 'string'
@@ -51,8 +52,8 @@ export function parseCommentsFile(bytes: Uint8Array | null): CommentThread[] {
         ...thread,
         x: Number(thread.x) || 0,
         y: Number(thread.y) || 0,
-        text: String(thread.text ?? ''),
-        author: String(thread.author ?? ''),
+        text: String((thread as Partial<CommentThread>).text ?? ''),
+        author: String((thread as Partial<CommentThread>).author ?? ''),
         resolved: !!thread.resolved,
         updatedAt: thread.updatedAt || thread.createdAt || new Date(0).toISOString(),
         replies: Array.isArray(thread.replies) ? thread.replies : []

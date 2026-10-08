@@ -10,7 +10,18 @@ export const activeStorageProviderID = useLocalStorage<StorageProviderID>(
   's3-compatible'
 )
 
-const storedPreferences = useLocalStorage<StoragePreferences>('open-pencil:storage:preferences', {})
+/** Address and bucket a self-hosted build can fill in ahead of time (never keys). */
+function presetPreferences(): StoragePreferences {
+  const endpoint = import.meta.env.VITE_STORAGE_PRESET_ENDPOINT
+  const bucket = import.meta.env.VITE_STORAGE_PRESET_BUCKET
+  if (!endpoint || !bucket) return {}
+  return { 's3-compatible': { endpoint, bucket } }
+}
+
+const storedPreferences = useLocalStorage<StoragePreferences>(
+  'open-pencil:storage:preferences',
+  presetPreferences()
+)
 
 export function readStoragePreferences(
   providerID: StorageProviderID

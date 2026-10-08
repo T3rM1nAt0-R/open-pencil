@@ -17,7 +17,10 @@ cd "$WORK/src"
 SHA="$(git rev-parse --short HEAD)"
 bun install --frozen-lockfile
 bun run build:packages
-bunx vite build
+# Fill in the shared storage address so only the two keys are left to paste (keys never go in the build).
+VITE_STORAGE_PRESET_ENDPOINT="${STORAGE_ENDPOINT:-https://dev-pencil.slumberjakz.com}" \
+  VITE_STORAGE_PRESET_BUCKET="${STORAGE_BUCKET:-pencil-store}" \
+  bunx vite build
 
 rm -rf "$HERE/out"
 mkdir -p "$HERE/out/site"
