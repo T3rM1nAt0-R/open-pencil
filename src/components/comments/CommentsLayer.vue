@@ -6,6 +6,7 @@ import IconLucideMessageCirclePlus from '~icons/lucide/message-circle-plus'
 
 import { pinPosition, useComments } from '@/app/comments/use'
 import { useEditorStore } from '@/app/editor/active-store'
+import StampMenu from '@/components/stamps/StampMenu.vue'
 
 import CommentsPanel from './CommentsPanel.vue'
 import CommentThreadCard from './CommentThreadCard.vue'
@@ -194,6 +195,7 @@ watch(commenting, (on) => {
     </div>
 
     <div class="pointer-events-auto absolute top-7 right-2 flex gap-1" @pointerdown.stop>
+      <StampMenu />
       <button
         type="button"
         class="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs shadow-sm"
