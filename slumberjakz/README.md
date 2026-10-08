@@ -20,6 +20,7 @@ never drift far apart.
 | --- | --- | --- |
 | Comments: pins, replies, resolve, a list; saved beside the design on the shelf | [specs/Comments.md](specs/Comments.md) | Not yet (needs translations first) |
 | `deploy/dev-pencil/`: the test site at dev-pencil.slumberjakz.com | this file | No, ours only |
+| Daily copies of every shelf design, kept 14 days (runs beside dev-pencil) | [specs/Design-Copies.md](specs/Design-Copies.md) | No, ours only |
 
 ## Sites
 

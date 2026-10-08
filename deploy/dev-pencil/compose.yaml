@@ -20,6 +20,21 @@ services:
     networks:
       - openpencil
 
+  copies:
+    # Daily copy of every design on the shelf, kept 14 days (design-copies.sh).
+    # Reads the live shelf read-only; copies go to ../openpencil-copies.
+    image: alpine:3.22
+    restart: unless-stopped
+    user: '1000:1000'
+    environment:
+      TZ: 'IST-5:30'
+    command: ['sh', '/design-copies.sh', 'loop']
+    volumes:
+      - ./design-copies.sh:/design-copies.sh:ro
+      - ../openpencil/designs/pencil-store/open_pencil_storage/canvases:/shelf:ro
+      - ../openpencil-copies:/copies
+    network_mode: none
+
 networks:
   openpencil:
     name: openpencil_default
