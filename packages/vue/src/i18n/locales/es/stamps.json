@@ -1,0 +1,9 @@
+{
+  "stamp": "Sello",
+  "built": "Hecho",
+  "beingBuilt": "En construcción",
+  "planned": "Planeado",
+  "removeStamp": "Quitar sello",
+  "selectToStamp": "Selecciona una pantalla para sellarla",
+  "stampSelected": "Sellar pantallas seleccionadas: {count}"
+}

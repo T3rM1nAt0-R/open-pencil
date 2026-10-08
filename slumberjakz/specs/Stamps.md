@@ -16,13 +16,14 @@ Now:
 - A screen with no title gets a tag layer named `Status: <screen name>` just above it.
 - Titles, notes and tags themselves are never stamped.
 - The whole stamp is one step: Undo takes it back.
+- The menu is in all of OpenPencil's languages; the tag written into the design stays in English, because scripts
+  read it back.
 
 ## Not in this version (planned)
 
 - **Staying in sync with what's merged.** The idea is that each screen names the issue or pull request it belongs
   to, and Claude (or a nightly robot) re-stamps the screens when that work merges. That needs a link from screen to
   issue first, so it waits for the next round. Today Claude can re-stamp from the shelf file after merges.
-- Translations (English only, like comments).
 
 ## Flow charts
 

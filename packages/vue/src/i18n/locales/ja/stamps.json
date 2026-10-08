@@ -1,0 +1,9 @@
+{
+  "stamp": "スタンプ",
+  "built": "完成",
+  "beingBuilt": "作成中",
+  "planned": "予定",
+  "removeStamp": "スタンプを外す",
+  "selectToStamp": "スタンプを押す画面を選択してください",
+  "stampSelected": "選択した画面にスタンプ: {count}"
+}

@@ -1,13 +1,24 @@
 <script setup lang="ts">
 import { useEventListener } from '@vueuse/core'
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import IconLucideMessageCircle from '~icons/lucide/message-circle'
-import IconLucideMessageCirclePlus from '~icons/lucide/message-circle-plus'
+import { ContextMenuContent, ContextMenuPortal, ContextMenuRoot, ContextMenuTrigger } from 'reka-ui'
+import { computed, nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
+
+import { useCommentMessages, useCommonMessages } from '@open-pencil/vue'
 
 import { pinPosition, useComments } from '@/app/comments/use'
 import { useEditorStore } from '@/app/editor/active-store'
+import { TOOL_SHORTCUTS } from '@/app/editor/session'
+import { isEditing } from '@/app/shell/keyboard/focus'
+import { useActionToast } from '@/app/shell/toast/action'
 import StampMenu from '@/components/stamps/StampMenu.vue'
+import AppButton from '@/components/ui/button/AppButton.vue'
+import { AppConfirmationDialog } from '@/components/ui/dialog'
+import AppInput from '@/components/ui/input/AppInput.vue'
+import AppTextarea from '@/components/ui/input/AppTextarea.vue'
+import { useMenuUI } from '@/components/ui/menu/menu'
+import Tip from '@/components/ui/overlay/Tip.vue'
 
+import CommentActionsMenu from './CommentActionsMenu.vue'
 import CommentsPanel from './CommentsPanel.vue'
 import CommentThreadCard from './CommentThreadCard.vue'
 
@@ -15,15 +26,25 @@ const { canvasEl } = defineProps<{ canvasEl: HTMLCanvasElement | null }>()
 
 const store = useEditorStore()
 const comments = useComments()
-const { commenting, panelOpen, activeThreadId, draft, openCount } = comments
+const messages = useCommentMessages()
+const common = useCommonMessages()
+const { showActionToast } = useActionToast()
+const menuCls = useMenuUI({ content: 'min-w-40' })
+const { commenting, panelOpen, activeThreadId, draft, openCount, pendingDeleteId } = comments
 
 const draftText = ref('')
 const draftName = ref(comments.author.value)
-const draftInput = ref<HTMLTextAreaElement | null>(null)
+const draftBox = useTemplateRef<HTMLElement>('draftBox')
 
 onMounted(() => comments.attach(store))
 onUnmounted(() => comments.detach())
 useEventListener(window, 'keydown', onKeydown)
+
+// Picking any drawing tool (V, R, T…) leaves comment mode, as in Figma.
+watch(
+  () => store.state.activeTool,
+  () => comments.setCommenting(false)
+)
 
 function toScreen(x: number, y: number) {
   return {
@@ -41,7 +62,8 @@ const pins = computed(() => {
     .filter((thread) => !thread.deleted)
     .map((thread) => ({ thread, number: thread.resolved ? 0 : ++number }))
     .filter(
-      ({ thread }) => thread.pageId === pageId && (comments.showResolved.value || !thread.resolved)
+      ({ thread }) =>
+        thread.pageId === pageId && (!thread.resolved || comments.showResolvedPins.value)
     )
     .map(({ thread, number: label }) => {
       const at = pinPosition(store, thread)
@@ -56,9 +78,26 @@ const draftScreen = computed(() =>
     : null
 )
 
+// The dialog closes itself before its confirm event, so hold on to which comment it was for.
+const deleteOpen = ref(false)
+const deleteTarget = ref<string | null>(null)
+watch(pendingDeleteId, (id) => {
+  if (!id) return
+  deleteTarget.value = id
+  deleteOpen.value = true
+  pendingDeleteId.value = null
+})
+
+function confirmDelete() {
+  if (!deleteTarget.value) return
+  comments.deleteThread(deleteTarget.value)
+  deleteTarget.value = null
+  showActionToast(messages.value.commentDeleted)
+}
+
 function placeDraft(event: PointerEvent) {
-  if (event.button !== 0) return
-  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  if (event.button !== 0 || !(event.currentTarget instanceof HTMLElement)) return
+  const rect = event.currentTarget.getBoundingClientRect()
   const sx = event.clientX - rect.left
   const sy = event.clientY - rect.top
   comments.startDraft(
@@ -67,7 +106,7 @@ function placeDraft(event: PointerEvent) {
     (sy - store.state.panY) / store.state.zoom
   )
   draftText.value = ''
-  void nextTick(() => draftInput.value?.focus())
+  void nextTick(() => draftBox.value?.querySelector('textarea')?.focus())
 }
 
 // Scrolling and zooming keep working while placing comments.
@@ -94,48 +133,61 @@ function togglePin(threadId: string) {
 }
 
 function onKeydown(event: KeyboardEvent) {
-  if (event.key !== 'Escape') return
+  const plain = !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey
+  if (commenting.value && plain && TOOL_SHORTCUTS[event.code] && !isEditing(event)) {
+    comments.setCommenting(false)
+    return
+  }
+  if (event.code !== 'Escape' || deleteOpen.value) return
   if (draft.value) cancelDraft()
   else if (activeThreadId.value) activeThreadId.value = null
   else if (commenting.value) comments.setCommenting(false)
 }
-
-watch(commenting, (on) => {
-  if (on) panelOpen.value = true
-})
 </script>
 
 <template>
-  <div class="pointer-events-none absolute inset-0 z-30" data-test-id="comments-layer">
+  <!-- Right-clicks here belong to comments, not to the canvas layer menu underneath. -->
+  <div
+    class="pointer-events-none absolute inset-0 z-30"
+    data-canvas-overlay="comments"
+    @contextmenu.stop
+  >
     <div
       v-if="commenting"
       class="pointer-events-auto absolute inset-0 cursor-crosshair"
-      data-test-id="comments-capture"
+      data-slot="comments-capture"
       @pointerdown.prevent="placeDraft"
       @wheel="forwardWheel"
+      @contextmenu.prevent
     />
 
-    <button
-      v-for="pin in pins"
-      :key="pin.thread.id"
-      type="button"
-      class="pointer-events-auto absolute flex size-7 -translate-y-full items-center justify-center rounded-full rounded-bl-none border-2 border-white text-xs font-semibold text-white shadow-md"
-      :class="[
-        pin.thread.resolved ? 'bg-muted opacity-70' : 'bg-accent',
-        activeThreadId === pin.thread.id ? 'ring-2 ring-accent ring-offset-1' : ''
-      ]"
-      :style="{ left: `${pin.left}px`, top: `${pin.top}px` }"
-      :title="`${pin.thread.author}: ${pin.thread.text}`"
-      data-test-id="comment-pin"
-      @pointerdown.stop
-      @click.stop="togglePin(pin.thread.id)"
-    >
-      <template v-if="pin.label">{{ pin.label }}</template>
-      <IconLucideMessageCircle v-else class="size-3.5" />
-    </button>
+    <ContextMenuRoot v-for="pin in pins" :key="pin.thread.id" :modal="false">
+      <ContextMenuTrigger as-child>
+        <button
+          type="button"
+          class="pointer-events-auto absolute flex size-7 -translate-y-full items-center justify-center rounded-full rounded-bl-none border-2 border-white bg-accent text-xs font-semibold text-white shadow-md data-[active]:ring-2 data-[active]:ring-accent data-[active]:ring-offset-1 data-[resolved]:bg-muted data-[resolved]:opacity-70"
+          :data-resolved="pin.thread.resolved || undefined"
+          :data-active="activeThreadId === pin.thread.id || undefined"
+          :style="{ left: `${pin.left}px`, top: `${pin.top}px` }"
+          :aria-label="`${pin.thread.author || messages.someone}: ${pin.thread.text}`"
+          data-slot="comment-pin"
+          @pointerdown.stop
+          @click.stop="togglePin(pin.thread.id)"
+        >
+          <template v-if="pin.label">{{ pin.label }}</template>
+          <icon-lucide-message-circle v-else class="size-3.5" />
+        </button>
+      </ContextMenuTrigger>
+      <ContextMenuPortal>
+        <ContextMenuContent :class="menuCls.content">
+          <CommentActionsMenu :thread="pin.thread" kind="context" />
+        </ContextMenuContent>
+      </ContextMenuPortal>
+    </ContextMenuRoot>
 
     <div
       v-if="draftScreen"
+      ref="draftBox"
       class="pointer-events-auto absolute"
       :style="{ left: `${draftScreen.left}px`, top: `${draftScreen.top}px` }"
       @pointerdown.stop
@@ -145,42 +197,29 @@ watch(commenting, (on) => {
       />
       <form
         class="absolute top-2 left-0 flex w-72 flex-col gap-2 rounded-lg border border-border bg-panel p-3 text-xs text-surface shadow-xl"
-        data-test-id="comment-draft"
+        data-slot="comment-draft"
         @submit.prevent="postDraft"
       >
-        <input
+        <AppInput
           v-if="!comments.author.value"
           v-model="draftName"
-          class="rounded border border-border bg-input px-2 py-1 text-surface outline-none"
-          placeholder="Your name"
-          data-test-id="comment-author-input"
+          size="sm"
+          :aria-label="messages.yourName"
+          :placeholder="messages.yourName"
         />
-        <textarea
-          ref="draftInput"
+        <AppTextarea
           v-model="draftText"
-          rows="3"
-          class="resize-none rounded border border-border bg-input px-2 py-1 text-surface outline-none"
-          placeholder="Add a comment"
-          data-test-id="comment-draft-input"
+          :rows="3"
+          :aria-label="messages.addComment"
+          :placeholder="messages.addComment"
           @keydown.enter.exact.prevent="postDraft"
           @keydown.escape.stop.prevent="cancelDraft"
         />
         <div class="flex justify-end gap-2">
-          <button
-            type="button"
-            class="rounded px-2 py-1 text-muted hover:bg-hover"
-            @click="cancelDraft"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            class="rounded bg-accent px-3 py-1 font-medium text-white disabled:opacity-50"
-            :disabled="!draftText.trim()"
-            data-test-id="comment-post"
-          >
-            Post
-          </button>
+          <AppButton @click="cancelDraft">{{ common.cancel }}</AppButton>
+          <AppButton type="submit" color="primary" variant="solid" :disabled="!draftText.trim()">
+            {{ messages.post }}
+          </AppButton>
         </div>
       </form>
     </div>
@@ -196,34 +235,35 @@ watch(commenting, (on) => {
 
     <div class="pointer-events-auto absolute top-7 right-2 flex gap-1" @pointerdown.stop>
       <StampMenu />
-      <button
-        type="button"
-        class="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs shadow-sm"
-        :class="commenting ? 'bg-accent text-white' : 'bg-panel text-surface hover:bg-hover'"
-        title="Click anywhere on the canvas to leave a comment (Esc to stop)"
-        data-test-id="comments-add-toggle"
-        @click="comments.setCommenting(!commenting)"
-      >
-        <IconLucideMessageCirclePlus class="size-3.5" />
-        {{ commenting ? 'Done' : 'Comment' }}
-      </button>
-      <button
-        type="button"
-        class="flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs shadow-sm"
-        :class="panelOpen ? 'bg-hover text-surface' : 'bg-panel text-surface hover:bg-hover'"
-        title="Show all comments"
-        data-test-id="comments-panel-toggle"
-        @click="panelOpen = !panelOpen"
-      >
-        <IconLucideMessageCircle class="size-3.5" />
-        {{ openCount }}
-      </button>
+      <Tip :label="messages.comments">
+        <button
+          type="button"
+          class="flex items-center gap-1 rounded-md border border-border bg-panel px-2 py-1 text-xs text-surface shadow-sm hover:bg-hover aria-pressed:bg-hover"
+          :aria-pressed="panelOpen"
+          :aria-label="messages.comments"
+          data-slot="comments-panel-toggle"
+          @click="panelOpen = !panelOpen"
+        >
+          <icon-lucide-message-circle class="size-3.5" />
+          {{ openCount }}
+        </button>
+      </Tip>
     </div>
 
     <CommentsPanel
       v-if="panelOpen"
       class="pointer-events-auto absolute top-16 right-2"
       @pointerdown.stop
+    />
+
+    <AppConfirmationDialog
+      v-model:open="deleteOpen"
+      :heading="messages.deleteComment"
+      :description="messages.deleteCommentDescription"
+      :cancel-label="common.cancel"
+      :confirm-label="messages.delete"
+      tone="danger"
+      @confirm="confirmDelete"
     />
   </div>
 </template>

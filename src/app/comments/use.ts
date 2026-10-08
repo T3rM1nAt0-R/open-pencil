@@ -7,7 +7,14 @@ import {
   backend,
   commenting,
   panelOpen,
-  showResolved,
+  listTab,
+  listQuery,
+  listScope,
+  listSort,
+  listOnlyMine,
+  pendingDeleteId,
+  setCommenting,
+  toggleCommenting,
   activeThreadId,
   draft,
   status,
@@ -30,17 +37,14 @@ export { pinPosition } from './session'
 export type { CommentDraft, CommentsStatus } from './session'
 
 export function useComments() {
-  const visibleThreads = computed(() =>
-    threads.value.filter((thread) => !thread.deleted && (showResolved.value || !thread.resolved))
-  )
   const openCount = computed(
     () => threads.value.filter((thread) => !thread.deleted && !thread.resolved).length
   )
-
-  function setCommenting(on: boolean) {
-    commenting.value = on
-    if (!on) draft.value = null
-  }
+  const resolvedCount = computed(
+    () => threads.value.filter((thread) => !thread.deleted && thread.resolved).length
+  )
+  /** Resolved pins stay hidden on the canvas unless the list is showing resolved comments. */
+  const showResolvedPins = computed(() => panelOpen.value && listTab.value === 'resolved')
 
   function startDraft(pageId: string, x: number, y: number) {
     activeThreadId.value = null
@@ -65,7 +69,7 @@ export function useComments() {
       offsetY: abs ? place.y - abs.y : 0,
       x: place.x,
       y: place.y,
-      author: author.value || 'Someone',
+      author: author.value,
       text: body,
       createdAt: stamp,
       updatedAt: stamp,
@@ -82,7 +86,7 @@ export function useComments() {
     if (!body) return
     const entry: CommentReply = {
       id: newId('r'),
-      author: author.value || 'Someone',
+      author: author.value,
       text: body,
       createdAt: now()
     }
@@ -99,7 +103,9 @@ export function useComments() {
       resolved,
       resolvedAt: resolved ? now() : null
     }))
-    if (resolved && !showResolved.value) activeThreadId.value = null
+    if (resolved && !showResolvedPins.value && activeThreadId.value === threadId) {
+      activeThreadId.value = null
+    }
   }
 
   function editThread(threadId: string, text: string) {
@@ -111,6 +117,11 @@ export function useComments() {
   function deleteThread(threadId: string) {
     updateThread(threadId, (thread) => ({ ...thread, deleted: true }))
     if (activeThreadId.value === threadId) activeThreadId.value = null
+  }
+
+  /** Ask before deleting; the comments layer shows the confirmation. */
+  function requestDelete(threadId: string) {
+    pendingDeleteId.value = threadId
   }
 
   function deleteReply(threadId: string, replyId: string) {
@@ -147,12 +158,18 @@ export function useComments() {
 
   return {
     threads,
-    visibleThreads,
     openCount,
+    resolvedCount,
+    showResolvedPins,
     backend,
     commenting,
     panelOpen,
-    showResolved,
+    listTab,
+    listQuery,
+    listScope,
+    listSort,
+    listOnlyMine,
+    pendingDeleteId,
     activeThreadId,
     draft,
     status,
@@ -163,12 +180,14 @@ export function useComments() {
     detach: detachStore,
     refresh,
     setCommenting,
+    toggleCommenting,
     startDraft,
     addThread,
     reply,
     setResolved,
     editThread,
     deleteThread,
+    requestDelete,
     deleteReply,
     rememberPosition,
     focusThread

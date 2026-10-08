@@ -11,6 +11,11 @@ run Pencil on our own server and to send fixes back to OpenPencil's makers.
 | `slumberjakz` | What our server runs: a released OpenPencil version (now v0.15.1) plus our few changes. |
 | `fix/*`, `feat/*` | One change each, cut from `master`, sent to OpenPencil as a pull request. |
 
+We follow OpenPencil's own rules (`CONTRIBUTING.md`, `AGENTS.md`): Conventional Commit messages, `bun run format`
+(oxfmt) before committing, `bun run lint` and `bun run typecheck` clean, every label in the language files, shared
+UI pieces (Reka UI menus, `AppInput`, `AppButton`), and no AI co-author lines in commits (AI help is disclosed in the
+PR's "AI assistance" section instead).
+
 Each change on `slumberjakz` is also offered upstream and dropped from ours once OpenPencil merges it, so we
 never drift far apart.
 
@@ -18,8 +23,8 @@ never drift far apart.
 
 | Change | Spec | Sent upstream? |
 | --- | --- | --- |
-| Comments: pins, replies, resolve, a list; saved beside the design on the shelf | [specs/Comments.md](specs/Comments.md) | Not yet (needs translations first) |
-| One-click Built / Being built / Planned stamps on screens | [specs/Stamps.md](specs/Stamps.md) | Not yet (needs translations first) |
+| Comments: Comment tool (C), pins, replies, resolve; list with tabs, search, filter and sort; saved beside the design on the shelf | [specs/Comments.md](specs/Comments.md) | Not yet (translated; next step is OpenPencil's PR template and checks) |
+| One-click Built / Being built / Planned stamps on screens | [specs/Stamps.md](specs/Stamps.md) | No, ours only (Slumberjakz workflow) |
 | `deploy/dev-pencil/`: the test site at dev-pencil.slumberjakz.com | this file | No, ours only |
 | Storage address and bucket filled in ahead of time on dev-pencil (keys are always typed in the browser, never built in) | this file | Maybe later |
 | Daily copies of every shelf design, kept 14 days (runs beside dev-pencil) | [specs/Design-Copies.md](specs/Design-Copies.md) | No, ours only |

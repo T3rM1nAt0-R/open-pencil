@@ -5,6 +5,7 @@ import type { Vector } from '@open-pencil/scene-graph/primitives'
 
 import type { EditorStore } from '@/app/editor/active-store'
 
+import type { CommentsScope, CommentsSort, CommentsTab } from './list'
 import { mergeThreads } from './merge'
 import { browserCommentsBackend, shelfCommentsBackend, type CommentsBackend } from './storage'
 import type { CommentThread } from './types'
@@ -22,7 +23,12 @@ export const threads = ref<CommentThread[]>([])
 export const backend = shallowRef<CommentsBackend | null>(null)
 export const commenting = ref(false)
 export const panelOpen = ref(false)
-export const showResolved = ref(false)
+export const listTab = ref<CommentsTab>('open')
+export const listQuery = ref('')
+export const listScope = useLocalStorage<CommentsScope>('op-comments-scope', 'all')
+export const listSort = useLocalStorage<CommentsSort>('op-comments-sort', 'newest')
+export const listOnlyMine = useLocalStorage('op-comments-only-mine', false)
+export const pendingDeleteId = ref<string | null>(null)
 export const activeThreadId = ref<string | null>(null)
 export const draft = ref<CommentDraft | null>(null)
 export const status = ref<CommentsStatus>('idle')
@@ -35,6 +41,16 @@ let writeChain: Promise<void> = Promise.resolve()
 
 export function setAuthor(name: string) {
   author.value = name.trim()
+}
+
+/** Comment mode: the next click on the canvas places a comment. */
+export function setCommenting(on: boolean) {
+  commenting.value = on
+  if (!on) draft.value = null
+}
+
+export function toggleCommenting() {
+  setCommenting(!commenting.value)
 }
 
 export function newId(prefix: string): string {

@@ -1,17 +1,30 @@
 <script setup lang="ts">
+import {
+  DropdownMenuContent,
+  DropdownMenuPortal,
+  DropdownMenuRoot,
+  DropdownMenuTrigger
+} from 'reka-ui'
 import { ref } from 'vue'
-import IconLucideCheck from '~icons/lucide/check'
-import IconLucideRotateCcw from '~icons/lucide/rotate-ccw'
-import IconLucideTrash2 from '~icons/lucide/trash-2'
-import IconLucideX from '~icons/lucide/x'
+
+import { useCommentMessages, useCommonMessages } from '@open-pencil/vue'
 
 import { formatCommentTime } from '@/app/comments/time'
 import type { CommentThread } from '@/app/comments/types'
 import { useComments } from '@/app/comments/use'
+import AppButton from '@/components/ui/button/AppButton.vue'
+import IconButton from '@/components/ui/button/IconButton.vue'
+import AppInput from '@/components/ui/input/AppInput.vue'
+import { useMenuUI } from '@/components/ui/menu/menu'
+
+import CommentActionsMenu from './CommentActionsMenu.vue'
 
 const { thread } = defineProps<{ thread: CommentThread }>()
 
 const comments = useComments()
+const messages = useCommentMessages()
+const common = useCommonMessages()
+const menuCls = useMenuUI({ content: 'min-w-40' })
 const replyText = ref('')
 const nameText = ref(comments.author.value)
 
@@ -20,56 +33,50 @@ function sendReply() {
   comments.reply(thread.id, replyText.value)
   replyText.value = ''
 }
-
-function remove() {
-  if (window.confirm('Delete this comment and its replies?')) comments.deleteThread(thread.id)
-}
 </script>
 
 <template>
   <div
     class="flex max-h-96 w-80 flex-col rounded-lg border border-border bg-panel text-xs text-surface shadow-xl"
-    data-test-id="comment-thread"
+    data-slot="comment-thread"
+    :data-resolved="thread.resolved || undefined"
   >
-    <div class="flex items-center gap-1 border-b border-border px-3 py-2">
+    <div class="flex items-center gap-1 border-b border-border py-1 pr-1 pl-3">
       <span class="flex-1 truncate text-muted">
-        {{ thread.nodeName ? `On ${thread.nodeName}` : (thread.pageName ?? 'Comment') }}
+        {{ thread.nodeName ? messages.onLayer({ name: thread.nodeName }) : thread.pageName }}
       </span>
-      <button
-        type="button"
-        class="rounded p-1 text-muted hover:bg-hover hover:text-surface"
-        :title="thread.resolved ? 'Reopen' : 'Resolve'"
-        data-test-id="comment-resolve"
+      <IconButton
+        :label="thread.resolved ? messages.reopen : messages.resolve"
+        :active="thread.resolved"
+        data-command="comment-resolve"
         @click="comments.setResolved(thread.id, !thread.resolved)"
       >
-        <IconLucideRotateCcw v-if="thread.resolved" class="size-3.5" />
-        <IconLucideCheck v-else class="size-3.5" />
-      </button>
-      <button
-        type="button"
-        class="rounded p-1 text-muted hover:bg-hover hover:text-danger"
-        title="Delete"
-        data-test-id="comment-delete"
-        @click="remove"
-      >
-        <IconLucideTrash2 class="size-3.5" />
-      </button>
-      <button
-        type="button"
-        class="rounded p-1 text-muted hover:bg-hover hover:text-surface"
-        title="Close"
-        @click="comments.activeThreadId.value = null"
-      >
-        <IconLucideX class="size-3.5" />
-      </button>
+        <icon-lucide-rotate-ccw v-if="thread.resolved" class="size-3.5" />
+        <icon-lucide-circle-check v-else class="size-3.5" />
+      </IconButton>
+      <DropdownMenuRoot :modal="false">
+        <DropdownMenuTrigger as-child>
+          <IconButton :label="messages.moreActions">
+            <icon-lucide-ellipsis class="size-3.5" />
+          </IconButton>
+        </DropdownMenuTrigger>
+        <DropdownMenuPortal>
+          <DropdownMenuContent :class="menuCls.content" align="end" :side-offset="4">
+            <CommentActionsMenu :thread="thread" kind="dropdown" />
+          </DropdownMenuContent>
+        </DropdownMenuPortal>
+      </DropdownMenuRoot>
+      <IconButton :label="common.close" @click="comments.activeThreadId.value = null">
+        <icon-lucide-x class="size-3.5" />
+      </IconButton>
     </div>
 
     <div class="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 py-2">
       <div>
         <div class="flex items-baseline gap-2">
-          <span class="font-semibold">{{ thread.author }}</span>
+          <span class="font-semibold">{{ thread.author || messages.someone }}</span>
           <span class="text-muted">{{ formatCommentTime(thread.createdAt) }}</span>
-          <span v-if="thread.resolved" class="ml-auto text-accent">Resolved</span>
+          <span v-if="thread.resolved" class="ml-auto text-accent">{{ messages.resolved }}</span>
         </div>
         <p class="mt-1 break-words whitespace-pre-wrap">{{ thread.text }}</p>
       </div>
@@ -77,46 +84,42 @@ function remove() {
         v-for="entry in thread.replies.filter((item) => !item.deleted)"
         :key="entry.id"
         class="group"
-        data-test-id="comment-reply"
+        data-slot="comment-reply"
       >
         <div class="flex items-baseline gap-2">
-          <span class="font-semibold">{{ entry.author }}</span>
+          <span class="font-semibold">{{ entry.author || messages.someone }}</span>
           <span class="text-muted">{{ formatCommentTime(entry.createdAt) }}</span>
-          <button
-            type="button"
-            class="ml-auto hidden text-muted group-hover:block hover:text-danger"
-            title="Delete reply"
+          <IconButton
+            :label="messages.deleteReply"
+            class="ml-auto opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
             @click="comments.deleteReply(thread.id, entry.id)"
           >
-            <IconLucideTrash2 class="size-3" />
-          </button>
+            <icon-lucide-trash-2 class="size-3" />
+          </IconButton>
         </div>
         <p class="mt-1 break-words whitespace-pre-wrap">{{ entry.text }}</p>
       </div>
     </div>
 
     <form class="flex flex-col gap-2 border-t border-border p-2" @submit.prevent="sendReply">
-      <input
+      <AppInput
         v-if="!comments.author.value"
         v-model="nameText"
-        class="rounded border border-border bg-input px-2 py-1 text-surface outline-none"
-        placeholder="Your name"
+        size="sm"
+        :aria-label="messages.yourName"
+        :placeholder="messages.yourName"
       />
       <div class="flex gap-2">
-        <input
+        <AppInput
           v-model="replyText"
-          class="min-w-0 flex-1 rounded border border-border bg-input px-2 py-1 text-surface outline-none"
-          placeholder="Reply"
-          data-test-id="comment-reply-input"
+          size="sm"
+          class="min-w-0 flex-1"
+          :aria-label="messages.reply"
+          :placeholder="messages.reply"
         />
-        <button
-          type="submit"
-          class="rounded bg-accent px-3 py-1 font-medium text-white disabled:opacity-50"
-          :disabled="!replyText.trim()"
-          data-test-id="comment-reply-send"
-        >
-          Send
-        </button>
+        <AppButton type="submit" color="primary" variant="solid" :disabled="!replyText.trim()">
+          {{ messages.send }}
+        </AppButton>
       </div>
     </form>
   </div>

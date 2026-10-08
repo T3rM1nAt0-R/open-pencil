@@ -6,18 +6,27 @@ v0.15.1 until Niraj says "promote".
 
 ## What it is
 
-Leave notes on a design, like sticky notes with a conversation attached:
+Leave notes on a design, like sticky notes with a conversation attached. The flow follows Figma and Notion
+(round 2, from Niraj's canvas feedback, 2026-10-08):
 
-- **Pins.** Press **Comment** (top right of the canvas), click anywhere, type, press Enter. A numbered pin
-  marks the spot.
+- **Comment tool.** Press **C**, or the speech-bubble-plus button at the end of the bottom toolbar, then click
+  anywhere and type. Enter posts. Esc, or picking any other tool (V, R, T…), leaves comment mode.
 - **Pins follow the layer.** A pin dropped on a frame stays on that frame when the frame moves. If the frame is
   deleted, the pin stays where it was.
-- **Replies.** Click a pin to open its thread and reply.
-- **Resolve.** The tick closes a thread; it hides from the canvas. "Show resolved" brings them back, and the
-  arrow reopens one. A new reply also reopens it.
-- **List.** The speech-bubble button shows every comment in the design, on every page, with the number still
-  open. Click one to jump to its page and spot.
+- **Thread card.** Click a pin to open its thread: reply, resolve (tick), or **More actions** (copy text, delete).
+- **Comments list.** The comments button at the top right (with the open count) only opens and closes the list; it
+  never starts a new comment. In the list:
+  - **Open / Resolved** tabs, each with its count.
+  - **Search** across comment text, replies, names and layer names.
+  - **Filter and sort**: this page or all pages, only my comments, newest or oldest first.
+  - Hover a comment for a quick **Resolve** tick and **More actions**; click it to jump to its page and spot.
+- **Right-click** a pin or a comment in the list for the same actions: go to comment, resolve or reopen, copy text,
+  delete. Right-clicking comments no longer opens the canvas layer menu underneath.
+- **Resolve** hides the pin from the canvas; it shows again while the list is on the Resolved tab. A new reply
+  reopens a thread. **Delete** asks first.
 - **Names.** The first comment asks for a name, kept in this browser (the same name the live-collab panel uses).
+- **Languages.** Every word is in OpenPencil's language files (English plus its 8 translations), so the feature can
+  be offered to OpenPencil's makers.
 
 ## Where comments are saved
 
@@ -44,8 +53,8 @@ designs/pencil-store/open_pencil_storage/canvases/<id>.comments.json  its commen
 - Mentions and email alerts.
 - Comments on designs that live only on your computer appearing anywhere else.
 - Removing the comments file when a design is deleted from the shelf (it stays as a small orphan file).
-- Translations: words are English only for now. Before sending this to OpenPencil's makers, they go into
-  OpenPencil's language files.
+- Mentions inside comments (@name).
+- Unread markers per person.
 
 ## Flow charts
 
@@ -59,14 +68,20 @@ flowchart TD
   load --> pins[/Pins on the canvas and the count button/]
   local --> pins
   pins --> act{What do you do?}
-  act -->|Comment, then click| draft[/Note box at that spot/]
+  act -->|C or toolbar Comment button, then click| draft[/Note box at that spot/]
   draft --> name{Name known?}
   name -->|no| ask[/Name box/]
   ask --> post[Post]
   name -->|yes| post
-  act -->|Click a pin| thread[/Thread card: reply, resolve, delete/]
-  act -->|Open the list| list[/Comments list, every page/]
+  act -->|Click a pin| thread[/Thread card: reply, resolve, more actions/]
+  act -->|Comments button| list[/List: Open or Resolved, search, filter, sort/]
+  act -->|Right-click a pin or list item| menu[/Menu: go to, resolve, copy, delete/]
   list -->|click one| jump[Go to its page and spot]
+  list -->|hover tick| resolve[Resolve]
+  menu -->|Delete| confirm{Sure?}
+  confirm -->|yes| saved
+  menu --> resolve
+  resolve --> saved
   jump --> thread
   post --> saved[(Comments file on the shelf)]
   thread --> saved
@@ -81,10 +96,10 @@ flowchart TD
   classDef built stroke:#15803d,stroke-width:3px
   classDef building stroke:#d97706,stroke-width:3px,stroke-dasharray:6 3
   classDef planned stroke:#94a3b8,stroke-width:2px,stroke-dasharray:2 3
-  class start,pins,draft,ask,thread,list,act,name player
-  class shelf,load,local,post,jump phone
+  class start,pins,draft,ask,thread,list,act,name,menu,confirm player
+  class shelf,load,local,post,jump,resolve phone
   class saved data
-  class start,shelf,load,local,pins,act,draft,name,ask,post,thread,list,jump,saved building
+  class start,shelf,load,local,pins,act,draft,name,ask,post,thread,list,jump,saved,menu,confirm,resolve building
 ```
 
 ### Where the parts run
@@ -121,6 +136,19 @@ flowchart LR
   class live,access,livecaddy,store,fig built
   class dev,bypass,devcaddy,notes building
   class claude planned
+```
+
+### Comment mode and the list
+
+```mermaid
+stateDiagram-v2
+  [*] --> Editing
+  Editing --> Commenting: C or toolbar Comment button
+  Commenting --> Editing: Esc, C again, or another tool
+  Commenting --> Commenting: click canvas, post note
+  state "List open" as ListOpen
+  Editing --> ListOpen: comments button
+  ListOpen --> Editing: comments button again or close
 ```
 
 ### A comment thread's states

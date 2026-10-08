@@ -1,0 +1,9 @@
+{
+  "stamp": "Pieczątka",
+  "built": "Gotowe",
+  "beingBuilt": "W budowie",
+  "planned": "Zaplanowane",
+  "removeStamp": "Usuń pieczątkę",
+  "selectToStamp": "Zaznacz ekran, aby go oznaczyć",
+  "stampSelected": "Oznacz zaznaczone ekrany: {count}"
+}
