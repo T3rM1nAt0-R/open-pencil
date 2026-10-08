@@ -9,7 +9,7 @@ function thread(id: string, patch: Partial<CommentThread> = {}): CommentThread {
     pageId: '0:1',
     x: 0,
     y: 0,
-    author: 'Niraj',
+    author: 'Ada',
     text: id,
     createdAt: '2026-10-08T10:00:00.000Z',
     updatedAt: '2026-10-08T10:00:00.000Z',
@@ -25,7 +25,7 @@ const base: CommentsListOptions = {
   scope: 'all',
   pageId: '0:1',
   onlyMine: false,
-  author: 'Niraj',
+  author: 'Ada',
   sort: 'newest'
 }
 
