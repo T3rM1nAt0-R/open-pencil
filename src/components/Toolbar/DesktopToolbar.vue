@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ToolbarRoot } from 'reka-ui'
+import { ToolbarRoot, ToolbarSeparator } from 'reka-ui'
 
 import type { EditorToolDef } from '@open-pencil/core/editor'
 import {
@@ -69,6 +69,10 @@ const emit = defineEmits<{
             />
           </Tip>
         </ToolbarItem>
+      </template>
+      <template v-if="$slots.after">
+        <ToolbarSeparator class="mx-0.5 my-1.5 w-px bg-border" />
+        <slot name="after" />
       </template>
     </ToolbarRoot>
   </div>
