@@ -1,0 +1,26 @@
+# Test copy of Pencil on Brian: https://dev-pencil.slumberjakz.com
+# Built from T3rM1nAt0-R/open-pencil, branch slumberjakz (publish.sh).
+# Lives in /opt/data/selfhost/openpencil-dev/ with the built site in ./site.
+# It has no storage of its own: it joins the live site's network and uses the
+# same "store" service, so live pencil and dev-pencil see the same designs.
+# Start the live site (/opt/data/selfhost/openpencil) first, then: docker compose up -d
+# The Cloudflare "atlas" tunnel routes dev-pencil.slumberjakz.com to
+# http://localhost:8101, behind the su-login Access policy.
+name: openpencil-dev
+
+services:
+  web:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:8101:80'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./site:/srv/site:ro
+    networks:
+      - openpencil
+
+networks:
+  openpencil:
+    name: openpencil_default
+    external: true

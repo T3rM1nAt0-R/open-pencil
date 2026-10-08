@@ -31,6 +31,7 @@ import { useEditorStore } from '@/app/editor/active-store'
 import { useCanvasCollaborationAwareness } from '@/app/editor/canvas/collaboration-awareness'
 import { createCanvasContextSelection } from '@/app/editor/canvas/context-selection'
 import { appRuntimeConfig } from '@/app/runtime/config'
+import CommentsLayer from '@/components/comments/CommentsLayer.vue'
 import PreparationOverlay from '@/components/preparation/canvas/Overlay.vue'
 
 import CanvasMenu from './canvas/CanvasMenu.vue'
@@ -255,6 +256,7 @@ const cursor = computed(() => toolCursor(store.state.activeTool, cursorOverride.
             </PopoverContent>
           </PopoverPortal>
         </PopoverRoot>
+        <CommentsLayer v-if="isActivePane" :canvas-el="canvasRef" />
         <PreparationOverlay
           v-if="store.state.preparation && store.state.preparation.kind !== 'font-retry'"
           :preparation="store.state.preparation"
