@@ -1,0 +1,9 @@
+{
+  "stamp": "Tampon",
+  "built": "Construit",
+  "beingBuilt": "En cours",
+  "planned": "Prévu",
+  "removeStamp": "Retirer le tampon",
+  "selectToStamp": "Sélectionnez un écran pour le tamponner",
+  "stampSelected": "Tamponner les écrans sélectionnés : {count}"
+}

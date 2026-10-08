@@ -1,0 +1,9 @@
+{
+  "stamp": "标记",
+  "built": "已完成",
+  "beingBuilt": "进行中",
+  "planned": "计划中",
+  "removeStamp": "移除标记",
+  "selectToStamp": "选择要标记的屏幕",
+  "stampSelected": "标记所选屏幕：{count}"
+}

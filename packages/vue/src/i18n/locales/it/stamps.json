@@ -1,0 +1,9 @@
+{
+  "stamp": "Timbro",
+  "built": "Costruito",
+  "beingBuilt": "In costruzione",
+  "planned": "Pianificato",
+  "removeStamp": "Rimuovi timbro",
+  "selectToStamp": "Seleziona una schermata da timbrare",
+  "stampSelected": "Timbra le schermate selezionate: {count}"
+}
