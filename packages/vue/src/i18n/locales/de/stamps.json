@@ -1,0 +1,9 @@
+{
+  "stamp": "Stempel",
+  "built": "Gebaut",
+  "beingBuilt": "Im Bau",
+  "planned": "Geplant",
+  "removeStamp": "Stempel entfernen",
+  "selectToStamp": "Wähle einen Bildschirm zum Stempeln",
+  "stampSelected": "Ausgewählte Bildschirme stempeln: {count}"
+}

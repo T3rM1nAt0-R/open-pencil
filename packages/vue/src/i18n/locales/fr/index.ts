@@ -5,6 +5,7 @@ import automation from './automation.json'
 import code from './code.json'
 import collaboration from './collaboration.json'
 import commands from './commands.json'
+import comments from './comments.json'
 import common from './common.json'
 import credentials from './credentials.json'
 import diagnostics from './diagnostics.json'
@@ -19,6 +20,7 @@ import recovery from './recovery.json'
 import rename from './rename.json'
 import rendering from './rendering.json'
 import settings from './settings.json'
+import stamps from './stamps.json'
 import storage from './storage.json'
 import tools from './tools.json'
 import updates from './updates.json'
@@ -31,6 +33,7 @@ export default {
   code,
   collaboration,
   commands,
+  comments,
   common,
   credentials,
   diagnostics,
@@ -45,6 +48,7 @@ export default {
   rendering,
   rename,
   settings,
+  stamps,
   storage,
   tools,
   updates,

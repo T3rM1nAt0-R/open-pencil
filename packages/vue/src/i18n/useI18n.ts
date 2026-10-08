@@ -10,6 +10,7 @@ import {
   codeMessages,
   collaborationMessages,
   commandMessages,
+  commentMessages,
   commonMessages,
   credentialsMessages,
   diagnosticsMessages,
@@ -24,6 +25,7 @@ import {
   renderingMessages,
   renameMessages,
   settingsMessages,
+  stampMessages,
   storageMessages,
   toolMessages,
   updatesMessages,
@@ -40,6 +42,7 @@ export const useAutomationMessages = () => useI18nNamespace(automationMessages)
 export const useCodeMessages = () => useI18nNamespace(codeMessages)
 export const useCollaborationMessages = () => useI18nNamespace(collaborationMessages)
 export const useCommandMessages = () => useI18nNamespace(commandMessages)
+export const useCommentMessages = () => useI18nNamespace(commentMessages)
 export const useCommonMessages = () => useI18nNamespace(commonMessages)
 export const useCredentialMessages = () => useI18nNamespace(credentialsMessages)
 export const useDiagnosticsMessages = () => useI18nNamespace(diagnosticsMessages)
@@ -54,6 +57,7 @@ export const useRecoveryMessages = () => useI18nNamespace(recoveryMessages)
 export const useRenderingMessages = () => useI18nNamespace(renderingMessages)
 export const useRenameMessages = () => useI18nNamespace(renameMessages)
 export const useSettingsMessages = () => useI18nNamespace(settingsMessages)
+export const useStampMessages = () => useI18nNamespace(stampMessages)
 export const useStorageMessages = () => useI18nNamespace(storageMessages)
 export const useToolMessages = () => useI18nNamespace(toolMessages)
 export const useUpdateMessages = () => useI18nNamespace(updatesMessages)

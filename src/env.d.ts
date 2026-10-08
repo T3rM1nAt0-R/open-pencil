@@ -7,6 +7,11 @@ declare const __OPENPENCIL_LOCAL_AUTOMATION_TOKEN__: string | null
 declare const __OPENPENCIL_LOCAL_AUTOMATION_URL__: string
 declare const __OPENPENCIL_LOCAL_AUTOMATION_HTTP_URL__: string
 
+interface ImportMetaEnv {
+  readonly VITE_STORAGE_PRESET_ENDPOINT?: string
+  readonly VITE_STORAGE_PRESET_BUCKET?: string
+}
+
 declare module '*.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<object, object, unknown>

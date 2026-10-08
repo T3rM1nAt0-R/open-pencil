@@ -6,6 +6,7 @@ import {
   collaborationMessages
 } from '#vue/i18n/messages/collaboration'
 import { commandMessageDefaults, commandMessages } from '#vue/i18n/messages/commands'
+import { commentMessageDefaults, commentMessages } from '#vue/i18n/messages/comments'
 import { commonMessageDefaults, commonMessages } from '#vue/i18n/messages/common'
 import { credentialsMessageDefaults, credentialsMessages } from '#vue/i18n/messages/credentials'
 import { diagnosticsMessageDefaults, diagnosticsMessages } from '#vue/i18n/messages/diagnostics'
@@ -20,6 +21,7 @@ import { recoveryMessageDefaults, recoveryMessages } from '#vue/i18n/messages/re
 import { renameMessageDefaults, renameMessages } from '#vue/i18n/messages/rename'
 import { renderingMessageDefaults, renderingMessages } from '#vue/i18n/messages/rendering'
 import { settingsMessageDefaults, settingsMessages } from '#vue/i18n/messages/settings'
+import { stampMessageDefaults, stampMessages } from '#vue/i18n/messages/stamps'
 import { storageMessageDefaults, storageMessages } from '#vue/i18n/messages/storage'
 import { toolMessageDefaults, toolMessages } from '#vue/i18n/messages/tools'
 import { updatesMessageDefaults, updatesMessages } from '#vue/i18n/messages/updates'
@@ -35,6 +37,7 @@ export {
   codeMessages,
   collaborationMessages,
   commandMessages,
+  commentMessages,
   commonMessages,
   credentialsMessages,
   diagnosticsMessages,
@@ -49,6 +52,7 @@ export {
   renderingMessages,
   renameMessages,
   settingsMessages,
+  stampMessages,
   storageMessages,
   toolMessages,
   updatesMessages,
@@ -62,6 +66,7 @@ export const messageDefaults = {
   code: codeMessageDefaults,
   collaboration: collaborationMessageDefaults,
   commands: commandMessageDefaults,
+  comments: commentMessageDefaults,
   common: commonMessageDefaults,
   credentials: credentialsMessageDefaults,
   diagnostics: diagnosticsMessageDefaults,
@@ -76,6 +81,7 @@ export const messageDefaults = {
   rendering: renderingMessageDefaults,
   rename: renameMessageDefaults,
   settings: settingsMessageDefaults,
+  stamps: stampMessageDefaults,
   storage: storageMessageDefaults,
   tools: toolMessageDefaults,
   updates: updatesMessageDefaults,
