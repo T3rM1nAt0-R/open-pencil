@@ -9,7 +9,7 @@ import type { EditorStore } from '@/app/editor/active-store'
 import type { PresencePoint } from '@/app/presence/types'
 
 import { readDocumentComments, writeDocumentComments } from './document'
-import type { CommentsScope, CommentsSort, CommentsTab } from './list'
+import type { CommentsSort } from './list'
 
 /** Where a comment is being written: a canvas point on a page. */
 export type CommentDraft = PresencePoint
@@ -18,10 +18,9 @@ export type CommentDraft = PresencePoint
 export const threads = ref<CommentThread[]>([])
 /** Shift+C: pins stay off the canvas until the Comment tool is picked again. */
 export const pinsHidden = useLocalStorage('op-comments-hidden', false)
-export const panelOpen = ref(false)
-export const listTab = ref<CommentsTab>('open')
 export const listQuery = ref('')
-export const listScope = useLocalStorage<CommentsScope>('op-comments-scope', 'all')
+export const listShowResolved = useLocalStorage('op-comments-show-resolved', false)
+export const listOnlyPage = useLocalStorage('op-comments-only-page', false)
 export const listSort = useLocalStorage<CommentsSort>('op-comments-sort', 'newest')
 export const listOnlyMine = useLocalStorage('op-comments-only-mine', false)
 export const pendingDeleteId = ref<string | null>(null)

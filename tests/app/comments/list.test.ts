@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 
 import type { CommentThread } from '@open-pencil/scene-graph'
 
-import { listThreads, type CommentsListOptions } from '@/app/comments/list'
+import { listThreads, threadNumbers, type CommentsListOptions } from '@/app/comments/list'
 
 function thread(id: string, patch: Partial<CommentThread> = {}): CommentThread {
   return {
@@ -21,9 +21,9 @@ function thread(id: string, patch: Partial<CommentThread> = {}): CommentThread {
 }
 
 const base: CommentsListOptions = {
-  tab: 'open',
   query: '',
-  scope: 'all',
+  showResolved: false,
+  onlyPage: false,
   pageId: '0:1',
   onlyMine: false,
   author: 'Ada',
@@ -33,10 +33,10 @@ const base: CommentsListOptions = {
 const ids = (threads: CommentThread[]) => threads.map((entry) => entry.id)
 
 describe('comments list', () => {
-  test('splits open and resolved and drops deleted threads', () => {
+  test('hides resolved threads until asked and never lists deleted ones', () => {
     const threads = [thread('a'), thread('b', { resolved: true }), thread('c', { deleted: true })]
     expect(ids(listThreads(threads, base))).toEqual(['a'])
-    expect(ids(listThreads(threads, { ...base, tab: 'resolved' }))).toEqual(['b'])
+    expect(ids(listThreads(threads, { ...base, showResolved: true }))).toEqual(['a', 'b'])
   })
 
   test('searches text, authors and replies', () => {
@@ -50,18 +50,41 @@ describe('comments list', () => {
     expect(ids(listThreads(threads, { ...base, query: 'LOGO' }))).toEqual(['b'])
   })
 
-  test('filters to this page and to my comments', () => {
-    const threads = [thread('a'), thread('b', { pageId: '0:2', author: 'Claude' })]
-    expect(ids(listThreads(threads, { ...base, scope: 'page' }))).toEqual(['a'])
-    expect(ids(listThreads(threads, { ...base, onlyMine: true }))).toEqual(['a'])
+  test('filters to this page and to threads I started or replied to', () => {
+    const threads = [
+      thread('mine'),
+      thread('replied', {
+        author: 'Claude',
+        replies: [{ id: 'r', author: 'Ada', text: 'Done', createdAt: '' }]
+      }),
+      thread('theirs', { pageId: '0:2', author: 'Claude' })
+    ]
+    expect(ids(listThreads(threads, { ...base, onlyPage: true }))).toEqual(['mine', 'replied'])
+    expect(ids(listThreads(threads, { ...base, onlyMine: true }))).toEqual(['mine', 'replied'])
   })
 
-  test('sorts by latest activity', () => {
+  test('sorts by when each thread was started', () => {
     const threads = [
-      thread('old', { updatedAt: '2026-10-07T10:00:00.000Z' }),
-      thread('new', { updatedAt: '2026-10-08T12:00:00.000Z' })
+      thread('old', {
+        createdAt: '2026-10-07T10:00:00.000Z',
+        updatedAt: '2026-10-09T10:00:00.000Z'
+      }),
+      thread('new', { createdAt: '2026-10-08T12:00:00.000Z' })
     ]
     expect(ids(listThreads(threads, base))).toEqual(['new', 'old'])
     expect(ids(listThreads(threads, { ...base, sort: 'oldest' }))).toEqual(['old', 'new'])
+  })
+
+  test('numbers threads in the order they were started, deleted ones included', () => {
+    const threads = [
+      thread('second', { createdAt: '2026-10-08T11:00:00.000Z' }),
+      thread('first', { createdAt: '2026-10-08T10:00:00.000Z', deleted: true }),
+      thread('third', { createdAt: '2026-10-08T12:00:00.000Z' })
+    ]
+    expect([...threadNumbers(threads)]).toEqual([
+      ['first', 1],
+      ['second', 2],
+      ['third', 3]
+    ])
   })
 })

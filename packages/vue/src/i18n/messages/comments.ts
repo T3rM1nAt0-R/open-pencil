@@ -7,13 +7,10 @@ export const commentMessageDefaults = {
   comments: 'Comments',
   addComment: 'Add a comment',
   reply: 'Reply',
-  post: 'Post',
   send: 'Send',
   someone: 'Someone',
   resolve: 'Resolve',
   reopen: 'Reopen',
-  resolved: 'Resolved',
-  open: 'Open',
   delete: 'Delete',
   deleteComment: 'Delete comment?',
   deleteCommentDescription: 'This removes the comment and all of its replies for everyone.',
@@ -23,17 +20,16 @@ export const commentMessageDefaults = {
   moreActions: 'More actions',
   searchComments: 'Search comments',
   filterAndSort: 'Filter and sort',
-  thisPage: 'This page',
-  allPages: 'All pages',
-  onlyMine: 'Only my comments',
+  showResolved: 'Show resolved comments',
+  onlyPage: 'Only current page',
+  onlyMine: 'Only my threads',
   newestFirst: 'Newest first',
   oldestFirst: 'Oldest first',
-  emptyOpen: 'No open comments. Use the Comment tool, then click the canvas.',
-  emptyResolved: 'No resolved comments.',
+  empty: 'No comments yet. Click the canvas to leave one.',
   noMatches: 'No comments match.',
   replyCount: params('Replies: {count}'),
-  onLayer: params('On {name}'),
-  commentDeleted: 'Comment deleted'
+  commentDeleted: 'Comment deleted',
+  showOnCanvas: 'Show comments on canvas'
 } as const
 
 export const commentMessages = i18n('comments', commentMessageDefaults)

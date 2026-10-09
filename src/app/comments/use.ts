@@ -1,5 +1,3 @@
-import { computed } from 'vue'
-
 import type { CommentReply, CommentThread } from '@open-pencil/scene-graph'
 
 import { useCollabIdentity } from '@/app/collab/identity'
@@ -8,10 +6,9 @@ import type { EditorStore } from '@/app/editor/active-store'
 import {
   threads,
   pinsHidden,
-  panelOpen,
-  listTab,
   listQuery,
-  listScope,
+  listShowResolved,
+  listOnlyPage,
   listSort,
   listOnlyMine,
   pendingDeleteId,
@@ -31,14 +28,6 @@ export { pinPosition } from './session'
 
 export function useComments() {
   const identity = useCollabIdentity()
-  const openCount = computed(
-    () => threads.value.filter((thread) => !thread.deleted && !thread.resolved).length
-  )
-  const resolvedCount = computed(
-    () => threads.value.filter((thread) => !thread.deleted && thread.resolved).length
-  )
-  /** Resolved pins stay hidden on the canvas unless the list is showing resolved comments. */
-  const showResolvedPins = computed(() => panelOpen.value && listTab.value === 'resolved')
 
   function startDraft(pageId: string, x: number, y: number) {
     activeThreadId.value = null
@@ -99,7 +88,8 @@ export function useComments() {
       resolved,
       resolvedAt: resolved ? now() : null
     }))
-    if (resolved && !showResolvedPins.value && activeThreadId.value === threadId) {
+    // A resolved thread leaves the canvas unless resolved comments are shown.
+    if (resolved && !listShowResolved.value && activeThreadId.value === threadId) {
       activeThreadId.value = null
     }
   }
@@ -140,14 +130,10 @@ export function useComments() {
 
   return {
     threads,
-    openCount,
-    resolvedCount,
-    showResolvedPins,
     pinsHidden,
-    panelOpen,
-    listTab,
     listQuery,
-    listScope,
+    listShowResolved,
+    listOnlyPage,
     listSort,
     listOnlyMine,
     pendingDeleteId,

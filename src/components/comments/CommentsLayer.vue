@@ -1,20 +1,29 @@
 <script setup lang="ts">
-import { ContextMenuContent, ContextMenuPortal, ContextMenuRoot, ContextMenuTrigger } from 'reka-ui'
-import { computed, nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
+import {
+  ContextMenuContent,
+  ContextMenuPortal,
+  ContextMenuRoot,
+  ContextMenuTrigger,
+  PopoverContent,
+  PopoverPortal,
+  PopoverRoot
+} from 'reka-ui'
+import { computed, nextTick, onMounted, onUnmounted, ref, toRef, useTemplateRef, watch } from 'vue'
 
-import { useCommentMessages, useCommonMessages } from '@open-pencil/vue'
+import type { Vector } from '@open-pencil/scene-graph/primitives'
+import { useCanvasVirtualReference, useCommentMessages, useCommonMessages } from '@open-pencil/vue'
 
 import { pinPosition, useComments } from '@/app/comments/use'
 import { useEditorStore } from '@/app/editor/active-store'
 import { useActionToast } from '@/app/shell/toast/action'
-import AppButton from '@/components/ui/button/AppButton.vue'
 import { AppConfirmationDialog } from '@/components/ui/dialog'
-import AppTextarea from '@/components/ui/input/AppTextarea.vue'
 import { useMenuUI } from '@/components/ui/menu/menu'
-import Tip from '@/components/ui/overlay/Tip.vue'
+import { usePopoverUI } from '@/components/ui/overlay/popover'
+import { comments as commentsTheme } from '@/theme/comments'
 
 import CommentActionsMenu from './CommentActionsMenu.vue'
-import CommentsPanel from './CommentsPanel.vue'
+import CommentComposer from './CommentComposer.vue'
+import CommentPin from './CommentPin.vue'
 import CommentThreadCard from './CommentThreadCard.vue'
 
 const { canvasEl } = defineProps<{ canvasEl: HTMLCanvasElement | null }>()
@@ -25,11 +34,14 @@ const messages = useCommentMessages()
 const common = useCommonMessages()
 const { showActionToast } = useActionToast()
 const menuCls = useMenuUI({ content: 'min-w-40' })
-const { panelOpen, activeThreadId, draft, openCount, pendingDeleteId, pinsHidden } = comments
+const ui = commentsTheme()
+const popoverCls = usePopoverUI({ content: ui.card() })
+const { activeThreadId, draft, pendingDeleteId, pinsHidden, listShowResolved } = comments
 const commenting = computed(() => store.state.activeTool === 'COMMENT')
 
 const draftText = ref('')
-const draftBox = useTemplateRef<HTMLElement>('draftBox')
+const draftComposer = useTemplateRef<{ focus: () => void }>('draftComposer')
+const threadCard = useTemplateRef<{ focus: () => void }>('threadCard')
 
 onMounted(() => comments.attach(store))
 onUnmounted(() => comments.detach())
@@ -39,37 +51,43 @@ watch(commenting, (on) => {
   if (!on) draft.value = null
 })
 
-function toScreen(x: number, y: number) {
+function toScreen(at: Vector) {
   return {
-    left: x * store.state.zoom + store.state.panX,
-    top: y * store.state.zoom + store.state.panY
+    left: at.x * store.state.zoom + store.state.panX,
+    top: at.y * store.state.zoom + store.state.panY
   }
 }
 
+// Pins show unless Shift+C hid them; the Comment tool always shows them, as in Figma.
 const pins = computed(() => {
   // Layers move without the comment changing; re-place pins on every scene change.
   void store.state.sceneVersion
-  const pageId = store.state.currentPageId
   if (pinsHidden.value && !commenting.value) return []
-  let number = 0
+  const pageId = store.state.currentPageId
   return comments.threads.value
-    .filter((thread) => !thread.deleted)
-    .map((thread) => ({ thread, number: thread.resolved ? 0 : ++number }))
     .filter(
-      ({ thread }) =>
-        thread.pageId === pageId && (!thread.resolved || comments.showResolvedPins.value)
+      (thread) =>
+        !thread.deleted && thread.pageId === pageId && (!thread.resolved || listShowResolved.value)
     )
-    .map(({ thread, number: label }) => {
+    .map((thread) => {
       const at = pinPosition(store, thread)
-      return { thread, label, ...toScreen(at.x, at.y) }
+      return { thread, at, ...toScreen(at) }
     })
 })
 
 const activePin = computed(() => pins.value.find((pin) => pin.thread.id === activeThreadId.value))
-const draftScreen = computed(() =>
-  draft.value && draft.value.pageId === store.state.currentPageId
-    ? toScreen(draft.value.x, draft.value.y)
-    : null
+const draftAt = computed(() =>
+  draft.value && draft.value.pageId === store.state.currentPageId ? draft.value : null
+)
+const draftScreen = computed(() => draftAt.value && toScreen(draftAt.value))
+
+// The card sits right of the pin's bubble, which rises above and right of the commented spot.
+const PIN_SIZE = 32
+const cardAnchor = computed(() => activePin.value?.at ?? draftAt.value ?? null)
+const cardReference = useCanvasVirtualReference(
+  toRef(() => canvasEl),
+  store,
+  cardAnchor
 )
 
 // The dialog closes itself before its confirm event, so hold on to which comment it was for.
@@ -91,16 +109,18 @@ function confirmDelete() {
 
 function placeDraft(event: PointerEvent) {
   if (event.button !== 0 || !(event.currentTarget instanceof HTMLElement)) return
+  // With a card open, a click on the canvas only closes it, as in Figma.
+  if (draft.value || activeThreadId.value) {
+    closeCard()
+    return
+  }
   const rect = event.currentTarget.getBoundingClientRect()
-  const sx = event.clientX - rect.left
-  const sy = event.clientY - rect.top
   comments.startDraft(
     store.state.currentPageId,
-    (sx - store.state.panX) / store.state.zoom,
-    (sy - store.state.panY) / store.state.zoom
+    (event.clientX - rect.left - store.state.panX) / store.state.zoom,
+    (event.clientY - rect.top - store.state.panY) / store.state.zoom
   )
   draftText.value = ''
-  void nextTick(() => draftBox.value?.querySelector('textarea')?.focus())
 }
 
 // Scrolling and zooming keep working while placing comments.
@@ -110,19 +130,43 @@ function forwardWheel(event: WheelEvent) {
   canvasEl.dispatchEvent(new WheelEvent('wheel', event))
 }
 
-function postDraft() {
-  comments.addThread(draftText.value)
+function postDraft(text: string) {
+  comments.addThread(text)
   draftText.value = ''
 }
 
-function cancelDraft() {
+function closeCard() {
   draft.value = null
-  draftText.value = ''
+  activeThreadId.value = null
 }
 
 function togglePin(threadId: string) {
   draft.value = null
   activeThreadId.value = activeThreadId.value === threadId ? null : threadId
+}
+
+function withActiveThread(run: (threadId: string) => void) {
+  const threadId = activePin.value?.thread.id
+  if (threadId) run(threadId)
+}
+
+function focusCard() {
+  const card = draftAt.value ? draftComposer.value : threadCard.value
+  card?.focus()
+}
+
+function onCardOpen(event: Event) {
+  event.preventDefault()
+  focusCard()
+}
+
+// The card stays open when a sent comment becomes its thread or another pin is picked.
+const cardKey = computed(() => (draftAt.value ? 'draft' : (activePin.value?.thread.id ?? null)))
+watch(cardKey, (key) => key && void nextTick(focusCard), { flush: 'post' })
+
+// Escape closes the card only; the editor's Escape would leave the Comment tool as well.
+function onCardEscape(event: KeyboardEvent) {
+  event.stopPropagation()
 }
 </script>
 
@@ -144,20 +188,16 @@ function togglePin(threadId: string) {
 
     <ContextMenuRoot v-for="pin in pins" :key="pin.thread.id" :modal="false">
       <ContextMenuTrigger as-child>
-        <button
-          type="button"
-          class="pointer-events-auto absolute flex size-7 -translate-y-full items-center justify-center rounded-full rounded-bl-none border-2 border-white bg-accent text-xs font-semibold text-white shadow-md data-[active]:ring-2 data-[active]:ring-accent data-[active]:ring-offset-1 data-[resolved]:bg-muted data-[resolved]:opacity-70"
-          :data-resolved="pin.thread.resolved || undefined"
-          :data-active="activeThreadId === pin.thread.id || undefined"
+        <CommentPin
+          :author="pin.thread.author || messages.someone"
+          :color="pin.thread.authorColor"
+          :active="activeThreadId === pin.thread.id"
+          :resolved="pin.thread.resolved"
           :style="{ left: `${pin.left}px`, top: `${pin.top}px` }"
           :aria-label="`${pin.thread.author || messages.someone}: ${pin.thread.text}`"
-          data-slot="comment-pin"
           @pointerdown.stop
           @click.stop="togglePin(pin.thread.id)"
-        >
-          <template v-if="pin.label">{{ pin.label }}</template>
-          <icon-lucide-message-circle v-else class="size-3.5" />
-        </button>
+        />
       </ContextMenuTrigger>
       <ContextMenuPortal>
         <ContextMenuContent :class="menuCls.content">
@@ -166,68 +206,61 @@ function togglePin(threadId: string) {
       </ContextMenuPortal>
     </ContextMenuRoot>
 
-    <div
+    <CommentPin
       v-if="draftScreen"
-      ref="draftBox"
-      class="pointer-events-auto absolute"
+      draft
       :style="{ left: `${draftScreen.left}px`, top: `${draftScreen.top}px` }"
-      @pointerdown.stop
-    >
-      <div
-        class="absolute size-7 -translate-y-full rounded-full rounded-bl-none border-2 border-white bg-accent shadow-md"
-      />
-      <form
-        class="absolute top-2 left-0 flex w-72 flex-col gap-2 rounded-lg border border-border bg-panel p-3 text-xs text-surface shadow-xl"
-        data-slot="comment-draft"
-        @submit.prevent="postDraft"
-      >
-        <AppTextarea
-          v-model="draftText"
-          :rows="3"
-          :aria-label="messages.addComment"
-          :placeholder="messages.addComment"
-          @keydown.enter.exact.prevent="postDraft"
-          @keydown.escape.stop.prevent="cancelDraft"
-        />
-        <div class="flex justify-end gap-2">
-          <AppButton @click="cancelDraft">{{ common.cancel }}</AppButton>
-          <AppButton type="submit" color="primary" variant="solid" :disabled="!draftText.trim()">
-            {{ messages.post }}
-          </AppButton>
-        </div>
-      </form>
-    </div>
-
-    <div
-      v-if="activePin"
-      class="pointer-events-auto absolute"
-      :style="{ left: `${activePin.left + 18}px`, top: `${activePin.top}px` }"
-      @pointerdown.stop
-    >
-      <CommentThreadCard :thread="activePin.thread" class="absolute top-0 left-0" />
-    </div>
-
-    <div class="pointer-events-auto absolute top-7 right-2 flex gap-1" @pointerdown.stop>
-      <Tip :label="messages.comments">
-        <button
-          type="button"
-          class="flex items-center gap-1 rounded-md border border-border bg-panel px-2 py-1 text-xs text-surface shadow-sm hover:bg-hover aria-pressed:bg-hover"
-          :aria-pressed="panelOpen"
-          :aria-label="messages.comments"
-          data-slot="comments-panel-toggle"
-          @click="panelOpen = !panelOpen"
-        >
-          <icon-lucide-message-circle class="size-3.5" />
-          {{ openCount }}
-        </button>
-      </Tip>
-    </div>
-
-    <CommentsPanel
-      v-if="panelOpen"
-      class="pointer-events-auto absolute top-16 right-2"
-      @pointerdown.stop
+      aria-hidden="true"
+      tabindex="-1"
     />
+
+    <PopoverRoot
+      :open="!!cardReference && (!!activePin || !!draftAt)"
+      @update:open="(open: boolean) => !open && closeCard()"
+    >
+      <PopoverPortal>
+        <PopoverContent
+          v-if="cardReference"
+          :reference="cardReference"
+          side="right"
+          align="start"
+          :side-offset="PIN_SIZE + 8"
+          :align-offset="-PIN_SIZE"
+          :collision-padding="8"
+          :class="popoverCls.content"
+          data-canvas-obstacle
+          @open-auto-focus="onCardOpen"
+          @escape-key-down="onCardEscape"
+        >
+          <div v-if="draftAt" data-slot="comment-draft" :class="ui.draft()">
+            <CommentComposer
+              ref="draftComposer"
+              v-model="draftText"
+              :label="messages.addComment"
+              @submit="postDraft"
+              @cancel="closeCard"
+            />
+          </div>
+          <CommentThreadCard
+            v-else-if="activePin"
+            ref="threadCard"
+            :thread="activePin.thread"
+            @close="closeCard"
+            @resolve="
+              (resolved: boolean) => withActiveThread((id) => comments.setResolved(id, resolved))
+            "
+            @reply="(text: string) => withActiveThread((id) => comments.reply(id, text))"
+            @delete-reply="
+              (replyId: string) => withActiveThread((id) => comments.deleteReply(id, replyId))
+            "
+          >
+            <template #menu>
+              <CommentActionsMenu :thread="activePin.thread" kind="dropdown" />
+            </template>
+          </CommentThreadCard>
+        </PopoverContent>
+      </PopoverPortal>
+    </PopoverRoot>
 
     <AppConfirmationDialog
       v-model:open="deleteOpen"

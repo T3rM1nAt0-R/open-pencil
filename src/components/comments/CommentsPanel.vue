@@ -16,33 +16,37 @@ import {
 } from 'reka-ui'
 import { computed } from 'vue'
 
-import { useCommentMessages, useCommonMessages } from '@open-pencil/vue'
+import { formatShortcut, useCommentMessages } from '@open-pencil/vue'
 
-import { listThreads } from '@/app/comments/list'
+import { listThreads, threadNumbers } from '@/app/comments/list'
 import { useComments } from '@/app/comments/use'
 import { useEditorStore } from '@/app/editor/active-store'
 import IconButton from '@/components/ui/button/IconButton.vue'
+import AppPlaceholder from '@/components/ui/feedback/AppPlaceholder.vue'
 import AppInput from '@/components/ui/input/AppInput.vue'
-import { useMenuUI } from '@/components/ui/menu/menu'
-import AppTabsList from '@/components/ui/tabs/AppTabsList.vue'
-import AppTabsRoot from '@/components/ui/tabs/AppTabsRoot.vue'
-import AppTabsTrigger from '@/components/ui/tabs/AppTabsTrigger.vue'
+import AppShortcutText from '@/components/ui/menu/AppShortcutText.vue'
+import { menuItem, useMenuUI } from '@/components/ui/menu/menu'
+import PanelHeader from '@/components/ui/panel/PanelHeader.vue'
+import { comments as commentsTheme } from '@/theme/comments'
 
 import CommentActionsMenu from './CommentActionsMenu.vue'
-import CommentTime from './CommentTime.vue'
+import CommentListItem from './CommentListItem.vue'
 
+/** The comments list that takes over the right sidebar while the Comment tool is active. */
 const store = useEditorStore()
 const comments = useComments()
 const messages = useCommentMessages()
-const common = useCommonMessages()
-const menuCls = useMenuUI({ content: 'min-w-44', item: 'justify-start gap-2' })
-const { listTab, listQuery, listScope, listSort, listOnlyMine } = comments
+const menuCls = useMenuUI({ content: 'min-w-52' })
+const itemCls = menuItem({ justify: 'start', class: 'relative pl-7' })
+const ui = commentsTheme()
+const { listQuery, listShowResolved, listOnlyPage, listSort, listOnlyMine, pinsHidden } = comments
 
+const numbers = computed(() => threadNumbers(comments.threads.value))
 const listed = computed(() =>
   listThreads(comments.threads.value, {
-    tab: listTab.value,
     query: listQuery.value,
-    scope: listScope.value,
+    showResolved: listShowResolved.value,
+    onlyPage: listOnlyPage.value,
     pageId: store.state.currentPageId,
     onlyMine: listOnlyMine.value,
     author: comments.author.value,
@@ -51,103 +55,90 @@ const listed = computed(() =>
 )
 
 const filtered = computed(
-  () => listQuery.value.trim() !== '' || listOnlyMine.value || listScope.value === 'page'
+  () => listQuery.value.trim() !== '' || listOnlyMine.value || listOnlyPage.value
 )
-
-const emptyText = computed(() => {
-  if (filtered.value) return messages.value.noMatches
-  return listTab.value === 'open' ? messages.value.emptyOpen : messages.value.emptyResolved
-})
-
-function replyCount(threadId: string) {
-  const thread = comments.threads.value.find((entry) => entry.id === threadId)
-  return thread?.replies.filter((entry) => !entry.deleted).length ?? 0
-}
 
 function pageName(pageId: string, fallback?: string) {
   return store.graph.getNode(pageId)?.name ?? fallback ?? ''
 }
 
-function setScope(value: unknown) {
-  if (value === 'page' || value === 'all') listScope.value = value
-}
-
 function setSort(value: unknown) {
   if (value === 'newest' || value === 'oldest') listSort.value = value
+}
+
+function showPins(shown: boolean) {
+  pinsHidden.value = !shown
 }
 </script>
 
 <template>
-  <section
-    class="flex max-h-[70vh] w-80 flex-col rounded-lg border border-border bg-panel text-xs text-surface shadow-xl"
-    :aria-label="messages.comments"
-    data-slot="comments-panel"
-  >
-    <header class="flex items-center gap-1 border-b border-border py-1 pr-1 pl-3">
-      <h2 class="flex-1 font-semibold">{{ messages.comments }}</h2>
-      <DropdownMenuRoot :modal="false">
-        <DropdownMenuTrigger as-child>
-          <IconButton :label="messages.filterAndSort" :active="filtered">
-            <icon-lucide-list-filter class="size-3.5" />
-          </IconButton>
-        </DropdownMenuTrigger>
-        <DropdownMenuPortal>
-          <DropdownMenuContent :class="menuCls.content" align="end" :side-offset="4">
-            <DropdownMenuRadioGroup :model-value="listScope" @update:model-value="setScope">
-              <DropdownMenuRadioItem value="page" :class="menuCls.item">
-                <DropdownMenuItemIndicator class="w-3" force-mount>
-                  <icon-lucide-check v-if="listScope === 'page'" class="size-3" />
+  <section :class="ui.panel()" :aria-label="messages.comments" data-slot="comments-panel">
+    <PanelHeader>
+      <template #icon><icon-lucide-messages-square class="size-3.5" /></template>
+      {{ messages.comments }}
+      <template #actions>
+        <DropdownMenuRoot :modal="false">
+          <DropdownMenuTrigger as-child>
+            <IconButton :label="messages.filterAndSort" :active="filtered">
+              <icon-lucide-list-filter class="size-3.5" />
+            </IconButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuContent :class="menuCls.content" align="end" :side-offset="4">
+              <DropdownMenuRadioGroup :model-value="listSort" @update:model-value="setSort">
+                <DropdownMenuRadioItem value="newest" :class="itemCls">
+                  <DropdownMenuItemIndicator :class="ui.menuIndicator()">
+                    <icon-lucide-check class="size-3.5" />
+                  </DropdownMenuItemIndicator>
+                  {{ messages.newestFirst }}
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="oldest" :class="itemCls">
+                  <DropdownMenuItemIndicator :class="ui.menuIndicator()">
+                    <icon-lucide-check class="size-3.5" />
+                  </DropdownMenuItemIndicator>
+                  {{ messages.oldestFirst }}
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+              <DropdownMenuSeparator :class="menuCls.separator" />
+              <DropdownMenuCheckboxItem v-model="listShowResolved" :class="itemCls">
+                <DropdownMenuItemIndicator :class="ui.menuIndicator()">
+                  <icon-lucide-check class="size-3.5" />
                 </DropdownMenuItemIndicator>
-                {{ messages.thisPage }}
-              </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="all" :class="menuCls.item">
-                <DropdownMenuItemIndicator class="w-3" force-mount>
-                  <icon-lucide-check v-if="listScope === 'all'" class="size-3" />
+                {{ messages.showResolved }}
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem v-model="listOnlyMine" :class="itemCls">
+                <DropdownMenuItemIndicator :class="ui.menuIndicator()">
+                  <icon-lucide-check class="size-3.5" />
                 </DropdownMenuItemIndicator>
-                {{ messages.allPages }}
-              </DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
-            <DropdownMenuSeparator :class="menuCls.separator" />
-            <DropdownMenuCheckboxItem v-model="listOnlyMine" :class="menuCls.item">
-              <DropdownMenuItemIndicator class="w-3" force-mount>
-                <icon-lucide-check v-if="listOnlyMine" class="size-3" />
-              </DropdownMenuItemIndicator>
-              {{ messages.onlyMine }}
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuSeparator :class="menuCls.separator" />
-            <DropdownMenuRadioGroup :model-value="listSort" @update:model-value="setSort">
-              <DropdownMenuRadioItem value="newest" :class="menuCls.item">
-                <DropdownMenuItemIndicator class="w-3" force-mount>
-                  <icon-lucide-check v-if="listSort === 'newest'" class="size-3" />
+                {{ messages.onlyMine }}
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem v-model="listOnlyPage" :class="itemCls">
+                <DropdownMenuItemIndicator :class="ui.menuIndicator()">
+                  <icon-lucide-check class="size-3.5" />
                 </DropdownMenuItemIndicator>
-                {{ messages.newestFirst }}
-              </DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="oldest" :class="menuCls.item">
-                <DropdownMenuItemIndicator class="w-3" force-mount>
-                  <icon-lucide-check v-if="listSort === 'oldest'" class="size-3" />
+                {{ messages.onlyPage }}
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuSeparator :class="menuCls.separator" />
+              <DropdownMenuCheckboxItem
+                :model-value="!pinsHidden"
+                :class="itemCls"
+                @update:model-value="showPins"
+              >
+                <DropdownMenuItemIndicator :class="ui.menuIndicator()">
+                  <icon-lucide-check class="size-3.5" />
                 </DropdownMenuItemIndicator>
-                {{ messages.oldestFirst }}
-              </DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenuPortal>
-      </DropdownMenuRoot>
-      <IconButton :label="common.close" @click="comments.panelOpen.value = false">
-        <icon-lucide-x class="size-3.5" />
-      </IconButton>
-    </header>
+                {{ messages.showOnCanvas }}
+                <AppShortcutText :ui="{ base: 'ml-auto' }">{{
+                  formatShortcut('SHIFT+C')
+                }}</AppShortcutText>
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenuPortal>
+        </DropdownMenuRoot>
+      </template>
+    </PanelHeader>
 
-    <div class="flex flex-col gap-2 border-b border-border px-3 py-2">
-      <AppTabsRoot v-model="listTab">
-        <AppTabsList :label="messages.comments">
-          <AppTabsTrigger value="open">
-            {{ messages.open }} · {{ comments.openCount.value }}
-          </AppTabsTrigger>
-          <AppTabsTrigger value="resolved">
-            {{ messages.resolved }} · {{ comments.resolvedCount.value }}
-          </AppTabsTrigger>
-        </AppTabsList>
-      </AppTabsRoot>
+    <div :class="ui.panelSearch()">
       <AppInput
         v-model="listQuery"
         type="search"
@@ -159,39 +150,23 @@ function setSort(value: unknown) {
       </AppInput>
     </div>
 
-    <ul class="min-h-0 flex-1 overflow-y-auto">
-      <li v-if="listed.length === 0" class="px-3 py-4 text-muted">{{ emptyText }}</li>
+    <AppPlaceholder
+      v-if="listed.length === 0"
+      size="compact"
+      :label="filtered ? messages.noMatches : messages.empty"
+    />
+    <ul v-else :class="ui.list()" :aria-label="messages.comments">
       <ContextMenuRoot v-for="thread in listed" :key="thread.id" :modal="false">
         <ContextMenuTrigger as-child>
-          <li
-            class="group relative flex cursor-pointer flex-col gap-1 border-b border-border px-3 py-2 hover:bg-hover data-[active]:bg-hover"
-            :data-active="comments.activeThreadId.value === thread.id || undefined"
-            data-slot="comments-panel-item"
+          <CommentListItem
+            :thread="thread"
+            :number="numbers.get(thread.id) ?? 0"
+            :page-name="pageName(thread.pageId, thread.pageName)"
+            :active="comments.activeThreadId.value === thread.id"
             @click="comments.focusThread(store, thread.id)"
+            @keydown.enter.self="comments.focusThread(store, thread.id)"
           >
-            <span class="flex items-baseline gap-2 pr-14">
-              <span class="truncate font-semibold">{{ thread.author || messages.someone }}</span>
-              <CommentTime :at="thread.updatedAt" class="shrink-0 text-muted" />
-            </span>
-            <span class="line-clamp-2 break-words">{{ thread.text }}</span>
-            <span class="text-muted">
-              {{ pageName(thread.pageId, thread.pageName) }}
-              <template v-if="replyCount(thread.id)">
-                · {{ messages.replyCount({ count: replyCount(thread.id) }) }}
-              </template>
-            </span>
-            <span
-              class="absolute top-1.5 right-2 flex gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"
-              @click.stop
-            >
-              <IconButton
-                :label="thread.resolved ? messages.reopen : messages.resolve"
-                data-command="comment-resolve"
-                @click="comments.setResolved(thread.id, !thread.resolved)"
-              >
-                <icon-lucide-rotate-ccw v-if="thread.resolved" class="size-3.5" />
-                <icon-lucide-circle-check v-else class="size-3.5" />
-              </IconButton>
+            <template #actions>
               <DropdownMenuRoot :modal="false">
                 <DropdownMenuTrigger as-child>
                   <IconButton :label="messages.moreActions">
@@ -204,8 +179,17 @@ function setSort(value: unknown) {
                   </DropdownMenuContent>
                 </DropdownMenuPortal>
               </DropdownMenuRoot>
-            </span>
-          </li>
+              <IconButton
+                :label="thread.resolved ? messages.reopen : messages.resolve"
+                :active="thread.resolved"
+                data-command="comment-resolve"
+                @click="comments.setResolved(thread.id, !thread.resolved)"
+              >
+                <icon-lucide-circle-check-big v-if="thread.resolved" class="size-3.5" />
+                <icon-lucide-circle-check v-else class="size-3.5" />
+              </IconButton>
+            </template>
+          </CommentListItem>
         </ContextMenuTrigger>
         <ContextMenuPortal>
           <ContextMenuContent :class="menuCls.content">
