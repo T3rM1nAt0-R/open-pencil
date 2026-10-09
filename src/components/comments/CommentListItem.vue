@@ -27,6 +27,8 @@ const {
   active?: boolean
 }>()
 
+const emit = defineEmits<{ select: [] }>()
+
 defineSlots<{ actions?(): unknown }>()
 
 const messages = useCommentMessages()
@@ -50,24 +52,25 @@ const people = computed<PresencePersonRow[]>(() =>
     :data-active="active || undefined"
     :data-resolved="thread.resolved || undefined"
     :class="ui.item()"
-    tabindex="0"
   >
-    <div :class="ui.itemTop()">
-      <AvatarStack
-        :people="people"
-        :max="3"
-        :label="people.map((person) => person.name).join(', ')"
-      />
-      <span :class="ui.itemPlace()">#{{ number }} · {{ pageName }}</span>
-    </div>
-    <div :class="ui.itemMeta()">
-      <span :class="ui.messageAuthor()">{{ thread.author || messages.someone }}</span>
-      <CommentTime :at="thread.createdAt" :class="ui.messageTime()" />
-    </div>
-    <p :class="ui.itemText()">{{ commentPreview(thread.text) }}</p>
-    <span v-if="replies.length" :class="ui.itemReplies()">
-      {{ messages.replyCount({ count: replies.length }) }}
-    </span>
-    <span v-if="$slots.actions" :class="ui.itemActions()" @click.stop><slot name="actions" /></span>
+    <button type="button" :class="ui.itemButton()" @click="emit('select')">
+      <span :class="ui.itemTop()">
+        <AvatarStack
+          :people="people"
+          :max="3"
+          :label="people.map((person) => person.name).join(', ')"
+        />
+        <span :class="ui.itemPlace()">#{{ number }} · {{ pageName }}</span>
+      </span>
+      <span :class="ui.itemMeta()">
+        <span :class="ui.messageAuthor()">{{ thread.author || messages.someone }}</span>
+        <CommentTime :at="thread.createdAt" :class="ui.messageTime()" />
+      </span>
+      <span :class="ui.itemText()">{{ commentPreview(thread.text) }}</span>
+      <span v-if="replies.length" :class="ui.itemReplies()">
+        {{ messages.replyCount({ count: replies.length }) }}
+      </span>
+    </button>
+    <span v-if="$slots.actions" :class="ui.itemActions()"><slot name="actions" /></span>
   </li>
 </template>

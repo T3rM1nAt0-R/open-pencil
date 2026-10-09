@@ -163,8 +163,7 @@ function showPins(shown: boolean) {
             :number="numbers.get(thread.id) ?? 0"
             :page-name="pageName(thread.pageId, thread.pageName)"
             :active="comments.activeThreadId.value === thread.id"
-            @click="comments.focusThread(store, thread.id)"
-            @keydown.enter.self="comments.focusThread(store, thread.id)"
+            @select="comments.focusThread(store, thread.id)"
           >
             <template #actions>
               <DropdownMenuRoot :modal="false">
