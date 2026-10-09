@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useEventListener } from '@vueuse/core'
 import { ContextMenuContent, ContextMenuPortal, ContextMenuRoot, ContextMenuTrigger } from 'reka-ui'
 import { computed, nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
 
@@ -7,8 +6,6 @@ import { useCommentMessages, useCommonMessages } from '@open-pencil/vue'
 
 import { pinPosition, useComments } from '@/app/comments/use'
 import { useEditorStore } from '@/app/editor/active-store'
-import { TOOL_SHORTCUTS } from '@/app/editor/session'
-import { isEditing } from '@/app/shell/keyboard/focus'
 import { useActionToast } from '@/app/shell/toast/action'
 import AppButton from '@/components/ui/button/AppButton.vue'
 import { AppConfirmationDialog } from '@/components/ui/dialog'
@@ -28,20 +25,19 @@ const messages = useCommentMessages()
 const common = useCommonMessages()
 const { showActionToast } = useActionToast()
 const menuCls = useMenuUI({ content: 'min-w-40' })
-const { commenting, panelOpen, activeThreadId, draft, openCount, pendingDeleteId } = comments
+const { panelOpen, activeThreadId, draft, openCount, pendingDeleteId, pinsHidden } = comments
+const commenting = computed(() => store.state.activeTool === 'COMMENT')
 
 const draftText = ref('')
 const draftBox = useTemplateRef<HTMLElement>('draftBox')
 
 onMounted(() => comments.attach(store))
 onUnmounted(() => comments.detach())
-useEventListener(window, 'keydown', onKeydown)
 
-// Picking any drawing tool (V, R, T…) leaves comment mode, as in Figma.
-watch(
-  () => store.state.activeTool,
-  () => comments.setCommenting(false)
-)
+// Picking another tool drops a comment that was never sent, as in Figma.
+watch(commenting, (on) => {
+  if (!on) draft.value = null
+})
 
 function toScreen(x: number, y: number) {
   return {
@@ -54,6 +50,7 @@ const pins = computed(() => {
   // Layers move without the comment changing; re-place pins on every scene change.
   void store.state.sceneVersion
   const pageId = store.state.currentPageId
+  if (pinsHidden.value && !commenting.value) return []
   let number = 0
   return comments.threads.value
     .filter((thread) => !thread.deleted)
@@ -126,18 +123,6 @@ function cancelDraft() {
 function togglePin(threadId: string) {
   draft.value = null
   activeThreadId.value = activeThreadId.value === threadId ? null : threadId
-}
-
-function onKeydown(event: KeyboardEvent) {
-  const plain = !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey
-  if (commenting.value && plain && TOOL_SHORTCUTS[event.code] && !isEditing(event)) {
-    comments.setCommenting(false)
-    return
-  }
-  if (event.code !== 'Escape' || deleteOpen.value) return
-  if (draft.value) cancelDraft()
-  else if (activeThreadId.value) activeThreadId.value = null
-  else if (commenting.value) comments.setCommenting(false)
 }
 </script>
 

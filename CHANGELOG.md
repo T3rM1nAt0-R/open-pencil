@@ -4,6 +4,7 @@
 
 ### Breaking changes
 
+- The editor `Tool` type from `@open-pencil/core` and `@open-pencil/vue` includes `'COMMENT'`, and `EDITOR_TOOLS` and `TOOL_SHORTCUTS` list the Comment tool on <kbd>C</kbd>, so a `Record<Tool, …>` needs a `COMMENT` entry and toolbars built on `ToolbarRoot` show it. The canvas places nothing while it is active; the app's comments layer does.
 - `SceneNode` from `@open-pencil/scene-graph` has `isExposedInstance`, whether an instance inside a component shows its properties on instances of that component, so code that builds `SceneNode` objects itself must include it. In the plugin API, `isExposedInstance` and `exposedInstances` follow that flag and Figma's rules instead of treating an instance whose swap is bound to a property as exposed: only an instance in a component's own layers whose component has properties can be exposed, and its copies in instances report it but cannot change it.
 - `usePosition` from `@open-pencil/vue` reports and edits `x`, `y`, and `rotation` as Figma's properties panel does: the turned layer's box on the canvas, measured from its frame or page, and its counterclockwise angle. `getDefaultCanvasBgColor` and `CANVAS_BG_COLOR_DARK` are removed from `@open-pencil/core/constants`; new pages use `PAGE_DEFAULT_BACKGROUNDS`, keyed by interface theme.
 - `SkiaRenderer.hitTestFrameTitle` no longer takes the selected IDs: it finds the name of any frame on the page or in a section under a point, selected or not.

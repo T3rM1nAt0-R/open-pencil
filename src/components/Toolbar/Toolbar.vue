@@ -13,7 +13,6 @@ import type { Tool } from '@open-pencil/vue'
 import { useEditorStore } from '@/app/editor/active-store'
 import { toolIcons } from '@/app/editor/icons'
 import { useActionToast } from '@/app/shell/toast/action'
-import CommentToolButton from '@/components/comments/CommentToolButton.vue'
 import InsertIconButton from '@/components/icon-picker/InsertIconButton.vue'
 import { useToolbarActions } from '@/components/Toolbar/actions'
 import DesktopToolbar from '@/components/Toolbar/DesktopToolbar.vue'
@@ -38,7 +37,8 @@ const toolLabels = computed<Record<Tool, string>>(() => ({
   STAR: toolTexts.value.star,
   PEN: toolTexts.value.pen,
   TEXT: toolTexts.value.text,
-  HAND: toolTexts.value.hand
+  HAND: toolTexts.value.hand,
+  COMMENT: toolTexts.value.comment
 }))
 
 const toolShortcuts: Record<Tool, string> = {
@@ -52,7 +52,8 @@ const toolShortcuts: Record<Tool, string> = {
   STAR: '',
   PEN: 'P',
   TEXT: 'T',
-  HAND: 'H'
+  HAND: 'H',
+  COMMENT: 'C'
 }
 
 const flyoutMenuCls = useMenuUI({ content: 'min-w-32' })
@@ -82,7 +83,6 @@ function onActionTap(item: ToolbarActionItem) {
     >
       <template #end>
         <InsertIconButton :ui="toolbarUI" />
-        <CommentToolButton :ui="toolbarUI" />
       </template>
     </DesktopToolbar>
 

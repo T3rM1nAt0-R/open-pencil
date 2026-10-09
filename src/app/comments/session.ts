@@ -16,7 +16,8 @@ export type CommentDraft = PresencePoint
 
 // One comments session for the app; it follows whichever document is active.
 export const threads = ref<CommentThread[]>([])
-export const commenting = ref(false)
+/** Shift+C: pins stay off the canvas until the Comment tool is picked again. */
+export const pinsHidden = useLocalStorage('op-comments-hidden', false)
 export const panelOpen = ref(false)
 export const listTab = ref<CommentsTab>('open')
 export const listQuery = ref('')
@@ -34,14 +35,21 @@ let refreshQueued = false
 // Where each pin was last drawn on its layer, so deleting the layer leaves the pin there.
 const lastSeen = new Map<string, Vector>()
 
-/** Comment mode: the next click on the canvas places a comment. */
-export function setCommenting(on: boolean) {
-  commenting.value = on
-  if (!on) draft.value = null
+export function togglePinsHidden() {
+  pinsHidden.value = !pinsHidden.value
 }
 
-export function toggleCommenting() {
-  setCommenting(!commenting.value)
+/** Escape closes an unsent comment or an open thread before it leaves the Comment tool. */
+export function dismissComment(): boolean {
+  if (draft.value) {
+    draft.value = null
+    return true
+  }
+  if (activeThreadId.value) {
+    activeThreadId.value = null
+    return true
+  }
+  return false
 }
 
 export function newId(prefix: string): string {
