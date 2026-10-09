@@ -14,6 +14,7 @@ import { useEditorStore } from '@/app/editor/active-store'
 import { toolIcons } from '@/app/editor/icons'
 import { useActionToast } from '@/app/shell/toast/action'
 import CommentToolButton from '@/components/comments/CommentToolButton.vue'
+import InsertIconButton from '@/components/icon-picker/InsertIconButton.vue'
 import { useToolbarActions } from '@/components/Toolbar/actions'
 import DesktopToolbar from '@/components/Toolbar/DesktopToolbar.vue'
 import MobileToolbar from '@/components/Toolbar/MobileToolbar.vue'
@@ -79,7 +80,10 @@ function onActionTap(item: ToolbarActionItem) {
       :ui="toolbarUI"
       @set-tool="actions.setTool"
     >
-      <template #after><CommentToolButton :ui="toolbarUI" /></template>
+      <template #end>
+        <InsertIconButton :ui="toolbarUI" />
+        <CommentToolButton :ui="toolbarUI" />
+      </template>
     </DesktopToolbar>
 
     <MobileToolbar
@@ -101,6 +105,10 @@ function onActionTap(item: ToolbarActionItem) {
       @prev="goPrev"
       @next="goNext"
       @action="onActionTap"
-    />
+    >
+      <template #end>
+        <InsertIconButton mobile :ui="toolbarUI" />
+      </template>
+    </MobileToolbar>
   </ToolbarRoot>
 </template>
