@@ -9,7 +9,6 @@ export const commentMessageDefaults = {
   reply: 'Reply',
   post: 'Post',
   send: 'Send',
-  yourName: 'Your name',
   someone: 'Someone',
   resolve: 'Resolve',
   reopen: 'Reopen',

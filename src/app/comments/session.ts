@@ -3,15 +3,13 @@ import { ref } from 'vue'
 
 import type { CommentThread } from '@open-pencil/scene-graph'
 import type { Vector } from '@open-pencil/scene-graph/primitives'
+import { randomHex } from '@open-pencil/scene-graph/random'
 
 import type { EditorStore } from '@/app/editor/active-store'
 import type { PresencePoint } from '@/app/presence/types'
 
 import { readDocumentComments, writeDocumentComments } from './document'
 import type { CommentsScope, CommentsSort, CommentsTab } from './list'
-
-// Same name the collaboration panel asks for, so people only type it once.
-const AUTHOR_KEY = 'op-collab-name'
 
 /** Where a comment is being written: a canvas point on a page. */
 export type CommentDraft = PresencePoint
@@ -28,16 +26,13 @@ export const listOnlyMine = useLocalStorage('op-comments-only-mine', false)
 export const pendingDeleteId = ref<string | null>(null)
 export const activeThreadId = ref<string | null>(null)
 export const draft = ref<CommentDraft | null>(null)
-export const author = useLocalStorage<string>(AUTHOR_KEY, '')
 
 let boundStore: EditorStore | null = null
 let users = 0
 let unsubscribe: (() => void) | null = null
 let refreshQueued = false
-
-export function setAuthor(name: string) {
-  author.value = name.trim()
-}
+// Where each pin was last drawn on its layer, so deleting the layer leaves the pin there.
+const lastSeen = new Map<string, Vector>()
 
 /** Comment mode: the next click on the canvas places a comment. */
 export function setCommenting(on: boolean) {
@@ -50,7 +45,7 @@ export function toggleCommenting() {
 }
 
 export function newId(prefix: string): string {
-  return `${prefix}_${Date.now().toString(36)}${crypto.randomUUID().slice(0, 8)}`
+  return `${prefix}_${randomHex(8)}`
 }
 
 export function now(): string {
@@ -73,6 +68,7 @@ function queueRefresh() {
 
 /** Another document is open: nothing from the last one stays selected or half-written. */
 function forgetDocument() {
+  lastSeen.clear()
   activeThreadId.value = null
   draft.value = null
   pendingDeleteId.value = null
@@ -102,10 +98,24 @@ export function pinPosition(store: EditorStore, thread: CommentThread): Vector {
     const node = store.graph.getNode(thread.nodeId)
     if (node) {
       const abs = store.graph.getAbsolutePosition(node.id)
-      return { x: abs.x + (thread.offsetX ?? 0), y: abs.y + (thread.offsetY ?? 0) }
+      const at = { x: abs.x + (thread.offsetX ?? 0), y: abs.y + (thread.offsetY ?? 0) }
+      lastSeen.set(thread.id, at)
+      return at
     }
   }
   return { x: thread.x, y: thread.y }
+}
+
+/** The layer a pin followed is gone: the pin stays where it was last seen, on the canvas. */
+function detachFromLayer(nodeId: string) {
+  if (!threads.value.some((thread) => thread.nodeId === nodeId)) return
+  mutate((current) =>
+    current.map((thread) => {
+      if (thread.nodeId !== nodeId) return thread
+      const at = lastSeen.get(thread.id) ?? { x: thread.x, y: thread.y }
+      return { ...thread, nodeId: null, x: at.x, y: at.y, updatedAt: now() }
+    })
+  )
 }
 
 export function activeStore(): EditorStore | null {
@@ -121,6 +131,9 @@ function subscribe(store: EditorStore) {
     // A collaboration room can bring its own document node.
     store.onEditorEvent('node:created', (node) => {
       if (node.parentId === null) queueRefresh()
+    }),
+    store.onEditorEvent('node:deleted', (id) => {
+      queueMicrotask(() => detachFromLayer(id))
     }),
     store.onEditorEvent('graph:replaced', forgetDocument)
   ]

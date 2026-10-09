@@ -12,7 +12,6 @@ import { isEditing } from '@/app/shell/keyboard/focus'
 import { useActionToast } from '@/app/shell/toast/action'
 import AppButton from '@/components/ui/button/AppButton.vue'
 import { AppConfirmationDialog } from '@/components/ui/dialog'
-import AppInput from '@/components/ui/input/AppInput.vue'
 import AppTextarea from '@/components/ui/input/AppTextarea.vue'
 import { useMenuUI } from '@/components/ui/menu/menu'
 import Tip from '@/components/ui/overlay/Tip.vue'
@@ -32,7 +31,6 @@ const menuCls = useMenuUI({ content: 'min-w-40' })
 const { commenting, panelOpen, activeThreadId, draft, openCount, pendingDeleteId } = comments
 
 const draftText = ref('')
-const draftName = ref(comments.author.value)
 const draftBox = useTemplateRef<HTMLElement>('draftBox')
 
 onMounted(() => comments.attach(store))
@@ -116,7 +114,6 @@ function forwardWheel(event: WheelEvent) {
 }
 
 function postDraft() {
-  if (!comments.author.value && draftName.value.trim()) comments.setAuthor(draftName.value)
   comments.addThread(draftText.value)
   draftText.value = ''
 }
@@ -199,13 +196,6 @@ function onKeydown(event: KeyboardEvent) {
         data-slot="comment-draft"
         @submit.prevent="postDraft"
       >
-        <AppInput
-          v-if="!comments.author.value"
-          v-model="draftName"
-          size="sm"
-          :aria-label="messages.yourName"
-          :placeholder="messages.yourName"
-        />
         <AppTextarea
           v-model="draftText"
           :rows="3"

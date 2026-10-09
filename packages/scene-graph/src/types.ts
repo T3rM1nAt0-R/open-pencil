@@ -424,6 +424,9 @@ export interface SourceLibraryPublication {
 export interface CommentReply {
   id: string
   author: string
+  /** The author's collaboration color when they wrote it, for their avatar. */
+  authorColor?: Color
+  /** Markdown: bold, italic, strikethrough, links and lists. */
   text: string
   createdAt: string
   deleted?: boolean
@@ -445,6 +448,9 @@ export interface CommentThread {
   x: number
   y: number
   author: string
+  /** The author's collaboration color when they wrote it, for their avatar. */
+  authorColor?: Color
+  /** Markdown: bold, italic, strikethrough, links and lists. */
   text: string
   createdAt: string
   /** Bumped on every change. */

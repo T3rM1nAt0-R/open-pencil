@@ -4,7 +4,7 @@ import { afterEach, expect, test } from 'bun:test'
 import type { CommentThread } from '@open-pencil/scene-graph'
 
 import { readDocumentComments } from '@/app/comments/document'
-import { attachStore, detachStore, mutate, threads } from '@/app/comments/session'
+import { attachStore, detachStore, mutate, pinPosition, threads } from '@/app/comments/session'
 import { createEditorStore } from '@/app/editor/session/create'
 
 function thread(id: string): CommentThread {
@@ -67,4 +67,22 @@ test('comments written to the document from elsewhere show up', async () => {
   await Promise.resolve()
 
   expect(ids(threads.value)).toEqual(['x'])
+})
+
+test('a pin stays where its layer was when the layer is deleted', async () => {
+  const store = createEditorStore()
+  attachStore(store)
+  const pageId = store.state.currentPageId
+  const rect = store.graph.createNode('RECTANGLE', pageId, { x: 100, y: 50, width: 80, height: 40 })
+  const pinned = { ...thread('p'), pageId, nodeId: rect.id, offsetX: 10, offsetY: 5 }
+  mutate((current) => [...current, pinned])
+
+  store.graph.updateNode(rect.id, { x: 300 })
+  expect(pinPosition(store, pinned)).toEqual({ x: 310, y: 55 })
+  store.graph.deleteNode(rect.id)
+  await Promise.resolve()
+
+  const [detached] = readDocumentComments(store.graph)
+  expect(detached?.nodeId).toBeNull()
+  expect(detached && pinPosition(store, detached)).toEqual({ x: 310, y: 55 })
 })

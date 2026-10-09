@@ -133,9 +133,15 @@ const sourceLibraryPublication: v.GenericSchema<unknown, SourceLibraryPublicatio
 
 // Lenient on purpose: other tools may write comments, so missing fields get defaults and one
 // malformed thread is skipped instead of hiding every comment.
+const commentAuthorColor = v.fallback(
+  v.optional(v.object({ r: v.number(), g: v.number(), b: v.number(), a: v.number() })),
+  undefined
+)
+
 const commentReply = v.object({
   id: v.string(),
   author: v.fallback(v.string(), ''),
+  authorColor: commentAuthorColor,
   text: v.fallback(v.string(), ''),
   createdAt: v.fallback(v.string(), ''),
   deleted: v.optional(v.boolean())
@@ -152,6 +158,7 @@ const commentThread = v.object({
   x: v.fallback(v.number(), 0),
   y: v.fallback(v.number(), 0),
   author: v.fallback(v.string(), ''),
+  authorColor: commentAuthorColor,
   text: v.fallback(v.string(), ''),
   createdAt: v.fallback(v.string(), ''),
   updatedAt: v.fallback(v.string(), ''),

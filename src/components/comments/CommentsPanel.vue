@@ -19,7 +19,6 @@ import { computed } from 'vue'
 import { useCommentMessages, useCommonMessages } from '@open-pencil/vue'
 
 import { listThreads } from '@/app/comments/list'
-import { formatCommentTime } from '@/app/comments/time'
 import { useComments } from '@/app/comments/use'
 import { useEditorStore } from '@/app/editor/active-store'
 import IconButton from '@/components/ui/button/IconButton.vue'
@@ -30,6 +29,7 @@ import AppTabsRoot from '@/components/ui/tabs/AppTabsRoot.vue'
 import AppTabsTrigger from '@/components/ui/tabs/AppTabsTrigger.vue'
 
 import CommentActionsMenu from './CommentActionsMenu.vue'
+import CommentTime from './CommentTime.vue'
 
 const store = useEditorStore()
 const comments = useComments()
@@ -171,7 +171,7 @@ function setSort(value: unknown) {
           >
             <span class="flex items-baseline gap-2 pr-14">
               <span class="truncate font-semibold">{{ thread.author || messages.someone }}</span>
-              <span class="shrink-0 text-muted">{{ formatCommentTime(thread.updatedAt) }}</span>
+              <CommentTime :at="thread.updatedAt" class="shrink-0 text-muted" />
             </span>
             <span class="line-clamp-2 break-words">{{ thread.text }}</span>
             <span class="text-muted">

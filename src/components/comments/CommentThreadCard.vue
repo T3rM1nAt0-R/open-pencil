@@ -10,7 +10,6 @@ import { ref } from 'vue'
 import type { CommentThread } from '@open-pencil/scene-graph'
 import { useCommentMessages, useCommonMessages } from '@open-pencil/vue'
 
-import { formatCommentTime } from '@/app/comments/time'
 import { useComments } from '@/app/comments/use'
 import AppButton from '@/components/ui/button/AppButton.vue'
 import IconButton from '@/components/ui/button/IconButton.vue'
@@ -18,6 +17,7 @@ import AppInput from '@/components/ui/input/AppInput.vue'
 import { useMenuUI } from '@/components/ui/menu/menu'
 
 import CommentActionsMenu from './CommentActionsMenu.vue'
+import CommentTime from './CommentTime.vue'
 
 const { thread } = defineProps<{ thread: CommentThread }>()
 
@@ -26,10 +26,8 @@ const messages = useCommentMessages()
 const common = useCommonMessages()
 const menuCls = useMenuUI({ content: 'min-w-40' })
 const replyText = ref('')
-const nameText = ref(comments.author.value)
 
 function sendReply() {
-  if (!comments.author.value && nameText.value.trim()) comments.setAuthor(nameText.value)
   comments.reply(thread.id, replyText.value)
   replyText.value = ''
 }
@@ -75,7 +73,7 @@ function sendReply() {
       <div>
         <div class="flex items-baseline gap-2">
           <span class="font-semibold">{{ thread.author || messages.someone }}</span>
-          <span class="text-muted">{{ formatCommentTime(thread.createdAt) }}</span>
+          <CommentTime :at="thread.createdAt" class="text-muted" />
           <span v-if="thread.resolved" class="ml-auto text-accent">{{ messages.resolved }}</span>
         </div>
         <p class="mt-1 break-words whitespace-pre-wrap">{{ thread.text }}</p>
@@ -88,7 +86,7 @@ function sendReply() {
       >
         <div class="flex items-baseline gap-2">
           <span class="font-semibold">{{ entry.author || messages.someone }}</span>
-          <span class="text-muted">{{ formatCommentTime(entry.createdAt) }}</span>
+          <CommentTime :at="entry.createdAt" class="text-muted" />
           <IconButton
             :label="messages.deleteReply"
             class="ml-auto opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
@@ -102,13 +100,6 @@ function sendReply() {
     </div>
 
     <form class="flex flex-col gap-2 border-t border-border p-2" @submit.prevent="sendReply">
-      <AppInput
-        v-if="!comments.author.value"
-        v-model="nameText"
-        size="sm"
-        :aria-label="messages.yourName"
-        :placeholder="messages.yourName"
-      />
       <div class="flex gap-2">
         <AppInput
           v-model="replyText"
