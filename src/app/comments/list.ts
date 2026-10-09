@@ -1,4 +1,4 @@
-import type { CommentThread } from './types'
+import type { CommentThread } from '@open-pencil/scene-graph'
 
 export type CommentsTab = 'open' | 'resolved'
 export type CommentsScope = 'page' | 'all'

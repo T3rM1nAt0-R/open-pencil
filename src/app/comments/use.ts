@@ -1,10 +1,11 @@
 import { computed } from 'vue'
 
+import type { CommentReply, CommentThread } from '@open-pencil/scene-graph'
+
 import type { EditorStore } from '@/app/editor/active-store'
 
 import {
   threads,
-  backend,
   commenting,
   panelOpen,
   listTab,
@@ -17,13 +18,10 @@ import {
   toggleCommenting,
   activeThreadId,
   draft,
-  status,
-  errorMessage,
   author,
   setAuthor,
   newId,
   now,
-  refresh,
   mutate,
   updateThread,
   pinPosition,
@@ -31,10 +29,9 @@ import {
   attachStore,
   detachStore
 } from './session'
-import type { CommentReply, CommentThread } from './types'
 
 export { pinPosition } from './session'
-export type { CommentDraft, CommentsStatus } from './session'
+export type { CommentDraft } from './session'
 
 export function useComments() {
   const openCount = computed(
@@ -161,7 +158,6 @@ export function useComments() {
     openCount,
     resolvedCount,
     showResolvedPins,
-    backend,
     commenting,
     panelOpen,
     listTab,
@@ -172,13 +168,10 @@ export function useComments() {
     pendingDeleteId,
     activeThreadId,
     draft,
-    status,
-    errorMessage,
     author,
     setAuthor,
     attach: attachStore,
     detach: detachStore,
-    refresh,
     setCommenting,
     toggleCommenting,
     startDraft,

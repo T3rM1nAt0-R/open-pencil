@@ -36,8 +36,7 @@ const comments = useComments()
 const messages = useCommentMessages()
 const common = useCommonMessages()
 const menuCls = useMenuUI({ content: 'min-w-44', item: 'justify-start gap-2' })
-const { listTab, listQuery, listScope, listSort, listOnlyMine, status, errorMessage, backend } =
-  comments
+const { listTab, listQuery, listScope, listSort, listOnlyMine } = comments
 
 const listed = computed(() =>
   listThreads(comments.threads.value, {
@@ -58,15 +57,6 @@ const filtered = computed(
 const emptyText = computed(() => {
   if (filtered.value) return messages.value.noMatches
   return listTab.value === 'open' ? messages.value.emptyOpen : messages.value.emptyResolved
-})
-
-const syncText = computed(() => {
-  if (status.value === 'error') {
-    return messages.value.syncFailed({ error: errorMessage.value ?? '' })
-  }
-  if (status.value === 'saving') return messages.value.saving
-  if (status.value === 'loading') return messages.value.loading
-  return backend.value?.shared ? messages.value.savedShared : messages.value.savedLocal
 })
 
 function replyCount(threadId: string) {
@@ -95,9 +85,6 @@ function setSort(value: unknown) {
   >
     <header class="flex items-center gap-1 border-b border-border py-1 pr-1 pl-3">
       <h2 class="flex-1 font-semibold">{{ messages.comments }}</h2>
-      <IconButton :label="messages.checkNow" @click="comments.refresh()">
-        <icon-lucide-refresh-cw class="size-3.5" />
-      </IconButton>
       <DropdownMenuRoot :modal="false">
         <DropdownMenuTrigger as-child>
           <IconButton :label="messages.filterAndSort" :active="filtered">
@@ -227,12 +214,5 @@ function setSort(value: unknown) {
         </ContextMenuPortal>
       </ContextMenuRoot>
     </ul>
-
-    <p
-      class="border-t border-border px-3 py-2 text-muted data-[error]:text-danger"
-      :data-error="status === 'error' || undefined"
-    >
-      {{ syncText }}
-    </p>
   </section>
 </template>

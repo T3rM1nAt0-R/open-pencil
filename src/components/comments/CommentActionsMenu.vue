@@ -8,9 +8,9 @@ import {
 } from 'reka-ui'
 import { computed } from 'vue'
 
+import type { CommentThread } from '@open-pencil/scene-graph'
 import { useCommentMessages, useCommonMessages } from '@open-pencil/vue'
 
-import type { CommentThread } from '@/app/comments/types'
 import { useComments } from '@/app/comments/use'
 import { useEditorStore } from '@/app/editor/active-store'
 import { useActionToast } from '@/app/shell/toast/action'

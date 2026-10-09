@@ -34,12 +34,6 @@ export const commentMessageDefaults = {
   noMatches: 'No comments match.',
   replyCount: params('Replies: {count}'),
   onLayer: params('On {name}'),
-  savedShared: 'Saved with the design on the shelf',
-  savedLocal: 'Only in this browser. Save the design to the shelf to share comments.',
-  saving: 'Saving…',
-  loading: 'Loading…',
-  syncFailed: params('Could not sync: {error}'),
-  checkNow: 'Check for new comments',
   commentDeleted: 'Comment deleted'
 } as const
 

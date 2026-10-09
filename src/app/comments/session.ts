@@ -1,28 +1,23 @@
-import { useIntervalFn, useLocalStorage } from '@vueuse/core'
-import { ref, shallowRef } from 'vue'
+import { useLocalStorage } from '@vueuse/core'
+import { ref } from 'vue'
 
+import type { CommentThread } from '@open-pencil/scene-graph'
 import type { Vector } from '@open-pencil/scene-graph/primitives'
 
 import type { EditorStore } from '@/app/editor/active-store'
 import type { PresencePoint } from '@/app/presence/types'
 
+import { readDocumentComments, writeDocumentComments } from './document'
 import type { CommentsScope, CommentsSort, CommentsTab } from './list'
-import { mergeThreads } from './merge'
-import { browserCommentsBackend, shelfCommentsBackend, type CommentsBackend } from './storage'
-import type { CommentThread } from './types'
 
-const REFRESH_MS = 10_000
-const DOCUMENT_CHECK_MS = 1_000
 // Same name the collaboration panel asks for, so people only type it once.
 const AUTHOR_KEY = 'op-collab-name'
 
 /** Where a comment is being written: a canvas point on a page. */
 export type CommentDraft = PresencePoint
-export type CommentsStatus = 'idle' | 'loading' | 'saving' | 'error'
 
 // One comments session for the app; it follows whichever document is active.
 export const threads = ref<CommentThread[]>([])
-export const backend = shallowRef<CommentsBackend | null>(null)
 export const commenting = ref(false)
 export const panelOpen = ref(false)
 export const listTab = ref<CommentsTab>('open')
@@ -33,13 +28,12 @@ export const listOnlyMine = useLocalStorage('op-comments-only-mine', false)
 export const pendingDeleteId = ref<string | null>(null)
 export const activeThreadId = ref<string | null>(null)
 export const draft = ref<CommentDraft | null>(null)
-export const status = ref<CommentsStatus>('idle')
-export const errorMessage = ref<string | null>(null)
 export const author = useLocalStorage<string>(AUTHOR_KEY, '')
 
 let boundStore: EditorStore | null = null
 let users = 0
-let writeChain: Promise<void> = Promise.resolve()
+let unsubscribe: (() => void) | null = null
+let refreshQueued = false
 
 export function setAuthor(name: string) {
   author.value = name.trim()
@@ -63,97 +57,38 @@ export function now(): string {
   return new Date().toISOString()
 }
 
-function documentKey(store: EditorStore): string {
-  const binding = store.getStorageBinding()
-  if (binding) return `storage:${binding.providerId}:${binding.documentId}`
-  const path = store.getDocumentFilePath()
-  return path ? `file:${path}` : `recovery:${store.getRecoveryId()}`
+/** Shows the comments the open document holds now. */
+function refresh() {
+  if (boundStore) threads.value = readDocumentComments(boundStore.graph)
 }
 
-function resolveBackend(store: EditorStore): CommentsBackend {
-  const binding = store.getStorageBinding()
-  if (binding) {
-    const shelf = shelfCommentsBackend(binding)
-    if (shelf) return shelf
-  }
-  const path = store.getDocumentFilePath()
-  return browserCommentsBackend(path ? `file:${path}` : `recovery:${store.getRecoveryId()}`)
+function queueRefresh() {
+  if (refreshQueued) return
+  refreshQueued = true
+  queueMicrotask(() => {
+    refreshQueued = false
+    refresh()
+  })
 }
 
-let lastDocumentKey: string | null = null
-
-function fail(error: unknown) {
-  status.value = 'error'
-  errorMessage.value = error instanceof Error ? error.message : String(error)
-  console.warn('[Comments]', error)
+/** Another document is open: nothing from the last one stays selected or half-written. */
+function forgetDocument() {
+  activeThreadId.value = null
+  draft.value = null
+  pendingDeleteId.value = null
+  refresh()
 }
 
-/** Pick up the open document's comments, and anything added elsewhere since. */
-export async function refresh() {
+/**
+ * Changes the open document's comments. The change starts from what the document holds, which
+ * includes edits a collaborator synced since this session last read it.
+ */
+export function mutate(change: (current: CommentThread[]) => CommentThread[]) {
   const store = boundStore
   if (!store) return
-  let next = backend.value
-  try {
-    lastDocumentKey = documentKey(store)
-    if (!next || lastDocumentKey !== next.key) next = resolveBackend(store)
-  } catch (error) {
-    fail(error)
-    return
-  }
-  const switched = backend.value?.key !== next.key
-  if (switched) {
-    backend.value = next
-    threads.value = []
-    activeThreadId.value = null
-    draft.value = null
-    status.value = 'loading'
-  }
-  try {
-    const remote = await next.load()
-    if (backend.value?.key !== next.key) return
-    threads.value = switched ? remote : mergeThreads(threads.value, remote)
-    if (status.value !== 'saving') status.value = 'idle'
-    errorMessage.value = null
-  } catch (error) {
-    fail(error)
-  }
-}
-
-const poller = useIntervalFn(() => void refresh(), REFRESH_MS, { immediate: false })
-
-// Opening or saving a design changes where its comments live; notice that quickly.
-const documentWatcher = useIntervalFn(
-  () => {
-    if (boundStore && documentKey(boundStore) !== lastDocumentKey) void refresh()
-  },
-  DOCUMENT_CHECK_MS,
-  { immediate: false }
-)
-
-/** Change comments locally at once, then join with the stored copy and write it back. */
-export function mutate(change: (current: CommentThread[]) => CommentThread[]) {
-  threads.value = change(threads.value)
-  const target = backend.value
-  const store = boundStore
-  if (!target || !store) return
-  // Keep this document's comments now: by the time the write runs, another design may be open.
-  const local = threads.value
-  const documentName = store.state.documentName
-  writeChain = writeChain.then(() => persist(target, local, documentName))
-}
-
-async function persist(target: CommentsBackend, local: CommentThread[], documentName: string) {
-  status.value = 'saving'
-  try {
-    const remote = await target.load()
-    const merged = mergeThreads(local, remote)
-    await target.save(merged, documentName)
-    if (backend.value?.key === target.key) threads.value = mergeThreads(threads.value, merged)
-    status.value = 'idle'
-    errorMessage.value = null
-  } catch (error) {
-    fail(error)
-  }
+  const next = change(readDocumentComments(store.graph))
+  writeDocumentComments(store.graph, next)
+  threads.value = next
 }
 
 export function updateThread(id: string, patch: (thread: CommentThread) => CommentThread) {
@@ -177,17 +112,36 @@ export function activeStore(): EditorStore | null {
   return boundStore
 }
 
+function subscribe(store: EditorStore) {
+  const stops = [
+    // Comments change on the document node: here, from a collaborator, or by opening a file.
+    store.onEditorEvent('node:updated', (id) => {
+      if (id === store.graph.rootId) queueRefresh()
+    }),
+    // A collaboration room can bring its own document node.
+    store.onEditorEvent('node:created', (node) => {
+      if (node.parentId === null) queueRefresh()
+    }),
+    store.onEditorEvent('graph:replaced', forgetDocument)
+  ]
+  return () => {
+    for (const stop of stops) stop()
+  }
+}
+
 export function attachStore(store: EditorStore) {
-  boundStore = store
   users++
-  void refresh()
-  poller.resume()
-  documentWatcher.resume()
+  if (boundStore === store) return
+  unsubscribe?.()
+  boundStore = store
+  unsubscribe = subscribe(store)
+  forgetDocument()
 }
 
 export function detachStore() {
   users = Math.max(0, users - 1)
   if (users > 0) return
-  poller.pause()
-  documentWatcher.pause()
+  unsubscribe?.()
+  unsubscribe = null
+  boundStore = null
 }

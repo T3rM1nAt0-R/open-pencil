@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 
+import type { CommentThread } from '@open-pencil/scene-graph'
+
 import { listThreads, type CommentsListOptions } from '@/app/comments/list'
-import type { CommentThread } from '@/app/comments/types'
 
 function thread(id: string, patch: Partial<CommentThread> = {}): CommentThread {
   return {

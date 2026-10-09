@@ -30,11 +30,5 @@
   "noMatches": "一致するコメントはありません。",
   "replyCount": "返信: {count}",
   "onLayer": "{name} 上",
-  "savedShared": "ストレージにデザインと一緒に保存済み",
-  "savedLocal": "このブラウザーのみ。コメントを共有するにはデザインをストレージに保存してください。",
-  "saving": "保存中…",
-  "loading": "読み込み中…",
-  "syncFailed": "同期できませんでした: {error}",
-  "checkNow": "新しいコメントを確認",
   "commentDeleted": "コメントを削除しました"
 }

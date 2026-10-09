@@ -1,9 +1,10 @@
 import 'fake-indexeddb/auto'
-import { expect, test } from 'bun:test'
+import { afterEach, expect, test } from 'bun:test'
 
-import { attachStore, detachStore, mutate, refresh } from '@/app/comments/session'
-import { browserCommentsBackend } from '@/app/comments/storage'
-import type { CommentThread } from '@/app/comments/types'
+import type { CommentThread } from '@open-pencil/scene-graph'
+
+import { readDocumentComments } from '@/app/comments/document'
+import { attachStore, detachStore, mutate, threads } from '@/app/comments/session'
 import { createEditorStore } from '@/app/editor/session/create'
 
 function thread(id: string): CommentThread {
@@ -21,24 +22,49 @@ function thread(id: string): CommentThread {
   }
 }
 
-test('a comment saves to its own document when another opens before the write', async () => {
+const ids = (list: CommentThread[]) => list.map((entry) => entry.id)
+
+afterEach(() => {
+  detachStore()
+})
+
+test('a comment lands in the document it was written in, not the next one opened', () => {
   const first = createEditorStore()
   const second = createEditorStore()
-  const firstComments = browserCommentsBackend(`recovery:${first.getRecoveryId()}`)
-  const secondComments = browserCommentsBackend(`recovery:${second.getRecoveryId()}`)
-  await secondComments.save([thread('other')], 'Other')
 
   attachStore(first)
-  await refresh()
   mutate((current) => [...current, thread('mine')])
+  detachStore()
   attachStore(second)
-  await refresh()
-  await new Promise<void>((resolve) => {
-    setTimeout(resolve, 0)
-  })
+  expect(threads.value).toEqual([])
+  mutate((current) => [...current, thread('other')])
 
-  expect((await firstComments.load()).map((t) => t.id)).toEqual(['mine'])
-  expect((await secondComments.load()).map((t) => t.id)).toEqual(['other'])
-  detachStore()
-  detachStore()
+  expect(ids(readDocumentComments(first.graph))).toEqual(['mine'])
+  expect(ids(readDocumentComments(second.graph))).toEqual(['other'])
+})
+
+test('commenting marks the document changed without adding an undo step', () => {
+  const store = createEditorStore()
+  store.markDocumentSaved()
+  const canUndo = store.undo.canUndo
+  attachStore(store)
+
+  mutate((current) => [...current, thread('a')])
+
+  expect(store.hasUnsavedChanges()).toBe(true)
+  expect(store.undo.canUndo).toBe(canUndo)
+})
+
+test('comments written to the document from elsewhere show up', async () => {
+  const store = createEditorStore()
+  attachStore(store)
+  const root = store.graph.getNode(store.graph.rootId)
+  if (!root) throw new Error('Root missing')
+
+  store.graph.updateNode(root.id, {
+    pluginData: [{ pluginId: 'open-pencil', key: 'comments', value: JSON.stringify([thread('x')]) }]
+  })
+  await Promise.resolve()
+
+  expect(ids(threads.value)).toEqual(['x'])
 })

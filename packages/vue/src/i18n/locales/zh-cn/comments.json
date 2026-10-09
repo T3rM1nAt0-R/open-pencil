@@ -30,11 +30,5 @@
   "noMatches": "没有匹配的评论。",
   "replyCount": "回复：{count}",
   "onLayer": "位于 {name}",
-  "savedShared": "已与设计一起保存在存储中",
-  "savedLocal": "仅在此浏览器中。将设计保存到存储以共享评论。",
-  "saving": "正在保存…",
-  "loading": "正在加载…",
-  "syncFailed": "无法同步：{error}",
-  "checkNow": "检查新评论",
   "commentDeleted": "评论已删除"
 }

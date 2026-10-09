@@ -30,11 +30,5 @@
   "noMatches": "Aucun commentaire ne correspond.",
   "replyCount": "Réponses : {count}",
   "onLayer": "Sur {name}",
-  "savedShared": "Enregistré avec le design dans le stockage",
-  "savedLocal": "Uniquement dans ce navigateur. Enregistrez le design dans le stockage pour partager les commentaires.",
-  "saving": "Enregistrement…",
-  "loading": "Chargement…",
-  "syncFailed": "Échec de la synchronisation : {error}",
-  "checkNow": "Rechercher de nouveaux commentaires",
   "commentDeleted": "Commentaire supprimé"
 }

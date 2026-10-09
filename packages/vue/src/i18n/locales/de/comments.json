@@ -30,11 +30,5 @@
   "noMatches": "Keine passenden Kommentare.",
   "replyCount": "Antworten: {count}",
   "onLayer": "Auf {name}",
-  "savedShared": "Mit dem Design im Speicher gesichert",
-  "savedLocal": "Nur in diesem Browser. Speichere das Design im Speicher, um Kommentare zu teilen.",
-  "saving": "Wird gespeichert…",
-  "loading": "Wird geladen…",
-  "syncFailed": "Synchronisierung fehlgeschlagen: {error}",
-  "checkNow": "Nach neuen Kommentaren suchen",
   "commentDeleted": "Kommentar gelöscht"
 }

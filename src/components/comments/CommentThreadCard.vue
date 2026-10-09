@@ -7,10 +7,10 @@ import {
 } from 'reka-ui'
 import { ref } from 'vue'
 
+import type { CommentThread } from '@open-pencil/scene-graph'
 import { useCommentMessages, useCommonMessages } from '@open-pencil/vue'
 
 import { formatCommentTime } from '@/app/comments/time'
-import type { CommentThread } from '@/app/comments/types'
 import { useComments } from '@/app/comments/use'
 import AppButton from '@/components/ui/button/AppButton.vue'
 import IconButton from '@/components/ui/button/IconButton.vue'

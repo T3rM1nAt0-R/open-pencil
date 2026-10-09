@@ -30,11 +30,5 @@
   "noMatches": "Brak pasujących komentarzy.",
   "replyCount": "Odpowiedzi: {count}",
   "onLayer": "Na {name}",
-  "savedShared": "Zapisano razem z projektem w magazynie",
-  "savedLocal": "Tylko w tej przeglądarce. Zapisz projekt w magazynie, aby udostępnić komentarze.",
-  "saving": "Zapisywanie…",
-  "loading": "Wczytywanie…",
-  "syncFailed": "Nie udało się zsynchronizować: {error}",
-  "checkNow": "Sprawdź nowe komentarze",
   "commentDeleted": "Usunięto komentarz"
 }

@@ -30,11 +30,5 @@
   "noMatches": "Ningún comentario coincide.",
   "replyCount": "Respuestas: {count}",
   "onLayer": "En {name}",
-  "savedShared": "Guardado con el diseño en el almacenamiento",
-  "savedLocal": "Solo en este navegador. Guarda el diseño en el almacenamiento para compartir comentarios.",
-  "saving": "Guardando…",
-  "loading": "Cargando…",
-  "syncFailed": "No se pudo sincronizar: {error}",
-  "checkNow": "Buscar comentarios nuevos",
   "commentDeleted": "Comentario eliminado"
 }
