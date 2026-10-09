@@ -2,6 +2,7 @@
 import type { Color } from '@open-pencil/scene-graph/primitives'
 import { useCommentMessages } from '@open-pencil/vue'
 
+import MarkdownContent from '@/components/markdown/MarkdownContent.vue'
 import PersonAvatar from '@/components/presence/PersonAvatar.vue'
 import { PEER_COLORS } from '@/constants'
 import { comments } from '@/theme/comments'
@@ -30,6 +31,6 @@ const ui = comments()
       <CommentTime :at="at" :class="ui.messageTime()" />
       <span v-if="$slots.actions" :class="ui.messageActions()"><slot name="actions" /></span>
     </div>
-    <p :class="ui.messageText()">{{ text }}</p>
+    <MarkdownContent :content="text" :class="ui.messageText()" />
   </article>
 </template>

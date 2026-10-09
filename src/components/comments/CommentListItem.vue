@@ -5,6 +5,7 @@ import { computed } from 'vue'
 import type { CommentThread } from '@open-pencil/scene-graph'
 import { useCommentMessages } from '@open-pencil/vue'
 
+import { commentPreview } from '@/app/comments/format'
 import AvatarStack from '@/components/presence/AvatarStack.vue'
 import type { PresencePersonRow } from '@/components/presence/rows'
 import { PEER_COLORS } from '@/constants'
@@ -63,7 +64,7 @@ const people = computed<PresencePersonRow[]>(() =>
       <span :class="ui.messageAuthor()">{{ thread.author || messages.someone }}</span>
       <CommentTime :at="thread.createdAt" :class="ui.messageTime()" />
     </div>
-    <p :class="ui.itemText()">{{ thread.text }}</p>
+    <p :class="ui.itemText()">{{ commentPreview(thread.text) }}</p>
     <span v-if="replies.length" :class="ui.itemReplies()">
       {{ messages.replyCount({ count: replies.length }) }}
     </span>

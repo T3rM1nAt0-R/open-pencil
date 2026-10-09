@@ -14,7 +14,7 @@ export const comments = tv({
     messageTime: 'shrink-0 text-[11px] text-muted',
     messageActions:
       'ml-auto flex shrink-0 opacity-0 group-focus-within/message:opacity-100 group-hover/message:opacity-100',
-    messageText: 'col-start-2 min-w-0 text-xs break-words whitespace-pre-wrap text-surface',
+    messageText: 'col-start-2 min-w-0 text-xs break-words text-surface',
     composerSlot: 'border-t border-border p-2',
     draft: 'p-2',
     composer:
