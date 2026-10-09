@@ -86,3 +86,22 @@ test('a pin stays where its layer was when the layer is deleted', async () => {
   expect(detached?.nodeId).toBeNull()
   expect(detached && pinPosition(store, detached)).toEqual({ x: 310, y: 55 })
 })
+
+test('a collaborator’s save that lacks this session’s comment does not lose it', async () => {
+  const store = createEditorStore()
+  attachStore(store)
+  mutate((current) => [...current, thread('mine')])
+  const root = store.graph.getNode(store.graph.rootId)
+  if (!root) throw new Error('Root missing')
+
+  // Their copy was written before ours arrived, so it replaces the list whole.
+  store.graph.updateNode(root.id, {
+    pluginData: [
+      { pluginId: 'open-pencil', key: 'comments', value: JSON.stringify([thread('theirs')]) }
+    ]
+  })
+  await Promise.resolve()
+
+  expect(ids(readDocumentComments(store.graph)).toSorted()).toEqual(['mine', 'theirs'])
+  expect(ids(threads.value).toSorted()).toEqual(['mine', 'theirs'])
+})

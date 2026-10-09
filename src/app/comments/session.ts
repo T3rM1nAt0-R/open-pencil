@@ -10,6 +10,7 @@ import type { PresencePoint } from '@/app/presence/types'
 
 import { readDocumentComments, writeDocumentComments } from './document'
 import type { CommentsSort } from './list'
+import { hasNewerComments, mergeThreads } from './merge'
 
 /** Where a comment is being written: a canvas point on a page. */
 export type CommentDraft = PresencePoint
@@ -30,7 +31,7 @@ export const draft = ref<CommentDraft | null>(null)
 let boundStore: EditorStore | null = null
 let users = 0
 let unsubscribe: (() => void) | null = null
-let refreshQueued = false
+let reconcileQueued = false
 // Where each pin was last drawn on its layer, so deleting the layer leaves the pin there.
 const lastSeen = new Map<string, Vector>()
 
@@ -64,12 +65,30 @@ function refresh() {
   if (boundStore) threads.value = readDocumentComments(boundStore.graph)
 }
 
-function queueRefresh() {
-  if (refreshQueued) return
-  refreshQueued = true
+/**
+ * The document's comments changed under this session. A collaborator's save replaces them
+ * whole, so when two people comment at once one copy wins; whatever this session had that the
+ * winning copy lacks is merged back in and written again.
+ */
+function reconcile() {
+  const store = boundStore
+  if (!store) return
+  const incoming = readDocumentComments(store.graph)
+  if (!hasNewerComments(threads.value, incoming)) {
+    threads.value = incoming
+    return
+  }
+  const merged = mergeThreads(threads.value, incoming)
+  writeDocumentComments(store.graph, merged)
+  threads.value = merged
+}
+
+function queueReconcile() {
+  if (reconcileQueued) return
+  reconcileQueued = true
   queueMicrotask(() => {
-    refreshQueued = false
-    refresh()
+    reconcileQueued = false
+    reconcile()
   })
 }
 
@@ -133,11 +152,11 @@ function subscribe(store: EditorStore) {
   const stops = [
     // Comments change on the document node: here, from a collaborator, or by opening a file.
     store.onEditorEvent('node:updated', (id) => {
-      if (id === store.graph.rootId) queueRefresh()
+      if (id === store.graph.rootId) queueReconcile()
     }),
-    // A collaboration room can bring its own document node.
+    // A collaboration room can bring its own document node, with its own comments.
     store.onEditorEvent('node:created', (node) => {
-      if (node.parentId === null) queueRefresh()
+      if (node.parentId === null) queueMicrotask(refresh)
     }),
     store.onEditorEvent('node:deleted', (id) => {
       queueMicrotask(() => detachFromLayer(id))
