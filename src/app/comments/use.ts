@@ -15,6 +15,7 @@ import type { Vector } from '@open-pencil/scene-graph/primitives'
 
 import { useCollabIdentity } from '@/app/collab/identity'
 import { useActiveEditorStoreRef } from '@/app/editor/active-store'
+import type { PagePoint } from '@/app/editor/pages/point'
 import { setCommentsOnCanvas } from '@/app/settings/preferences/apply'
 import {
   appPreferences,
@@ -23,13 +24,6 @@ import {
 } from '@/app/settings/preferences/store'
 
 import { followDocumentComments } from './document'
-
-/** Where a new comment is being written: a canvas point on a page. */
-export interface CommentDraft {
-  pageId: string
-  x: number
-  y: number
-}
 
 /** A comment preference the list and menus read and change in place. */
 function preference<K extends keyof CommentPreferences>(
@@ -54,7 +48,7 @@ export const useComments = createGlobalState(() => {
   const storeRef = useActiveEditorStoreRef()
 
   const activeThreadId = ref<string | null>(null)
-  const draft = ref<CommentDraft | null>(null)
+  const draft = ref<PagePoint | null>(null)
   /** Deleting asks first; the confirmation dialog listens for which thread. */
   const deleteRequested = createEventHook<string>()
   const listQuery = ref('')
@@ -75,7 +69,7 @@ export const useComments = createGlobalState(() => {
     return { name: identity.name.value, color: identity.color }
   }
 
-  function startDraft(at: CommentDraft) {
+  function startDraft(at: PagePoint) {
     activeThreadId.value = null
     draft.value = at
   }
