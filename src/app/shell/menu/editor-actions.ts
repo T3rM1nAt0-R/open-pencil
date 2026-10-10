@@ -61,6 +61,10 @@ export function createSharedEditorMenuActions(
       store.state.showRulers = !store.state.showRulers
       store.requestRepaint()
     },
+    'view-pixel-grid': () => {
+      store.state.showPixelGrid = store.state.showPixelGrid === false
+      store.requestRepaint()
+    },
     'view-multiplayer-cursors': () => {
       store.state.showRemoteCursors = !store.state.showRemoteCursors
       store.requestRepaint()

@@ -89,6 +89,11 @@ export function useCanvasInput(
     )
   }
 
+  /** ⌘ or Ctrl held: hover reaches the deepest layer, the one a click would select, as in Figma. */
+  function hoverDeep(e?: MouseEvent) {
+    return e ? e.metaKey || e.ctrlKey : metaHeld || controlHeld
+  }
+
   function refreshMeasurement() {
     const mode = altHeld && canMeasure() ? (metaHeld || controlHeld ? 'deep' : 'shallow') : 'off'
     editor.setMeasurementMode(mode)
@@ -100,7 +105,7 @@ export function useCanvasInput(
       pointer.cy,
       editor,
       hitFns,
-      mode === 'deep'
+      mode === 'deep' || hoverDeep()
     )
     editor.setAutoLayoutHover(
       mode === 'off' ? resolveAutoLayoutHover(pointer.cx, pointer.cy, editor) : null
@@ -145,6 +150,7 @@ export function useCanvasInput(
     hitTestInScope,
     hitTestSectionTitle,
     hitTestComponentLabel,
+    hitTestFrameTitle,
     getClickCount,
     wasSelectedBeforeClickSequence: (id) => selectedIdsBeforeClickSequence.value.has(id),
     onEditCanvasLabel: canvasLabelEdit.start,
@@ -296,7 +302,13 @@ export function useCanvasInput(
       const guideCursor = guideInput.updateHover(sx, sy)
       cursorOverride.value =
         guideCursor ??
-        updateHoverCursor(cx, cy, editor, hitFns, editor.state.measurementMode === 'deep')
+        updateHoverCursor(
+          cx,
+          cy,
+          editor,
+          hitFns,
+          editor.state.measurementMode === 'deep' || hoverDeep(e)
+        )
       editor.setAutoLayoutHover(
         editor.state.measurementMode === 'off' ? resolveAutoLayoutHover(cx, cy, editor) : null
       )
@@ -311,6 +323,11 @@ export function useCanvasInput(
     }
 
     const { sx, sy, cx, cy } = getCoords(e)
+
+    if (d.type === 'gradient') {
+      d.update(sx, sy, e.shiftKey)
+      return
+    }
 
     if (d.type === 'guide') {
       const frameId = e.altKey && !d.guideId ? selectedTopLevelGuideFrameId(editor) : null
@@ -396,7 +413,7 @@ export function useCanvasInput(
         editor.commitRotation(d.nodeId, d.origRotation)
       }
       if (editor.state.rotationPreview === preview) editor.setRotationPreview(null)
-    } else if (d.type === 'draw') d.commit()
+    } else if (d.type === 'draw' || d.type === 'gradient') d.commit()
     else if (d.type === 'marquee') editor.setMarquee(null)
 
     drag.value = null
@@ -417,7 +434,7 @@ export function useCanvasInput(
       drag.value = null
       if (editor.state.rotationPreview?.nodeId === rotation.nodeId) editor.setRotationPreview(null)
     }
-    if (drag.value?.type === 'draw') {
+    if (drag.value?.type === 'draw' || drag.value?.type === 'gradient') {
       const drawing = drag.value
       drag.value = null
       drawing.cancel()
@@ -474,7 +491,8 @@ export function useCanvasInput(
     'keydown',
     (event) => {
       if (event.code !== 'Escape' || event.isComposing || !isEnabled()) return
-      if (drag.value?.type !== 'draw' && drag.value?.type !== 'rotate') return
+      const type = drag.value?.type
+      if (type !== 'draw' && type !== 'gradient' && type !== 'rotate') return
       event.preventDefault()
       event.stopImmediatePropagation()
       cancelPointerInteraction()

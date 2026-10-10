@@ -24,6 +24,8 @@ export interface DragDraw {
   toLocal: (x: number, y: number) => Vector
   /** A line is drawn by its length and angle, as in Figma, not as a box. */
   line?: boolean
+  /** Lands a coordinate on the pixel grid while Snap to pixel grid is on. */
+  snap: (value: number) => number
   nodeId: string
   update: (changes: Partial<SceneNode>) => void
   commit: () => void
@@ -164,8 +166,18 @@ export interface DragGuide {
   originalPosition?: number
 }
 
+/** Dragging a handle or stop of the gradient whose picker is open. */
+export interface DragGradient {
+  type: 'gradient'
+  /** Moves the dragged handle or stop to a screen point. */
+  update: (screenX: number, screenY: number, shiftKey: boolean) => void
+  commit: () => void
+  cancel: () => void
+}
+
 export type DragState =
   | DragDraw
+  | DragGradient
   | DragMove
   | DragPan
   | DragResize

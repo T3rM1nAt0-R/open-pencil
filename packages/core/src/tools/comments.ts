@@ -24,7 +24,7 @@ export const getComments = defineTool({
     'resolved. Open threads only unless includeResolved is set. Use it to find review ' +
     'feedback to act on, then reply_to_comment and resolve_comment.',
   execution: { kind: 'sync', mutation: 'none' },
-  input: v.object({
+  input: v.strictObject({
     includeResolved: v.optional(v.pipe(v.boolean(), v.description('Also list resolved threads'))),
     page: v.optional(v.pipe(v.string(), v.description('Only threads on this page ID'))),
     author: v.optional(
@@ -52,7 +52,7 @@ export const addComment = defineTool({
     'by ID, which it then follows, or at x, y on a page. Text may use Markdown: **bold**, ' +
     '*italic*, ~~strikethrough~~, [links](https://…), and - or 1. lists.',
   execution: { kind: 'sync', mutation: 'document' },
-  input: v.object({
+  input: v.strictObject({
     text: v.pipe(v.string(), v.minLength(1), v.description('The comment, in Markdown')),
     node: v.optional(v.pipe(v.string(), v.description('Layer ID to pin the comment on'))),
     page: v.optional(
@@ -81,7 +81,7 @@ export const replyToComment = defineTool({
     'Answer a comment thread by ID from get_comments, for example to say what you changed. A ' +
     'reply reopens a resolved thread. Text may use Markdown, as in add_comment.',
   execution: { kind: 'sync', mutation: 'document' },
-  input: v.object({
+  input: v.strictObject({
     id: v.pipe(v.string(), v.description('Comment thread ID')),
     text: v.pipe(v.string(), v.minLength(1), v.description('The reply, in Markdown')),
     author
@@ -103,7 +103,7 @@ export const resolveComment = defineTool({
     'Mark a comment thread by ID as resolved once its feedback is addressed, which hides it ' +
     'from the canvas and the open list; pass resolved: false to reopen it.',
   execution: { kind: 'sync', mutation: 'document' },
-  input: v.object({
+  input: v.strictObject({
     id: v.pipe(v.string(), v.description('Comment thread ID')),
     resolved: v.optional(
       v.pipe(v.boolean(), v.description('false reopens the thread; true by default'))

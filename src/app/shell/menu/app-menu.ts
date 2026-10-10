@@ -118,6 +118,7 @@ export function useAppMenu() {
     variables: 'variables',
     'insert-icon': 'insertIcon',
     'view-rulers': 'rulers',
+    'view-pixel-grid': 'pixelGrid',
     'view-multiplayer-cursors': 'multiplayerCursors',
     'view-design-issues': 'designIssues',
     'view-comments': 'comments',
@@ -198,6 +199,8 @@ export function useAppMenu() {
         return store.renderer?.profiler.hudVisible ?? false
       case 'view-rulers':
         return store.state.showRulers
+      case 'view-pixel-grid':
+        return store.state.showPixelGrid !== false
       case 'view-multiplayer-cursors':
         return store.state.showRemoteCursors
       case 'view-design-issues':
@@ -232,6 +235,10 @@ export function useAppMenu() {
       case 'view-rulers':
         return (value: boolean) => {
           if (store.state.showRulers !== value) itemAction(item)?.()
+        }
+      case 'view-pixel-grid':
+        return (value: boolean) => {
+          if ((store.state.showPixelGrid !== false) !== value) itemAction(item)?.()
         }
       case 'view-multiplayer-cursors':
         return (value: boolean) => {
