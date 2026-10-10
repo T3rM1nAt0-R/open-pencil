@@ -1,8 +1,11 @@
 import { expect, test } from 'bun:test'
 
-import type { CommentThread } from '@open-pencil/scene-graph'
+import {
+  hasNewerComments,
+  mergeCommentThreads,
+  type CommentThread
+} from '@open-pencil/scene-graph'
 
-import { hasNewerComments, mergeThreads } from '@/app/comments/merge'
 
 function thread(id: string, patch: Partial<CommentThread> = {}): CommentThread {
   return {
@@ -30,7 +33,7 @@ const reply = (id: string, deleted?: boolean) => ({
 
 test('keeps threads from both copies and the newer edit of a shared one', () => {
   const later = '2026-10-08T11:00:00.000Z'
-  const merged = mergeThreads(
+  const merged = mergeCommentThreads(
     [thread('a', { resolved: true, updatedAt: later }), thread('mine')],
     [thread('a'), thread('theirs')]
   )
@@ -39,7 +42,7 @@ test('keeps threads from both copies and the newer edit of a shared one', () => 
 })
 
 test('joins replies and never brings a deleted thread or reply back', () => {
-  const [merged] = mergeThreads(
+  const [merged] = mergeCommentThreads(
     [thread('a', { deleted: true, replies: [reply('r'), reply('mine')] })],
     [thread('a', { updatedAt: '2026-10-09T00:00:00.000Z', replies: [reply('r', true)] })]
   )
@@ -52,7 +55,7 @@ test('joins replies and never brings a deleted thread or reply back', () => {
 
 test('knows when a copy already holds everything another has', () => {
   const local = [thread('a', { replies: [reply('r')] })]
-  expect(hasNewerComments(local, mergeThreads(local, [thread('b')]))).toBe(false)
+  expect(hasNewerComments(local, mergeCommentThreads(local, [thread('b')]))).toBe(false)
   expect(hasNewerComments(local, [thread('a')])).toBe(true)
   expect(hasNewerComments([thread('a', { deleted: true })], [thread('a')])).toBe(true)
 })

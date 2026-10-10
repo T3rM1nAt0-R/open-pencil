@@ -1,8 +1,8 @@
-import type { CommentThread } from '@open-pencil/scene-graph'
+import type { CommentThread } from '../types'
 
-export type CommentsSort = 'newest' | 'oldest'
+export type CommentSort = 'newest' | 'oldest'
 
-export interface CommentsListOptions {
+export interface CommentListOptions {
   query: string
   showResolved: boolean
   /** Only threads on `pageId`. */
@@ -11,7 +11,7 @@ export interface CommentsListOptions {
   /** Only threads `author` started or replied to. */
   onlyMine: boolean
   author: string
-  sort: CommentsSort
+  sort: CommentSort
 }
 
 function liveReplies(thread: CommentThread) {
@@ -32,15 +32,15 @@ function takesPart(thread: CommentThread, author: string): boolean {
  * Each thread's number, counted in the order threads were started, as Figma numbers them in its
  * list. Deleted threads keep their place so the numbers people refer to do not shift.
  */
-export function threadNumbers(threads: readonly CommentThread[]): Map<string, number> {
+export function commentThreadNumbers(threads: readonly CommentThread[]): Map<string, number> {
   const started = threads.toSorted((a, b) => a.createdAt.localeCompare(b.createdAt))
   return new Map(started.map((thread, index) => [thread.id, index + 1]))
 }
 
 /** The threads the comments list shows for its search, filters and order. */
-export function listThreads(
+export function listCommentThreads(
   threads: readonly CommentThread[],
-  options: CommentsListOptions
+  options: CommentListOptions
 ): CommentThread[] {
   const query = options.query.trim().toLocaleLowerCase()
   const author = options.author.trim()

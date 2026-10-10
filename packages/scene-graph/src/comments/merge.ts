@@ -1,4 +1,4 @@
-import type { CommentReply, CommentThread } from '@open-pencil/scene-graph'
+import type { CommentReply, CommentThread } from '../types'
 
 function mergeReplies(first: CommentReply[], second: CommentReply[]): CommentReply[] {
   const byId = new Map<string, CommentReply>()
@@ -18,7 +18,7 @@ function mergeReplies(first: CommentReply[], second: CommentReply[]): CommentRep
  * joined by id, and for a thread both copies changed, the newer edit wins while replies from
  * both are kept. Deleted threads and replies stay deleted.
  */
-export function mergeThreads(
+export function mergeCommentThreads(
   local: readonly CommentThread[],
   remote: readonly CommentThread[]
 ): CommentThread[] {

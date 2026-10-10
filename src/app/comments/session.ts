@@ -1,16 +1,20 @@
 import { useLocalStorage } from '@vueuse/core'
 import { ref } from 'vue'
 
-import type { CommentThread } from '@open-pencil/scene-graph'
+import {
+  commentPosition,
+  editCommentThread,
+  hasNewerComments,
+  mergeCommentThreads,
+  readComments,
+  writeComments,
+  type CommentSort,
+  type CommentThread
+} from '@open-pencil/scene-graph'
 import type { Vector } from '@open-pencil/scene-graph/primitives'
-import { randomHex } from '@open-pencil/scene-graph/random'
 
 import type { EditorStore } from '@/app/editor/active-store'
 import type { PresencePoint } from '@/app/presence/types'
-
-import { readDocumentComments, writeDocumentComments } from './document'
-import type { CommentsSort } from './list'
-import { hasNewerComments, mergeThreads } from './merge'
 
 /** Where a comment is being written: a canvas point on a page. */
 export type CommentDraft = PresencePoint
@@ -22,7 +26,7 @@ export const pinsHidden = useLocalStorage('op-comments-hidden', false)
 export const listQuery = ref('')
 export const listShowResolved = useLocalStorage('op-comments-show-resolved', false)
 export const listOnlyPage = useLocalStorage('op-comments-only-page', false)
-export const listSort = useLocalStorage<CommentsSort>('op-comments-sort', 'newest')
+export const listSort = useLocalStorage<CommentSort>('op-comments-sort', 'newest')
 export const listOnlyMine = useLocalStorage('op-comments-only-mine', false)
 export const pendingDeleteId = ref<string | null>(null)
 export const activeThreadId = ref<string | null>(null)
@@ -52,17 +56,13 @@ export function dismissComment(): boolean {
   return false
 }
 
-export function newId(prefix: string): string {
-  return `${prefix}_${randomHex(8)}`
-}
-
 export function now(): string {
   return new Date().toISOString()
 }
 
 /** Shows the comments the open document holds now. */
 function refresh() {
-  if (boundStore) threads.value = readDocumentComments(boundStore.graph)
+  if (boundStore) threads.value = readComments(boundStore.graph)
 }
 
 /**
@@ -73,13 +73,13 @@ function refresh() {
 function reconcile() {
   const store = boundStore
   if (!store) return
-  const incoming = readDocumentComments(store.graph)
+  const incoming = readComments(store.graph)
   if (!hasNewerComments(threads.value, incoming)) {
     threads.value = incoming
     return
   }
-  const merged = mergeThreads(threads.value, incoming)
-  writeDocumentComments(store.graph, merged)
+  const merged = mergeCommentThreads(threads.value, incoming)
+  writeComments(store.graph, merged)
   threads.value = merged
 }
 
@@ -108,28 +108,20 @@ function forgetDocument() {
 export function mutate(change: (current: CommentThread[]) => CommentThread[]) {
   const store = boundStore
   if (!store) return
-  const next = change(readDocumentComments(store.graph))
-  writeDocumentComments(store.graph, next)
+  const next = change(readComments(store.graph))
+  writeComments(store.graph, next)
   threads.value = next
 }
 
-export function updateThread(id: string, patch: (thread: CommentThread) => CommentThread) {
-  mutate((current) =>
-    current.map((thread) => (thread.id === id ? { ...patch(thread), updatedAt: now() } : thread))
-  )
+export function updateThread(id: string, edit: (thread: CommentThread) => CommentThread) {
+  mutate((current) => editCommentThread(current, id, now(), edit))
 }
 
+/** Where a pin is drawn now; remembered while it follows a layer, for when that layer goes. */
 export function pinPosition(store: EditorStore, thread: CommentThread): Vector {
-  if (thread.nodeId) {
-    const node = store.graph.getNode(thread.nodeId)
-    if (node) {
-      const abs = store.graph.getAbsolutePosition(node.id)
-      const at = { x: abs.x + (thread.offsetX ?? 0), y: abs.y + (thread.offsetY ?? 0) }
-      lastSeen.set(thread.id, at)
-      return at
-    }
-  }
-  return { x: thread.x, y: thread.y }
+  const at = commentPosition(store.graph, thread)
+  if (thread.nodeId && store.graph.getNode(thread.nodeId)) lastSeen.set(thread.id, at)
+  return at
 }
 
 /** The layer a pin followed is gone: the pin stays where it was last seen, on the canvas. */

@@ -16,9 +16,9 @@ import {
 } from 'reka-ui'
 import { computed } from 'vue'
 
+import { commentThreadNumbers, listCommentThreads } from '@open-pencil/scene-graph'
 import { formatShortcut, useCommentMessages } from '@open-pencil/vue'
 
-import { listThreads, threadNumbers } from '@/app/comments/list'
 import { useComments } from '@/app/comments/use'
 import { useEditorStore } from '@/app/editor/active-store'
 import IconButton from '@/components/ui/button/IconButton.vue'
@@ -41,9 +41,9 @@ const itemCls = menuItem({ justify: 'start', class: 'relative pl-7' })
 const ui = commentsTheme()
 const { listQuery, listShowResolved, listOnlyPage, listSort, listOnlyMine, pinsHidden } = comments
 
-const numbers = computed(() => threadNumbers(comments.threads.value))
+const numbers = computed(() => commentThreadNumbers(comments.threads.value))
 const listed = computed(() =>
-  listThreads(comments.threads.value, {
+  listCommentThreads(comments.threads.value, {
     query: listQuery.value,
     showResolved: listShowResolved.value,
     onlyPage: listOnlyPage.value,

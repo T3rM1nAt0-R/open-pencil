@@ -1,9 +1,8 @@
 import 'fake-indexeddb/auto'
 import { afterEach, expect, test } from 'bun:test'
 
-import type { CommentThread } from '@open-pencil/scene-graph'
+import { readComments, type CommentThread } from '@open-pencil/scene-graph'
 
-import { readDocumentComments } from '@/app/comments/document'
 import { attachStore, detachStore, mutate, pinPosition, threads } from '@/app/comments/session'
 import { createEditorStore } from '@/app/editor/session/create'
 
@@ -39,8 +38,8 @@ test('a comment lands in the document it was written in, not the next one opened
   expect(threads.value).toEqual([])
   mutate((current) => [...current, thread('other')])
 
-  expect(ids(readDocumentComments(first.graph))).toEqual(['mine'])
-  expect(ids(readDocumentComments(second.graph))).toEqual(['other'])
+  expect(ids(readComments(first.graph))).toEqual(['mine'])
+  expect(ids(readComments(second.graph))).toEqual(['other'])
 })
 
 test('commenting marks the document changed without adding an undo step', () => {
@@ -82,7 +81,7 @@ test('a pin stays where its layer was when the layer is deleted', async () => {
   store.graph.deleteNode(rect.id)
   await Promise.resolve()
 
-  const [detached] = readDocumentComments(store.graph)
+  const [detached] = readComments(store.graph)
   expect(detached?.nodeId).toBeNull()
   expect(detached && pinPosition(store, detached)).toEqual({ x: 310, y: 55 })
 })
@@ -102,6 +101,6 @@ test('a collaborator’s save that lacks this session’s comment does not lose 
   })
   await Promise.resolve()
 
-  expect(ids(readDocumentComments(store.graph)).toSorted()).toEqual(['mine', 'theirs'])
+  expect(ids(readComments(store.graph)).toSorted()).toEqual(['mine', 'theirs'])
   expect(ids(threads.value).toSorted()).toEqual(['mine', 'theirs'])
 })
