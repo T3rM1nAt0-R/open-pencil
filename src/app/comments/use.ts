@@ -1,4 +1,5 @@
 import type { CommentReply, CommentThread } from '@open-pencil/scene-graph'
+import type { Vector } from '@open-pencil/scene-graph/primitives'
 
 import { useCollabIdentity } from '@/app/collab/identity'
 import type { EditorStore } from '@/app/editor/active-store'
@@ -26,8 +27,32 @@ import {
 
 export { pinPosition } from './session'
 
+/**
+ * Where a pin at a canvas point is kept: on the top-level layer under it, so it follows that
+ * layer, as Figma attaches comments; on the canvas when nothing is there.
+ */
+function anchorAt(store: EditorStore, pageId: string, at: Vector) {
+  const hit = store.graph.hitTest(at.x, at.y, pageId)
+  const abs = hit ? store.graph.getAbsolutePosition(hit.id) : null
+  return {
+    nodeId: hit?.id ?? null,
+    nodeName: hit?.name ?? null,
+    offsetX: abs ? at.x - abs.x : 0,
+    offsetY: abs ? at.y - abs.y : 0,
+    x: at.x,
+    y: at.y
+  }
+}
+
 export function useComments() {
   const identity = useCollabIdentity()
+
+  /** A dragged pin lands on whatever is under it now, as in Figma. */
+  function movePin(threadId: string, at: Vector) {
+    const store = activeStore()
+    if (!store) return
+    updateThread(threadId, (thread) => ({ ...thread, ...anchorAt(store, thread.pageId, at) }))
+  }
 
   function startDraft(pageId: string, x: number, y: number) {
     activeThreadId.value = null
@@ -39,19 +64,12 @@ export function useComments() {
     const place = draft.value
     const body = text.trim()
     if (!store || !place || !body) return
-    const hit = store.graph.hitTest(place.x, place.y, place.pageId)
-    const abs = hit ? store.graph.getAbsolutePosition(hit.id) : null
     const stamp = now()
     const thread: CommentThread = {
       id: newId('c'),
       pageId: place.pageId,
       pageName: store.graph.getNode(place.pageId)?.name,
-      nodeId: hit?.id ?? null,
-      nodeName: hit?.name ?? null,
-      offsetX: abs ? place.x - abs.x : 0,
-      offsetY: abs ? place.y - abs.y : 0,
-      x: place.x,
-      y: place.y,
+      ...anchorAt(store, place.pageId, place),
       author: identity.name.value,
       authorColor: identity.color,
       text: body,
@@ -144,6 +162,7 @@ export function useComments() {
     detach: detachStore,
     startDraft,
     addThread,
+    movePin,
     reply,
     setResolved,
     deleteThread,

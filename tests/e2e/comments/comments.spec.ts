@@ -61,6 +61,23 @@ test('Shift+C hides pins outside the Comment tool', async () => {
   await expect(pins()).toHaveCount(1)
 })
 
+test('a pin can be dragged, and the toolbar still picks tools in the Comment tool', async () => {
+  await commentTool().click()
+  const pin = expectDefined(await pins().first().boundingBox(), 'pin bounds')
+  await editor.page.mouse.move(pin.x + 8, pin.y + pin.height - 8)
+  await editor.page.mouse.down()
+  await editor.page.mouse.move(pin.x + 48, pin.y + pin.height + 32, { steps: 4 })
+  await editor.page.mouse.up()
+  const moved = expectDefined(await pins().first().boundingBox(), 'moved pin bounds')
+  expect(Math.round(moved.x - pin.x)).toBe(40)
+  expect(Math.round(moved.y + moved.height - (pin.y + pin.height))).toBe(40)
+  await expect(thread()).toHaveCount(0)
+
+  await editor.page.getByTestId(toolbarToolTestId('RECTANGLE')).click()
+  await expect(commentTool()).toHaveAttribute('aria-pressed', 'false')
+  await editor.page.keyboard.press('Escape')
+})
+
 test('the list searches and resolves threads', async () => {
   await commentTool().click()
   await placeComment(260, 210, 'second note')

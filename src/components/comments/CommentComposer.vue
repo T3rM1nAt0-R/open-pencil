@@ -94,19 +94,17 @@ defineExpose({ focus })
       @keydown="onKeydown"
       @keydown.escape.stop.prevent="emit('cancel')"
     />
-    <div :class="ui.composerBar()">
-      <AppButton
-        type="submit"
-        color="primary"
-        variant="solid"
-        shape="pill"
-        size="xs"
-        :disabled="empty"
-        :aria-label="messages.send"
-        :ui="{ base: 'size-6 px-0' }"
-      >
-        <icon-lucide-arrow-up class="size-3.5" />
-      </AppButton>
-    </div>
+    <AppButton
+      type="submit"
+      color="primary"
+      variant="solid"
+      shape="pill"
+      size="xs"
+      :disabled="empty"
+      :aria-label="messages.send"
+      :ui="{ base: 'size-6 shrink-0 px-0' }"
+    >
+      <icon-lucide-arrow-up class="size-3.5" />
+    </AppButton>
   </form>
 </template>

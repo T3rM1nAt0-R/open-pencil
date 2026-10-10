@@ -3,8 +3,15 @@ import { tv } from 'tailwind-variants'
 /** Canvas comments: pins, the thread card beside a pin, and the list in the right sidebar. */
 export const comments = tv({
   slots: {
-    // A speech bubble whose square corner points at the commented spot, as in Figma.
-    pin: 'pointer-events-auto absolute flex -translate-y-full cursor-pointer items-center justify-center rounded-full rounded-bl-none bg-panel p-[3px] shadow-md ring-1 ring-black/15 outline-none hover:ring-accent focus-visible:ring-2 focus-visible:ring-accent data-[active]:ring-2 data-[active]:ring-accent data-[draft]:pointer-events-none data-[draft]:size-8 data-[draft]:bg-accent data-[draft]:ring-white/70 data-[resolved]:grayscale',
+    // Below the toolbar and other floating UI, above the canvas.
+    layer: 'pointer-events-none absolute inset-0 z-0',
+    capture: 'pointer-events-auto absolute inset-0 cursor-crosshair',
+    // A 32px speech bubble whose square corner points at the commented spot, as Figma draws it;
+    // hovering opens it in place into a preview of the comment.
+    pin: 'group/pin pointer-events-auto absolute flex max-w-64 -translate-y-full cursor-pointer touch-none items-start gap-2 rounded-2xl rounded-bl-none bg-panel p-1 text-left shadow-md ring-1 ring-black/10 outline-none select-none hover:shadow-lg focus-visible:ring-2 focus-visible:ring-accent data-[active]:ring-2 data-[active]:ring-accent data-[draft]:pointer-events-none data-[draft]:size-8 data-[draft]:bg-accent data-[dragging]:cursor-grabbing data-[dragging]:shadow-lg data-[resolved]:grayscale',
+    pinPreview:
+      'hidden min-w-0 flex-col py-0.5 pr-2 text-xs group-hover/pin:flex group-focus-visible/pin:flex group-data-[active]/pin:hidden group-data-[dragging]/pin:hidden',
+    pinText: 'line-clamp-2 break-words text-surface',
     card: 'flex max-h-[min(28rem,70vh)] w-80 flex-col overflow-hidden p-0',
     threadCard: 'flex min-h-0 flex-col',
     thread: 'scrollbar-thin flex min-h-0 flex-col gap-3 overflow-y-auto px-3 py-2.5',
@@ -16,12 +23,12 @@ export const comments = tv({
       'ml-auto flex shrink-0 opacity-0 group-focus-within/message:opacity-100 group-hover/message:opacity-100',
     messageText: 'col-start-2 min-w-0 text-xs break-words text-surface',
     composerSlot: 'border-t border-border p-2',
-    draft: 'p-2',
+    draft: 'p-1.5',
+    // One line with the send button beside it, growing as the comment does, as in Figma.
     composer:
-      'flex flex-col rounded-lg border border-border bg-input focus-within:border-panel-focus focus-within:ring-1 focus-within:ring-accent/25',
+      'flex items-end gap-1 rounded-lg border border-border bg-input py-1 pr-1 pl-3 focus-within:border-panel-focus focus-within:ring-1 focus-within:ring-accent/25',
     composerInput:
-      'scrollbar-thin max-h-40 min-h-8 w-full resize-none bg-transparent px-3 pt-2 text-xs leading-relaxed text-surface outline-none placeholder:text-muted',
-    composerBar: 'flex items-center justify-end gap-1 px-1.5 pb-1.5',
+      'scrollbar-thin max-h-40 min-w-0 flex-1 resize-none bg-transparent py-0.5 text-xs leading-5 text-surface outline-none placeholder:text-muted',
     panel: 'flex min-h-0 flex-1 flex-col',
     panelSearch: 'shrink-0 border-b border-border px-3 py-2',
     list: 'scrollbar-thin min-h-0 flex-1 overflow-y-auto',

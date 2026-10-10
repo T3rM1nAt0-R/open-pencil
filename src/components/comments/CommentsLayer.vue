@@ -58,6 +58,59 @@ function toScreen(at: Vector) {
   }
 }
 
+// A pin follows the pointer once it moves a few pixels; a shorter press is a click.
+const PIN_DRAG_THRESHOLD = 3
+interface PinDrag {
+  id: string
+  startX: number
+  startY: number
+  origin: Vector
+  at: Vector
+  moved: boolean
+}
+const pinDrag = ref<PinDrag | null>(null)
+let dragJustEnded = false
+
+function startPinDrag(event: PointerEvent, threadId: string, origin: Vector) {
+  if (event.button !== 0 || !(event.currentTarget instanceof HTMLElement)) return
+  event.currentTarget.setPointerCapture(event.pointerId)
+  pinDrag.value = {
+    id: threadId,
+    startX: event.clientX,
+    startY: event.clientY,
+    origin,
+    at: origin,
+    moved: false
+  }
+}
+
+function movePinDrag(event: PointerEvent) {
+  const drag = pinDrag.value
+  if (!drag) return
+  const dx = event.clientX - drag.startX
+  const dy = event.clientY - drag.startY
+  if (!drag.moved && Math.hypot(dx, dy) < PIN_DRAG_THRESHOLD) return
+  drag.moved = true
+  drag.at = { x: drag.origin.x + dx / store.state.zoom, y: drag.origin.y + dy / store.state.zoom }
+}
+
+function endPinDrag() {
+  const drag = pinDrag.value
+  pinDrag.value = null
+  if (!drag?.moved) return
+  dragJustEnded = true
+  comments.movePin(drag.id, drag.at)
+}
+
+function onPinClick(threadId: string) {
+  // The click that ends a drag only drops the pin.
+  if (dragJustEnded) {
+    dragJustEnded = false
+    return
+  }
+  togglePin(threadId)
+}
+
 // Pins show unless Shift+C hid them; the Comment tool always shows them, as in Figma.
 const pins = computed(() => {
   // Layers move without the comment changing; re-place pins on every scene change.
@@ -70,8 +123,9 @@ const pins = computed(() => {
         !thread.deleted && thread.pageId === pageId && (!thread.resolved || listShowResolved.value)
     )
     .map((thread) => {
-      const at = pinPosition(store, thread)
-      return { thread, at, ...toScreen(at) }
+      const dragged = pinDrag.value?.id === thread.id && pinDrag.value.moved
+      const at = dragged && pinDrag.value ? pinDrag.value.at : pinPosition(store, thread)
+      return { thread, at, dragging: dragged, ...toScreen(at) }
     })
 })
 
@@ -172,14 +226,10 @@ function onCardEscape(event: KeyboardEvent) {
 
 <template>
   <!-- Right-clicks here belong to comments, not to the canvas layer menu underneath. -->
-  <div
-    class="pointer-events-none absolute inset-0 z-30"
-    data-canvas-overlay="comments"
-    @contextmenu.stop
-  >
+  <div :class="ui.layer()" data-canvas-overlay="comments" @contextmenu.stop>
     <div
       v-if="commenting"
-      class="pointer-events-auto absolute inset-0 cursor-crosshair"
+      :class="ui.capture()"
       data-slot="comments-capture"
       @pointerdown.prevent="placeDraft"
       @wheel="forwardWheel"
@@ -191,12 +241,18 @@ function onCardEscape(event: KeyboardEvent) {
         <CommentPin
           :author="pin.thread.author || messages.someone"
           :color="pin.thread.authorColor"
+          :text="pin.thread.text"
+          :at="pin.thread.createdAt"
           :active="activeThreadId === pin.thread.id"
           :resolved="pin.thread.resolved"
+          :dragging="pin.dragging"
           :style="{ left: `${pin.left}px`, top: `${pin.top}px` }"
           :aria-label="`${pin.thread.author || messages.someone}: ${pin.thread.text}`"
-          @pointerdown.stop
-          @click.stop="togglePin(pin.thread.id)"
+          @pointerdown.stop="startPinDrag($event, pin.thread.id, pin.at)"
+          @pointermove="movePinDrag"
+          @pointerup="endPinDrag"
+          @pointercancel="endPinDrag"
+          @click.stop="onPinClick(pin.thread.id)"
         />
       </ContextMenuTrigger>
       <ContextMenuPortal>
