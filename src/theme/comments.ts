@@ -6,6 +6,8 @@ export const comments = tv({
     // Below the toolbar and other floating UI, above the canvas.
     layer: 'pointer-events-none absolute inset-0 z-0',
     capture: 'pointer-events-auto absolute inset-0 cursor-crosshair',
+    // Pins sit at their zoomed canvas positions in here; panning only moves this layer.
+    pins: 'absolute top-0 left-0',
     // A 32px speech bubble whose square corner points at the commented spot, as Figma draws it;
     // hovering opens it in place into a preview of the comment.
     pin: 'group/pin pointer-events-auto absolute flex -translate-y-full cursor-pointer touch-none items-start rounded-2xl rounded-bl-none bg-panel p-1 text-left shadow-md ring-1 ring-black/10 outline-none select-none hover:shadow-lg focus-visible:ring-2 focus-visible:ring-accent data-[active]:ring-2 data-[active]:ring-accent data-[draft]:pointer-events-none data-[draft]:size-8 data-[draft]:bg-accent data-[dragging]:cursor-grabbing data-[dragging]:shadow-lg data-[resolved]:grayscale',

@@ -10,6 +10,7 @@ import {
 } from 'reka-ui'
 import { computed, nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
 
+import type { ViewportTransform } from '@open-pencil/core/geometry'
 import type { Vector } from '@open-pencil/scene-graph/primitives'
 import { useCommentMessages, useCommonMessages } from '@open-pencil/vue'
 
@@ -26,7 +27,14 @@ import CommentComposer from './CommentComposer.vue'
 import CommentPin from './CommentPin.vue'
 import CommentThreadCard from './CommentThreadCard.vue'
 
-const { canvasEl } = defineProps<{ canvasEl: HTMLCanvasElement | null }>()
+const { canvasEl, drawn = null } = defineProps<{
+  canvasEl: HTMLCanvasElement | null
+  /**
+   * The pan and zoom of the canvas's last drawn frame. Pins follow it rather than the live view,
+   * which runs ahead of the drawing while panning fast, as preview islands do.
+   */
+  drawn?: ViewportTransform | null
+}>()
 
 const store = useEditorStore()
 const comments = useComments()
@@ -52,11 +60,16 @@ watch(commenting, (on) => {
   if (!on) draft.value = null
 })
 
+const placement = computed<ViewportTransform>(() => drawn ?? store.state)
+
+/** A canvas point in the pins' layer, which panning moves as a whole. */
+function toLayer(at: Vector) {
+  return { left: at.x * placement.value.zoom, top: at.y * placement.value.zoom }
+}
+
 function toScreen(at: Vector) {
-  return {
-    left: at.x * store.state.zoom + store.state.panX,
-    top: at.y * store.state.zoom + store.state.panY
-  }
+  const { left, top } = toLayer(at)
+  return { left: left + placement.value.panX, top: top + placement.value.panY }
 }
 
 // A pin follows the pointer once it moves a few pixels; a shorter press is a click.
@@ -126,7 +139,7 @@ const pins = computed(() => {
     .map((thread) => {
       const dragged = pinDrag.value?.id === thread.id && pinDrag.value.moved
       const at = dragged && pinDrag.value ? pinDrag.value.at : pinPosition(store, thread)
-      return { thread, at, dragging: dragged, ...toScreen(at) }
+      return { thread, at, dragging: dragged, ...toLayer(at) }
     })
 })
 
@@ -134,7 +147,7 @@ const activePin = computed(() => pins.value.find((pin) => pin.thread.id === acti
 const draftAt = computed(() =>
   draft.value && draft.value.pageId === store.state.currentPageId ? draft.value : null
 )
-const draftScreen = computed(() => draftAt.value && toScreen(draftAt.value))
+const draftScreen = computed(() => draftAt.value && toLayer(draftAt.value))
 
 // The card sits beside the pin's bubble, which rises above and right of the commented spot,
 // on whichever side has room; the bubble's box is what it keeps clear of.
@@ -246,39 +259,44 @@ function onCardEscape(event: KeyboardEvent) {
       @contextmenu.prevent
     />
 
-    <ContextMenuRoot v-for="pin in pins" :key="pin.thread.id" :modal="false">
-      <ContextMenuTrigger as-child>
-        <CommentPin
-          :author="pin.thread.author || messages.someone"
-          :color="pin.thread.authorColor"
-          :text="pin.thread.text"
-          :at="pin.thread.createdAt"
-          :active="activeThreadId === pin.thread.id"
-          :resolved="pin.thread.resolved"
-          :dragging="pin.dragging"
-          :style="{ left: `${pin.left}px`, top: `${pin.top}px` }"
-          :aria-label="`${pin.thread.author || messages.someone}: ${pin.thread.text}`"
-          @pointerdown.stop="startPinDrag($event, pin.thread.id, pin.at)"
-          @pointermove="movePinDrag"
-          @pointerup="endPinDrag"
-          @pointercancel="endPinDrag"
-          @click.stop="onPinClick(pin.thread.id)"
-        />
-      </ContextMenuTrigger>
-      <ContextMenuPortal>
-        <ContextMenuContent :class="menuCls.content">
-          <CommentActionsMenu :thread="pin.thread" kind="context" show-hide />
-        </ContextMenuContent>
-      </ContextMenuPortal>
-    </ContextMenuRoot>
+    <div
+      :class="ui.pins()"
+      :style="{ transform: `translate(${placement.panX}px, ${placement.panY}px)` }"
+    >
+      <ContextMenuRoot v-for="pin in pins" :key="pin.thread.id" :modal="false">
+        <ContextMenuTrigger as-child>
+          <CommentPin
+            :author="pin.thread.author || messages.someone"
+            :color="pin.thread.authorColor"
+            :text="pin.thread.text"
+            :at="pin.thread.createdAt"
+            :active="activeThreadId === pin.thread.id"
+            :resolved="pin.thread.resolved"
+            :dragging="pin.dragging"
+            :style="{ left: `${pin.left}px`, top: `${pin.top}px` }"
+            :aria-label="`${pin.thread.author || messages.someone}: ${pin.thread.text}`"
+            @pointerdown.stop="startPinDrag($event, pin.thread.id, pin.at)"
+            @pointermove="movePinDrag"
+            @pointerup="endPinDrag"
+            @pointercancel="endPinDrag"
+            @click.stop="onPinClick(pin.thread.id)"
+          />
+        </ContextMenuTrigger>
+        <ContextMenuPortal>
+          <ContextMenuContent :class="menuCls.content">
+            <CommentActionsMenu :thread="pin.thread" kind="context" show-hide />
+          </ContextMenuContent>
+        </ContextMenuPortal>
+      </ContextMenuRoot>
 
-    <CommentPin
-      v-if="draftScreen"
-      draft
-      :style="{ left: `${draftScreen.left}px`, top: `${draftScreen.top}px` }"
-      aria-hidden="true"
-      tabindex="-1"
-    />
+      <CommentPin
+        v-if="draftScreen"
+        draft
+        :style="{ left: `${draftScreen.left}px`, top: `${draftScreen.top}px` }"
+        aria-hidden="true"
+        tabindex="-1"
+      />
+    </div>
 
     <PopoverRoot
       :open="!!cardReference && (!!activePin || !!draftAt)"

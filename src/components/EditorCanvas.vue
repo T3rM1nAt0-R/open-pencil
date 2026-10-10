@@ -290,7 +290,7 @@ const cursor = computed(() =>
           :followed="followView.label.value"
           @stop="followView.stop"
         />
-        <CommentsLayer v-if="isActivePane" :canvas-el="canvasRef" />
+        <CommentsLayer v-if="isActivePane" :canvas-el="canvasRef" :drawn="drawnView" />
         <PreparationOverlay
           v-if="store.state.preparation && store.state.preparation.kind !== 'font-retry'"
           :preparation="store.state.preparation"
