@@ -17,7 +17,11 @@ import { comments } from '@/theme/comments'
  * Where a comment or reply is written. Enter sends and Shift+Enter starts a new line or list
  * item; Figma's shortcuts format the selection as Markdown (`format.ts`).
  */
-const { label } = defineProps<{ label: string }>()
+const { label, bare = false } = defineProps<{
+  label: string
+  /** The composer is its card's whole content, as a new comment's is. */
+  bare?: boolean
+}>()
 
 const emit = defineEmits<{ submit: [text: string]; cancel: [] }>()
 
@@ -26,7 +30,7 @@ const input = useTemplateRef<HTMLTextAreaElement>('input')
 useTextareaAutosize({ element: input, input: text })
 
 const messages = useCommentMessages()
-const ui = comments()
+const ui = computed(() => comments({ bare }))
 const empty = computed(() => text.value.trim() === '')
 const mac = shortcutPlatform() === 'mac'
 

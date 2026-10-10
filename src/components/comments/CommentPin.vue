@@ -48,12 +48,17 @@ const ui = comments()
   >
     <template v-if="!draft">
       <PersonAvatar :name="author" :color="color ?? PEER_COLORS[0]" />
-      <span v-if="text" :class="ui.pinPreview()" aria-hidden="true">
-        <span :class="ui.messageMeta()">
-          <span :class="ui.messageAuthor()">{{ author }}</span>
-          <CommentTime v-if="at" :at="at" :class="ui.messageTime()" />
+      <!-- An open or moving pin stays a bubble; its thread or its new place is what matters. -->
+      <span v-if="text && !active && !dragging" :class="ui.pinPreview()" aria-hidden="true">
+        <span :class="ui.pinPreviewClip()">
+          <span :class="ui.pinPreviewBody()">
+            <span :class="ui.messageMeta()">
+              <span :class="ui.messageAuthor()">{{ author }}</span>
+              <CommentTime v-if="at" :at="at" :class="ui.messageTime()" />
+            </span>
+            <span :class="ui.pinText()">{{ commentPreview(text) }}</span>
+          </span>
         </span>
-        <span :class="ui.pinText()">{{ commentPreview(text) }}</span>
       </span>
     </template>
   </button>

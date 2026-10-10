@@ -8,10 +8,10 @@ import {
   PopoverPortal,
   PopoverRoot
 } from 'reka-ui'
-import { computed, nextTick, onMounted, onUnmounted, ref, toRef, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue'
 
 import type { Vector } from '@open-pencil/scene-graph/primitives'
-import { useCanvasVirtualReference, useCommentMessages, useCommonMessages } from '@open-pencil/vue'
+import { useCommentMessages, useCommonMessages } from '@open-pencil/vue'
 
 import { pinPosition, useComments } from '@/app/comments/use'
 import { useEditorStore } from '@/app/editor/active-store'
@@ -35,7 +35,8 @@ const common = useCommonMessages()
 const { showActionToast } = useActionToast()
 const menuCls = useMenuUI({ content: 'min-w-40' })
 const ui = commentsTheme()
-const popoverCls = usePopoverUI({ content: ui.card() })
+const threadCls = usePopoverUI({ content: ui.card() })
+const draftCls = usePopoverUI({ content: ui.draftCard() })
 const { activeThreadId, draft, pendingDeleteId, pinsHidden, listShowResolved } = comments
 const commenting = computed(() => store.state.activeTool === 'COMMENT')
 
@@ -135,14 +136,23 @@ const draftAt = computed(() =>
 )
 const draftScreen = computed(() => draftAt.value && toScreen(draftAt.value))
 
-// The card sits right of the pin's bubble, which rises above and right of the commented spot.
+// The card sits beside the pin's bubble, which rises above and right of the commented spot,
+// on whichever side has room; the bubble's box is what it keeps clear of.
 const PIN_SIZE = 32
+const CARD_GAP = 8
 const cardAnchor = computed(() => activePin.value?.at ?? draftAt.value ?? null)
-const cardReference = useCanvasVirtualReference(
-  toRef(() => canvasEl),
-  store,
-  cardAnchor
-)
+const cardReference = computed(() => {
+  const at = cardAnchor.value
+  const canvas = canvasEl
+  if (!at || !canvas) return null
+  const { left, top } = toScreen(at)
+  return {
+    getBoundingClientRect() {
+      const rect = canvas.getBoundingClientRect()
+      return new DOMRect(rect.left + left, rect.top + top - PIN_SIZE, PIN_SIZE, PIN_SIZE)
+    }
+  }
+})
 
 // The dialog closes itself before its confirm event, so hold on to which comment it was for.
 const deleteOpen = ref(false)
@@ -177,7 +187,7 @@ function placeDraft(event: PointerEvent) {
   draftText.value = ''
 }
 
-// Scrolling and zooming keep working while placing comments.
+// Scrolling and zooming keep working over pins and while placing comments, as in Figma.
 function forwardWheel(event: WheelEvent) {
   if (!canvasEl) return
   event.preventDefault()
@@ -225,14 +235,14 @@ function onCardEscape(event: KeyboardEvent) {
 </script>
 
 <template>
-  <!-- Right-clicks here belong to comments, not to the canvas layer menu underneath. -->
-  <div :class="ui.layer()" data-canvas-overlay="comments" @contextmenu.stop>
+  <!-- Right-clicks here belong to comments, not to the canvas layer menu underneath; scrolling
+       and zooming over pins or while placing comments still reach the canvas. -->
+  <div :class="ui.layer()" data-canvas-overlay="comments" @contextmenu.stop @wheel="forwardWheel">
     <div
       v-if="commenting"
       :class="ui.capture()"
       data-slot="comments-capture"
       @pointerdown.prevent="placeDraft"
-      @wheel="forwardWheel"
       @contextmenu.prevent
     />
 
@@ -279,24 +289,23 @@ function onCardEscape(event: KeyboardEvent) {
           v-if="cardReference"
           :reference="cardReference"
           side="right"
-          align="start"
-          :side-offset="PIN_SIZE + 8"
-          :align-offset="-PIN_SIZE"
+          :align="draftAt ? 'center' : 'start'"
+          :side-offset="CARD_GAP"
           :collision-padding="8"
-          :class="popoverCls.content"
+          :class="draftAt ? draftCls.content : threadCls.content"
           data-canvas-obstacle
           @open-auto-focus="onCardOpen"
           @escape-key-down="onCardEscape"
         >
-          <div v-if="draftAt" data-slot="comment-draft" :class="ui.draft()">
-            <CommentComposer
-              ref="draftComposer"
-              v-model="draftText"
-              :label="messages.addComment"
-              @submit="postDraft"
-              @cancel="closeCard"
-            />
-          </div>
+          <CommentComposer
+            v-if="draftAt"
+            ref="draftComposer"
+            v-model="draftText"
+            bare
+            :label="messages.addComment"
+            @submit="postDraft"
+            @cancel="closeCard"
+          />
           <CommentThreadCard
             v-else-if="activePin"
             ref="threadCard"
