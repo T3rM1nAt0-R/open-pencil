@@ -17,14 +17,14 @@ import {
 import { computed } from 'vue'
 
 import { commentThreadNumbers, listCommentThreads } from '@open-pencil/scene-graph'
-import { formatShortcut, useCommentMessages } from '@open-pencil/vue'
+import { useCommentMessages } from '@open-pencil/vue'
 
 import { useComments } from '@/app/comments/use'
 import { useEditorStore } from '@/app/editor/active-store'
+import ZoomDropdown from '@/components/editor/ZoomDropdown.vue'
 import IconButton from '@/components/ui/button/IconButton.vue'
 import AppPlaceholder from '@/components/ui/feedback/AppPlaceholder.vue'
 import AppInput from '@/components/ui/input/AppInput.vue'
-import AppShortcutText from '@/components/ui/menu/AppShortcutText.vue'
 import { menuItem, useMenuUI } from '@/components/ui/menu/menu'
 import PanelHeader from '@/components/ui/panel/PanelHeader.vue'
 import { comments as commentsTheme } from '@/theme/comments'
@@ -39,7 +39,7 @@ const messages = useCommentMessages()
 const menuCls = useMenuUI({ content: 'min-w-52' })
 const itemCls = menuItem({ justify: 'start', class: 'relative pl-7' })
 const ui = commentsTheme()
-const { listQuery, listShowResolved, listOnlyPage, listSort, listOnlyMine, pinsHidden } = comments
+const { listQuery, listShowResolved, listOnlyPage, listSort, listOnlyMine } = comments
 
 const numbers = computed(() => commentThreadNumbers(comments.threads.value))
 const listed = computed(() =>
@@ -65,10 +65,6 @@ function pageName(pageId: string, fallback?: string) {
 function setSort(value: unknown) {
   if (value === 'newest' || value === 'oldest') listSort.value = value
 }
-
-function showPins(shown: boolean) {
-  pinsHidden.value = !shown
-}
 </script>
 
 <template>
@@ -77,6 +73,7 @@ function showPins(shown: boolean) {
       <template #icon><icon-lucide-messages-square class="size-3.5" /></template>
       {{ messages.comments }}
       <template #actions>
+        <ZoomDropdown />
         <DropdownMenuRoot :modal="false">
           <DropdownMenuTrigger as-child>
             <IconButton :label="messages.filterAndSort" :active="filtered">
@@ -117,20 +114,6 @@ function showPins(shown: boolean) {
                   <icon-lucide-check class="size-3.5" />
                 </DropdownMenuItemIndicator>
                 {{ messages.onlyPage }}
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuSeparator :class="menuCls.separator" />
-              <DropdownMenuCheckboxItem
-                :model-value="!pinsHidden"
-                :class="itemCls"
-                @update:model-value="showPins"
-              >
-                <DropdownMenuItemIndicator :class="ui.menuIndicator()">
-                  <icon-lucide-check class="size-3.5" />
-                </DropdownMenuItemIndicator>
-                {{ messages.showOnCanvas }}
-                <AppShortcutText :ui="{ base: 'ml-auto' }">{{
-                  formatShortcut('SHIFT+C')
-                }}</AppShortcutText>
               </DropdownMenuCheckboxItem>
             </DropdownMenuContent>
           </DropdownMenuPortal>

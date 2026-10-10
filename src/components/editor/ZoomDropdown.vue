@@ -11,6 +11,7 @@ import { nextTick, ref, watch } from 'vue'
 
 import { useEditorCommands, useI18n, formatShortcut } from '@open-pencil/vue'
 
+import { pinsHidden, togglePinsHidden } from '@/app/comments/session'
 import { useEditorStore } from '@/app/editor/active-store'
 import { setDesignIssuesOnCanvas } from '@/app/settings/preferences/apply'
 import { appPreferences } from '@/app/settings/preferences/store'
@@ -176,6 +177,11 @@ watch(open, (v) => {
             class="absolute left-2 size-3.5"
           />
           <span class="flex-1">{{ menuText.designIssues }}</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem :class="itemCls" @select.prevent="togglePinsHidden">
+          <icon-lucide-check v-if="!pinsHidden" class="absolute left-2 size-3.5" />
+          <span class="flex-1">{{ menuText.comments }}</span>
+          <AppShortcutText>{{ appMenuShortcutLabel('view-comments') }}</AppShortcutText>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenuPortal>

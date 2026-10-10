@@ -267,7 +267,7 @@ function onCardEscape(event: KeyboardEvent) {
       </ContextMenuTrigger>
       <ContextMenuPortal>
         <ContextMenuContent :class="menuCls.content">
-          <CommentActionsMenu :thread="pin.thread" kind="context" />
+          <CommentActionsMenu :thread="pin.thread" kind="context" show-hide />
         </ContextMenuContent>
       </ContextMenuPortal>
     </ContextMenuRoot>

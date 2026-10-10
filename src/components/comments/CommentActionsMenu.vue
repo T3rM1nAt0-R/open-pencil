@@ -11,20 +11,26 @@ import { computed } from 'vue'
 import type { CommentThread } from '@open-pencil/scene-graph'
 import { useCommentMessages, useCommonMessages } from '@open-pencil/vue'
 
+import { togglePinsHidden } from '@/app/comments/session'
 import { useComments } from '@/app/comments/use'
 import { useEditorStore } from '@/app/editor/active-store'
+import { appMenuShortcutLabel } from '@/app/shell/menu/shortcut'
 import { useActionToast } from '@/app/shell/toast/action'
+import AppShortcutText from '@/components/ui/menu/AppShortcutText.vue'
 import { useMenuUI } from '@/components/ui/menu/menu'
 
 // One list of comment actions for both the right-click menu and the "More actions" button.
 const {
   thread,
   kind,
-  showGoTo = false
+  showGoTo = false,
+  showHide = false
 } = defineProps<{
   thread: CommentThread
   kind: 'context' | 'dropdown'
   showGoTo?: boolean
+  /** Offer Hide comments, as a pin's menu does in Figma. */
+  showHide?: boolean
 }>()
 
 const store = useEditorStore()
@@ -81,4 +87,17 @@ async function copyText() {
     <icon-lucide-trash-2 :class="menuCls.icon" />
     <span>{{ messages.delete }}</span>
   </component>
+  <template v-if="showHide">
+    <component :is="Separator" :class="menuCls.separator" />
+    <component
+      :is="Item"
+      :class="menuCls.item"
+      data-command="comments-hide"
+      @select="togglePinsHidden"
+    >
+      <icon-lucide-eye-off :class="menuCls.icon" />
+      <span class="flex-1">{{ messages.hideComments }}</span>
+      <AppShortcutText>{{ appMenuShortcutLabel('view-comments') }}</AppShortcutText>
+    </component>
+  </template>
 </template>

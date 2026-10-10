@@ -25,5 +25,5 @@
   "noMatches": "Нет подходящих комментариев.",
   "replyCount": "Ответы: {count}",
   "commentDeleted": "Комментарий удалён",
-  "showOnCanvas": "Показывать комментарии на холсте"
+  "hideComments": "Скрыть комментарии"
 }

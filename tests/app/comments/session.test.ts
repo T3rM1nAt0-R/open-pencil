@@ -1,8 +1,11 @@
 import 'fake-indexeddb/auto'
 import { afterEach, expect, test } from 'bun:test'
 
+import { FigmaAPI } from '@open-pencil/core/figma-api'
+import { ALL_TOOLS } from '@open-pencil/core/tools'
 import { readComments, type CommentThread } from '@open-pencil/scene-graph'
 
+import { executeWithPageUndo } from '@/app/automation/execution/editor'
 import { attachStore, detachStore, mutate, pinPosition, threads } from '@/app/comments/session'
 import { createEditorStore } from '@/app/editor/session/create'
 
@@ -103,4 +106,21 @@ test('a collaborator’s save that lacks this session’s comment does not lose 
 
   expect(ids(readComments(store.graph)).toSorted()).toEqual(['mine', 'theirs'])
   expect(ids(threads.value).toSorted()).toEqual(['mine', 'theirs'])
+})
+
+test('an agent’s comment is not an undo step either, as comments stay out of undo', async () => {
+  const store = createEditorStore()
+  attachStore(store)
+  const canUndo = store.undo.canUndo
+  const figma = new FigmaAPI(store.graph)
+  const addComment = ALL_TOOLS.find((tool) => tool.name === 'add_comment')
+  if (!addComment) throw new Error('add_comment missing')
+
+  await executeWithPageUndo(store, store.state.currentPageId, 'Agent: add_comment', () =>
+    Promise.resolve(addComment.execute(figma, { text: 'Tighten the spacing', x: 4, y: 4 }))
+  )
+  await Promise.resolve()
+
+  expect(ids(threads.value)).toHaveLength(1)
+  expect(store.undo.canUndo).toBe(canUndo)
 })

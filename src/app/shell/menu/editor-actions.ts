@@ -1,5 +1,6 @@
 import type { SceneNode } from '@open-pencil/scene-graph'
 
+import { togglePinsHidden } from '@/app/comments/session'
 import { useEditorStore } from '@/app/editor/active-store'
 import { setDesignIssuesOnCanvas, setSnappingPreference } from '@/app/settings/preferences/apply'
 import { appPreferences } from '@/app/settings/preferences/store'
@@ -66,6 +67,7 @@ export function createSharedEditorMenuActions(
     },
     'view-design-issues': () =>
       setDesignIssuesOnCanvas(!appPreferences.value.designCheck.showOnCanvas),
+    'view-comments': togglePinsHidden,
     'snap-geometry': () =>
       setSnappingPreference('geometry', !store.state.snappingPreferences.geometry),
     'snap-objects': () =>

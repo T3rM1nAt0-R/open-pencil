@@ -25,5 +25,5 @@
   "noMatches": "Nessun commento corrisponde.",
   "replyCount": "Risposte: {count}",
   "commentDeleted": "Commento eliminato",
-  "showOnCanvas": "Mostra commenti sulla tela"
+  "hideComments": "Nascondi commenti"
 }

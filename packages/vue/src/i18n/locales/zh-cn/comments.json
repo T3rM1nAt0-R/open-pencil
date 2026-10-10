@@ -25,5 +25,5 @@
   "noMatches": "没有匹配的评论。",
   "replyCount": "回复：{count}",
   "commentDeleted": "评论已删除",
-  "showOnCanvas": "在画布上显示评论"
+  "hideComments": "隐藏评论"
 }

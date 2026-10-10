@@ -29,7 +29,7 @@ export const commentMessageDefaults = {
   noMatches: 'No comments match.',
   replyCount: params('Replies: {count}'),
   commentDeleted: 'Comment deleted',
-  showOnCanvas: 'Show comments on canvas'
+  hideComments: 'Hide comments'
 } as const
 
 export const commentMessages = i18n('comments', commentMessageDefaults)

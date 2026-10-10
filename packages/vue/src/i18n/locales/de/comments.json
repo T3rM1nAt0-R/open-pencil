@@ -25,5 +25,5 @@
   "noMatches": "Keine passenden Kommentare.",
   "replyCount": "Antworten: {count}",
   "commentDeleted": "Kommentar gelöscht",
-  "showOnCanvas": "Kommentare auf der Arbeitsfläche anzeigen"
+  "hideComments": "Kommentare ausblenden"
 }

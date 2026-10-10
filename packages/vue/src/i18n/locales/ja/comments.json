@@ -25,5 +25,5 @@
   "noMatches": "一致するコメントはありません。",
   "replyCount": "返信: {count}",
   "commentDeleted": "コメントを削除しました",
-  "showOnCanvas": "キャンバスにコメントを表示"
+  "hideComments": "コメントを非表示"
 }

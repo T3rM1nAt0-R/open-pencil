@@ -25,5 +25,5 @@
   "noMatches": "Brak pasujących komentarzy.",
   "replyCount": "Odpowiedzi: {count}",
   "commentDeleted": "Usunięto komentarz",
-  "showOnCanvas": "Pokaż komentarze na obszarze roboczym"
+  "hideComments": "Ukryj komentarze"
 }
