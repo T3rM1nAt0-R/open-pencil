@@ -7,7 +7,7 @@ import {
 } from 'reka-ui'
 import { computed, ref, useTemplateRef } from 'vue'
 
-import type { CommentThread } from '@open-pencil/scene-graph'
+import { liveReplies, type CommentThread } from '@open-pencil/scene-graph'
 import { useCommentMessages, useCommonMessages } from '@open-pencil/vue'
 
 import IconButton from '@/components/ui/button/IconButton.vue'
@@ -23,9 +23,9 @@ const { thread } = defineProps<{ thread: CommentThread }>()
 
 const emit = defineEmits<{
   close: []
-  resolve: [resolved: boolean]
-  reply: [text: string]
-  deleteReply: [id: string]
+  resolve: [threadId: string, resolved: boolean]
+  reply: [threadId: string, text: string]
+  deleteReply: [threadId: string, replyId: string]
 }>()
 
 defineSlots<{ menu?(): unknown }>()
@@ -36,10 +36,10 @@ const menuCls = useMenuUI({ content: 'min-w-40' })
 const ui = comments()
 const replyText = ref('')
 const composer = useTemplateRef<{ focus: () => void }>('composer')
-const replies = computed(() => thread.replies.filter((entry) => !entry.deleted))
+const replies = computed(() => liveReplies(thread))
 
 function sendReply(text: string) {
-  emit('reply', text)
+  emit('reply', thread.id, text)
   replyText.value = ''
 }
 
@@ -73,7 +73,7 @@ defineExpose({ focus: () => composer.value?.focus() })
           :label="thread.resolved ? messages.reopen : messages.resolve"
           :active="thread.resolved"
           data-command="comment-resolve"
-          @click="emit('resolve', !thread.resolved)"
+          @click="emit('resolve', thread.id, !thread.resolved)"
         >
           <icon-lucide-circle-check-big v-if="thread.resolved" class="size-3.5" />
           <icon-lucide-circle-check v-else class="size-3.5" />
@@ -100,7 +100,10 @@ defineExpose({ focus: () => composer.value?.focus() })
         :text="entry.text"
       >
         <template #actions>
-          <IconButton :label="messages.deleteReply" @click="emit('deleteReply', entry.id)">
+          <IconButton
+            :label="messages.deleteReply"
+            @click="emit('deleteReply', thread.id, entry.id)"
+          >
             <icon-lucide-trash-2 class="size-3" />
           </IconButton>
         </template>

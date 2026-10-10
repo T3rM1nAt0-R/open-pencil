@@ -1,12 +1,17 @@
 import {
+  byCreatedAt,
   commentPosition,
+  commentTimestamp as now,
   createCommentReply,
   createCommentThread,
-  deleteThread,
+  deleteCommentThread,
   editCommentThread,
+  findLiveCommentThread,
+  liveReplies,
   readComments,
-  replyToThread,
-  resolveThread,
+  replyToCommentThread,
+  resolveCommentThread,
+  takesPartInThread,
   writeComments,
   type CommentAuthor,
   type CommentThread,
@@ -43,10 +48,6 @@ function author(name: string | undefined): CommentAuthor {
   return { name: name?.trim() || DEFAULT_COMMENT_AUTHOR }
 }
 
-function now(): string {
-  return new Date().toISOString()
-}
-
 function pageOf(graph: SceneGraph, nodeId: string): string {
   const page = graph.closest(nodeId, (node) => node.type === 'CANVAS')
   if (!page) throw new Error(`${graph.getNode(nodeId)?.name ?? nodeId} is not on a page`)
@@ -65,15 +66,14 @@ export class CommentHandle {
   ) {}
 
   private get thread(): CommentThread {
-    const thread = readComments(this.graph).find((entry) => entry.id === this.id && !entry.deleted)
+    const thread = findLiveCommentThread(readComments(this.graph), this.id)
     if (!thread) throw new Error(`Comment ${this.id} was deleted`)
     return thread
   }
 
   private edit(change: (thread: CommentThread) => CommentThread): this {
     const threads = readComments(this.graph)
-    if (!threads.some((entry) => entry.id === this.id && !entry.deleted))
-      throw new Error(`Comment ${this.id} was deleted`)
+    if (!findLiveCommentThread(threads, this.id)) throw new Error(`Comment ${this.id} was deleted`)
     writeComments(this.graph, editCommentThread(threads, this.id, now(), change))
     return this
   }
@@ -113,9 +113,12 @@ export class CommentHandle {
   }
 
   get replies(): { id: string; author: string; text: string; createdAt: string }[] {
-    return this.thread.replies
-      .filter((entry) => !entry.deleted)
-      .map(({ id, author, text, createdAt }) => ({ id, author, text, createdAt }))
+    return liveReplies(this.thread).map(({ id, author, text, createdAt }) => ({
+      id,
+      author,
+      text,
+      createdAt
+    }))
   }
 
   /** Answer the thread, which reopens it if it was resolved. */
@@ -123,20 +126,20 @@ export class CommentHandle {
     const body = text.trim()
     if (!body) throw new Error('A reply needs text')
     const entry = createCommentReply(author(options.author), body, now())
-    return this.edit((thread) => replyToThread(thread, entry))
+    return this.edit((thread) => replyToCommentThread(thread, entry))
   }
 
   resolve(): this {
-    return this.edit((thread) => resolveThread(thread, true, now()))
+    return this.edit((thread) => resolveCommentThread(thread, true, now()))
   }
 
   reopen(): this {
-    return this.edit((thread) => resolveThread(thread, false, now()))
+    return this.edit((thread) => resolveCommentThread(thread, false, now()))
   }
 
   /** Delete the thread and its replies for everyone. */
   remove(): void {
-    this.edit(deleteThread)
+    this.edit(deleteCommentThread)
   }
 
   toJSON() {
@@ -154,13 +157,6 @@ export class CommentHandle {
   }
 }
 
-function takesPart(thread: CommentThread, name: string): boolean {
-  return (
-    thread.author === name ||
-    thread.replies.some((entry) => !entry.deleted && entry.author === name)
-  )
-}
-
 /** The document's live threads, oldest first, narrowed by `filter`. */
 export function getComments(graph: SceneGraph, filter: CommentFilter = {}): CommentHandle[] {
   const pageId = filter.page === undefined ? undefined : nodeOf(graph, filter.page).id
@@ -170,16 +166,14 @@ export function getComments(graph: SceneGraph, filter: CommentFilter = {}): Comm
         !thread.deleted &&
         (filter.resolved === undefined || thread.resolved === filter.resolved) &&
         (pageId === undefined || thread.pageId === pageId) &&
-        (filter.author === undefined || takesPart(thread, filter.author))
+        (filter.author === undefined || takesPartInThread(thread, filter.author))
     )
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    .sort(byCreatedAt)
     .map((thread) => new CommentHandle(graph, thread.id))
 }
 
 export function getComment(graph: SceneGraph, id: string): CommentHandle | null {
-  return readComments(graph).some((thread) => thread.id === id && !thread.deleted)
-    ? new CommentHandle(graph, id)
-    : null
+  return findLiveCommentThread(readComments(graph), id) ? new CommentHandle(graph, id) : null
 }
 
 /** Leave a comment on a layer, or at a point of a page. */

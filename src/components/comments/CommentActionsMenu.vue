@@ -11,9 +11,7 @@ import { computed } from 'vue'
 import type { CommentThread } from '@open-pencil/scene-graph'
 import { useCommentMessages, useCommonMessages } from '@open-pencil/vue'
 
-import { togglePinsHidden } from '@/app/comments/session'
 import { useComments } from '@/app/comments/use'
-import { useEditorStore } from '@/app/editor/active-store'
 import { appMenuShortcutLabel } from '@/app/shell/menu/shortcut'
 import { useActionToast } from '@/app/shell/toast/action'
 import AppShortcutText from '@/components/ui/menu/AppShortcutText.vue'
@@ -33,7 +31,6 @@ const {
   showHide?: boolean
 }>()
 
-const store = useEditorStore()
 const comments = useComments()
 const messages = useCommentMessages()
 const common = useCommonMessages()
@@ -58,7 +55,7 @@ async function copyText() {
     v-if="showGoTo"
     :class="menuCls.item"
     data-command="comment-go-to"
-    @select="comments.focusThread(store, thread.id)"
+    @select="comments.focusThread(thread.id)"
   >
     <icon-lucide-locate-fixed :class="menuCls.icon" />
     <span>{{ messages.goToComment }}</span>
@@ -93,7 +90,7 @@ async function copyText() {
       :is="Item"
       :class="menuCls.item"
       data-command="comments-hide"
-      @select="togglePinsHidden"
+      @select="comments.toggleOnCanvas"
     >
       <icon-lucide-eye-off :class="menuCls.icon" />
       <span class="flex-1">{{ messages.hideComments }}</span>

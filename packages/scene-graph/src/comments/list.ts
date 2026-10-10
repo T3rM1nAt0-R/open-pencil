@@ -1,6 +1,8 @@
 import type { CommentThread } from '../types'
+import { byCreatedAt, liveReplies, takesPartInThread } from './threads'
 
-export type CommentSort = 'newest' | 'oldest'
+export const COMMENT_SORTS = ['newest', 'oldest'] as const
+export type CommentSort = (typeof COMMENT_SORTS)[number]
 
 export interface CommentListOptions {
   query: string
@@ -14,18 +16,10 @@ export interface CommentListOptions {
   sort: CommentSort
 }
 
-function liveReplies(thread: CommentThread) {
-  return thread.replies.filter((entry) => !entry.deleted)
-}
-
 function matches(thread: CommentThread, query: string): boolean {
   const words = [thread.text, thread.author, thread.nodeName ?? '', thread.pageName ?? '']
   for (const entry of liveReplies(thread)) words.push(entry.text, entry.author)
   return words.some((word) => word.toLocaleLowerCase().includes(query))
-}
-
-function takesPart(thread: CommentThread, author: string): boolean {
-  return thread.author === author || liveReplies(thread).some((entry) => entry.author === author)
 }
 
 /**
@@ -33,7 +27,7 @@ function takesPart(thread: CommentThread, author: string): boolean {
  * list. Deleted threads keep their place so the numbers people refer to do not shift.
  */
 export function commentThreadNumbers(threads: readonly CommentThread[]): Map<string, number> {
-  const started = threads.toSorted((a, b) => a.createdAt.localeCompare(b.createdAt))
+  const started = threads.toSorted(byCreatedAt)
   return new Map(started.map((thread, index) => [thread.id, index + 1]))
 }
 
@@ -49,10 +43,10 @@ export function listCommentThreads(
       !thread.deleted &&
       (options.showResolved || !thread.resolved) &&
       (!options.onlyPage || thread.pageId === options.pageId) &&
-      (!options.onlyMine || (author !== '' && takesPart(thread, author))) &&
+      (!options.onlyMine || (author !== '' && takesPartInThread(thread, author))) &&
       (query === '' || matches(thread, query))
   )
   // Ordered by when each thread was started, as Figma's "Sort by date" is.
   const direction = options.sort === 'newest' ? -1 : 1
-  return listed.sort((a, b) => direction * a.createdAt.localeCompare(b.createdAt))
+  return listed.sort((a, b) => direction * byCreatedAt(a, b))
 }

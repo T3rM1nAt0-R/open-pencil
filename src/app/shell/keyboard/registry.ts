@@ -5,7 +5,7 @@ import { onScopeDispose } from 'vue'
 import { editorCommandMetadata } from '@open-pencil/vue'
 import type { EditorCommandId } from '@open-pencil/vue'
 
-import { togglePinsHidden } from '@/app/comments/session'
+import { useComments } from '@/app/comments/use'
 import { requestRenameSelection } from '@/app/editor/selection/rename-dialog'
 import { TOOL_SHORTCUTS } from '@/app/editor/session'
 import { openSettingsDialog } from '@/app/settings/dialog'
@@ -185,7 +185,7 @@ export function registerKeyboardShortcuts(options: KeyboardShortcutOptions) {
     {
       id: 'toggle-comments',
       keys: appMenuTinykeysShortcut('view-comments') ?? 'Shift+KeyC',
-      run: () => togglePinsHidden()
+      run: () => useComments().toggleOnCanvas()
     },
     {
       id: 'open-settings',

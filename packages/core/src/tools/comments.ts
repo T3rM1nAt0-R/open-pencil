@@ -1,11 +1,7 @@
 import * as v from 'valibot'
 
 import { DEFAULT_COMMENT_AUTHOR, OpenPencilAPI } from '#core/openpencil-api'
-import { defineTool } from '#core/tools/schema'
-
-const failure = (error: unknown) => ({
-  error: error instanceof Error ? error.message : String(error)
-})
+import { defineTool, toolFailure } from '#core/tools/schema'
 
 const author = v.optional(
   v.pipe(
@@ -40,7 +36,7 @@ export const getComments = defineTool({
       })
       return { comments: comments.map((comment) => comment.toJSON()) }
     } catch (error) {
-      return failure(error)
+      return toolFailure(error)
     }
   }
 })
@@ -70,7 +66,7 @@ export const addComment = defineTool({
     try {
       return new OpenPencilAPI(figma).addComment(text, options).toJSON()
     } catch (error) {
-      return failure(error)
+      return toolFailure(error)
     }
   }
 })
@@ -92,7 +88,7 @@ export const replyToComment = defineTool({
       if (!comment) return { error: `No comment ${id}` }
       return comment.reply(text, { author }).toJSON()
     } catch (error) {
-      return failure(error)
+      return toolFailure(error)
     }
   }
 })
@@ -115,7 +111,7 @@ export const resolveComment = defineTool({
       if (!comment) return { error: `No comment ${id}` }
       return (resolved ? comment.resolve() : comment.reopen()).toJSON()
     } catch (error) {
-      return failure(error)
+      return toolFailure(error)
     }
   }
 })

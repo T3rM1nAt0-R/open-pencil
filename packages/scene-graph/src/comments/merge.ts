@@ -1,4 +1,5 @@
 import type { CommentReply, CommentThread } from '../types'
+import { byCreatedAt } from './threads'
 
 function mergeReplies(first: CommentReply[], second: CommentReply[]): CommentReply[] {
   const byId = new Map<string, CommentReply>()
@@ -10,7 +11,7 @@ function mergeReplies(first: CommentReply[], second: CommentReply[]): CommentRep
       existing ? { ...existing, ...reply, deleted: existing.deleted || reply.deleted } : reply
     )
   }
-  return [...byId.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+  return [...byId.values()].sort(byCreatedAt)
 }
 
 /**
@@ -37,7 +38,7 @@ export function mergeCommentThreads(
       replies: mergeReplies(other.replies, thread.replies)
     })
   }
-  return [...byId.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+  return [...byId.values()].sort(byCreatedAt)
 }
 
 /**

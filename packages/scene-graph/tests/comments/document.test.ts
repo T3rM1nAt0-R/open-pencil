@@ -63,4 +63,16 @@ describe('document comments', () => {
 
     expect(commentAnchor(graph, page.id, { x: 900, y: 900 }).nodeId).toBeNull()
   })
+
+  test('inside a section a pin follows the frame it is on, not the whole section', () => {
+    const graph = new SceneGraph()
+    const page = graph.getPages()[0]
+    if (!page) throw new Error('Page missing')
+    const section = graph.createNode('SECTION', page.id, { x: 0, y: 0, width: 800, height: 600 })
+    const frame = graph.createNode('FRAME', section.id, { x: 100, y: 100, width: 200, height: 100 })
+    graph.createNode('RECTANGLE', frame.id, { x: 10, y: 10, width: 20, height: 20 })
+
+    expect(commentAnchor(graph, page.id, { x: 115, y: 115 }).nodeId).toBe(frame.id)
+  })
 })
+

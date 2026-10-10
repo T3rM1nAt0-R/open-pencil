@@ -9,22 +9,48 @@ export interface CommentAuthor {
   color?: Color
 }
 
-export function newCommentId(prefix: 'c' | 'r'): string {
+function newCommentId(prefix: 'c' | 'r'): string {
   return `${prefix}_${randomHex(8)}`
+}
+
+/** When a comment is written or changed, as stored: an ISO timestamp. */
+export function commentTimestamp(): string {
+  return new Date().toISOString()
+}
+
+/** Oldest first, the order threads and replies are shown and numbered in. */
+export function byCreatedAt(a: { createdAt: string }, b: { createdAt: string }): number {
+  return a.createdAt.localeCompare(b.createdAt)
+}
+
+/** A thread's replies, without the deleted ones kept as tombstones. */
+export function liveReplies(thread: CommentThread): CommentReply[] {
+  return thread.replies.filter((entry) => !entry.deleted)
+}
+
+/** Whether `author` started the thread or replied to it, as Figma's "Only your threads" counts. */
+export function takesPartInThread(thread: CommentThread, author: string): boolean {
+  return thread.author === author || liveReplies(thread).some((entry) => entry.author === author)
+}
+
+/** The thread with `id`, unless it is missing or deleted. */
+export function findLiveCommentThread(
+  threads: readonly CommentThread[],
+  id: string
+): CommentThread | undefined {
+  return threads.find((thread) => thread.id === id && !thread.deleted)
 }
 
 /**
  * The layer a comment on `node` is kept on: its top-level layer, as Figma attaches comments, or
  * within a section the section's own child, as frames move about inside it.
  */
-export function commentLayer(graph: SceneGraph, node: SceneNode, pageId: string): SceneNode {
-  let layer = node
-  while (layer.parentId && layer.parentId !== pageId) {
-    const parent = graph.getNode(layer.parentId)
-    if (!parent || parent.type === 'SECTION') break
-    layer = parent
-  }
-  return layer
+function commentLayer(graph: SceneGraph, node: SceneNode, pageId: string): SceneNode {
+  const isSection = (id: string | null) => !!id && graph.getNode(id)?.type === 'SECTION'
+  return (
+    graph.closest(node.id, (layer) => layer.parentId === pageId || isSection(layer.parentId)) ??
+    node
+  )
 }
 
 /**
@@ -103,11 +129,11 @@ export function editCommentThread(
 }
 
 /** A reply ends up in the thread and reopens it, as answering a resolved comment does. */
-export function replyToThread(thread: CommentThread, reply: CommentReply): CommentThread {
+export function replyToCommentThread(thread: CommentThread, reply: CommentReply): CommentThread {
   return { ...thread, resolved: false, resolvedAt: null, replies: [...thread.replies, reply] }
 }
 
-export function resolveThread(
+export function resolveCommentThread(
   thread: CommentThread,
   resolved: boolean,
   now: string
@@ -116,11 +142,11 @@ export function resolveThread(
 }
 
 /** Deleted threads and replies stay as tombstones, so a stale copy cannot bring them back. */
-export function deleteThread(thread: CommentThread): CommentThread {
+export function deleteCommentThread(thread: CommentThread): CommentThread {
   return { ...thread, deleted: true }
 }
 
-export function deleteReply(thread: CommentThread, replyId: string): CommentThread {
+export function deleteCommentReply(thread: CommentThread, replyId: string): CommentThread {
   return {
     ...thread,
     replies: thread.replies.map((entry) =>

@@ -146,7 +146,7 @@ function setSort(value: unknown) {
             :number="numbers.get(thread.id) ?? 0"
             :page-name="pageName(thread.pageId, thread.pageName)"
             :active="comments.activeThreadId.value === thread.id"
-            @select="comments.focusThread(store, thread.id)"
+            @select="comments.focusThread(thread.id)"
           >
             <template #actions>
               <DropdownMenuRoot :modal="false">

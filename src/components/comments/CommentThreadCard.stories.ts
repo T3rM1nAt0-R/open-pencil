@@ -8,7 +8,7 @@ import CommentComposer from './CommentComposer.vue'
 import CommentThreadCard from './CommentThreadCard.vue'
 import { discussed, long, resolved } from './examples/threads'
 
-type Args = { thread: CommentThread; onReply: (text: string) => void }
+type Args = { thread: CommentThread; onReply: (threadId: string, text: string) => void }
 
 const meta = {
   title: 'App/Editor/Comments/Thread Card',
@@ -46,7 +46,7 @@ export const Replying: Story = {
     await userEvent.keyboard('{Shift>}{Enter}{/Shift}')
     await userEvent.type(reply, 'Shipping it')
     await userEvent.keyboard('{Enter}')
-    await expect(args.onReply).toHaveBeenCalledWith('Looks right\nShipping it')
+    await expect(args.onReply).toHaveBeenCalledWith(discussed.id, 'Looks right\nShipping it')
     await expect(reply).toHaveValue('')
   }
 }

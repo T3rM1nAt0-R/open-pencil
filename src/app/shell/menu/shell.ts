@@ -1,8 +1,5 @@
-import { watch } from 'vue'
-
 import { useI18n } from '@open-pencil/vue'
 
-import { pinsHidden } from '@/app/comments/session'
 import { requestAppExit } from '@/app/document/close/exit'
 import { openSettingsDialog } from '@/app/settings/dialog'
 import { setDesignIssuesOnCanvas, setSnappingPreference } from '@/app/settings/preferences/apply'
@@ -46,14 +43,10 @@ export function useShellMenu() {
     }
   )
 
-  watch(
-    pinsHidden,
-    (hidden) => {
-      void syncNativeCommentsMenu(!hidden).catch((error: unknown) => {
-        console.error('[Menu] Failed to synchronize the native comments menu:', error)
-      })
-    },
-    { immediate: true }
+  void syncNativeCommentsMenu(appPreferences.value.comments.showOnCanvas).catch(
+    (error: unknown) => {
+      console.error('[Menu] Failed to synchronize the native comments menu:', error)
+    }
   )
 
   const { setTheme } = useAppTheme()

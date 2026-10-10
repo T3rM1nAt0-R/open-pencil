@@ -3,9 +3,9 @@ import type { Color } from '@open-pencil/scene-graph/primitives'
 
 import { commentPreview } from '@/app/comments/format'
 import PersonAvatar from '@/components/presence/PersonAvatar.vue'
-import { PEER_COLORS } from '@/constants'
 import { comments } from '@/theme/comments'
 
+import { useCommentAuthor } from './author'
 import CommentTime from './CommentTime.vue'
 
 /**
@@ -33,6 +33,7 @@ const {
   draft?: boolean
 }>()
 
+const who = useCommentAuthor()
 const ui = comments()
 </script>
 
@@ -47,7 +48,7 @@ const ui = comments()
     :class="ui.pin()"
   >
     <template v-if="!draft">
-      <PersonAvatar :name="author" :color="color ?? PEER_COLORS[0]" />
+      <PersonAvatar :name="author" :color="who.color(color)" />
       <!-- An open or moving pin stays a bubble; its thread or its new place is what matters. -->
       <span v-if="text && !active && !dragging" :class="ui.pinPreview()" aria-hidden="true">
         <span :class="ui.pinPreviewClip()">

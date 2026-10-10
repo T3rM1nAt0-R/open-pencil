@@ -4,7 +4,7 @@ import { opacityFromBuffer } from '@open-pencil/core/editor'
 import type { useEditorCommands, useViewportKind } from '@open-pencil/vue'
 
 import type { PropertiesTab } from '@/app/ai/chat/use'
-import { dismissComment } from '@/app/comments/session'
+import { useComments } from '@/app/comments/use'
 import type { EditorStore } from '@/app/editor/active-store'
 
 type KeyboardActionsOptions = {
@@ -79,7 +79,7 @@ export function createKeyboardActions({
       store.exitContainer()
       return
     }
-    if (dismissComment()) return
+    if (useComments().closeCard()) return
     store.clearSelection()
     store.setTool('SELECT')
   }
