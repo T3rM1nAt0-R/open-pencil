@@ -24,11 +24,9 @@ export {
   gradientStopPoint,
   gradientStopPosition,
   hitTestGradientHandles,
-  isGradientFill,
   moveGradientHandle
 } from './gradient'
 export type {
-  GradientFillType,
   GradientHandle,
   GradientHandleLayout,
   GradientHandles,
