@@ -271,6 +271,8 @@ export function createS3StorageAdapter(runtime: StorageProviderRuntime): S3Stora
 
     async getThumbnail(id) {
       const config = await resolveConfig(runtime)
+      const saved = await getObject(config, documentThumbnailKey(id))
+      if (saved?.byteLength) return saved
       const figKey = documentFigKey(id)
       const size = await headObjectSize(config, figKey)
       if (size == null) return null

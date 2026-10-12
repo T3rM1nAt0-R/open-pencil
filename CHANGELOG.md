@@ -24,6 +24,8 @@
 - Variables that alias library variables still point at the library after a save, and a collection's modes keep their order in Figma.
 - Importing design tokens adds them to the file's own collections, never to a collection copied from a library, where Figma did not show them. A token collection named like a library's, such as Tokens in Preline UI files, becomes a new collection of the file.
 
+- Designs in cloud storage show a preview on the home screen: a design without a saved preview gets one drawn from its cover or first page the first time it opens, kept beside the design in the bucket. Recent files without a cover page get a preview from their first page the same way.
+
 ### Performance
 
 - Shader fills store their still frame as JPEG when no pixel is transparent, about 25 times smaller than PNG, so documents with shaders save and open faster; frames with transparency stay PNG. Figma opens both.

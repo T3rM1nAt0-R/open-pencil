@@ -38,9 +38,9 @@ export function clearRecentFileThumbnails(): Promise<void> {
 }
 
 export async function loadRecentFileThumbnail(path: string): Promise<Uint8Array | null> {
-  if (!isTauri() || !path.toLowerCase().endsWith('.fig')) return null
+  if (!isTauri()) return null
   const cached = await loadCachedRecentFileThumbnail(path)
-  if (cached) return cached
+  if (cached || !path.toLowerCase().endsWith('.fig')) return cached
   const { open, SeekMode } = await import('@tauri-apps/plugin-fs')
   const file = await open(path, { read: true })
   try {

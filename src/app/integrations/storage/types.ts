@@ -20,7 +20,6 @@ export type StorageDocumentMetadata = {
 
 export type StorageDocument = StorageDocumentMetadata & {
   id: string
-  thumbnailURL?: string | null
   metadataAuthoritative?: boolean
 }
 

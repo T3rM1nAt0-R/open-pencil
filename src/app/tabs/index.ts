@@ -1,9 +1,7 @@
-import { promiseTimeout } from '@vueuse/core'
 import { shallowRef, computed, triggerRef } from 'vue'
 
 import { BUILTIN_IO_FORMATS, IORegistry } from '@open-pencil/core/io'
 import { findFigThumbnailPageId, populateFigPage } from '@open-pencil/core/io/formats/fig'
-import { renderThumbnail } from '@open-pencil/core/io/formats/raster'
 import { computeAllLayouts } from '@open-pencil/core/layout'
 import type { SceneGraph } from '@open-pencil/scene-graph'
 
@@ -26,17 +24,19 @@ import {
   createActiveStorageAdapter,
   type StorageDocument
 } from '@/app/integrations/storage'
-import {
-  cacheRecentFileThumbnail,
-  loadCachedRecentFileThumbnail,
-  rememberRecentStorageDocument
-} from '@/app/recent-files'
+import { rememberRecentStorageDocument } from '@/app/recent-files'
 import { createDeferred } from '@/app/runtime/deferred'
 import { toast } from '@/app/shell/ui'
 import { getLocalCanvasStore } from '@/app/storage/local-store'
 import { seedStorageCanvasFromRemote } from '@/app/storage/sync/persist'
 import { createFileOpenCoordinator } from '@/app/tabs/open/coordinator'
 import { findTabByFileIdentity } from '@/app/tabs/open/identity'
+import {
+  cacheOpenedFigCover,
+  cacheStorageDocumentPreview,
+  stopWatchingFigCover,
+  watchOpenedFigCover
+} from '@/app/tabs/previews'
 
 export type TabKind = 'home' | 'document'
 
@@ -48,8 +48,6 @@ export interface Tab {
 
 const io = new IORegistry(BUILTIN_IO_FORMATS)
 const fileOpenCoordinator = createFileOpenCoordinator()
-const RECENT_FILE_THUMBNAIL_SIZE = 512
-const coverThumbnailListeners = new WeakMap<EditorStore, () => void>()
 
 let nextTabId = 1
 
@@ -173,8 +171,7 @@ export async function closeTab(tabId: string, unsaved?: 'save' | 'discard'): Pro
   if (!tabsRef.value.includes(closingTab)) return
   if (choice !== 'discard' && closingTab.store.hasUnsavedChanges()) return
   const wasActive = activeTabId.value === tabId
-  coverThumbnailListeners.get(closingTab.store)?.()
-  coverThumbnailListeners.delete(closingTab.store)
+  stopWatchingFigCover(closingTab.store)
   closingTab.store.preparationController.dispose()
   closingTab.store.dispose()
   tabsRef.value = tabsRef.value.filter((t) => t.id !== tabId)
@@ -246,48 +243,6 @@ async function showImportedGraph(
   load?.signal.throwIfAborted()
   load?.update({ phase: 'preparing-render', detail: store.state.documentName })
   await store.fitCurrentPageToViewport()
-}
-
-async function cacheOpenedFigCover(path: string, store: EditorStore): Promise<void> {
-  if (await loadCachedRecentFileThumbnail(path)) return
-  const coverPageId = findFigThumbnailPageId(store.graph.getPages())
-  if (!coverPageId) return
-  for (let attempt = 0; attempt < 240 && !store.renderer; attempt++) {
-    await promiseTimeout(250)
-  }
-  const renderer = store.renderer
-  if (!renderer) {
-    console.warn('[Recent files] Cover thumbnail skipped because the renderer was unavailable')
-    return
-  }
-  const bytes = renderThumbnail(
-    renderer.ck,
-    renderer,
-    store.graph,
-    coverPageId,
-    RECENT_FILE_THUMBNAIL_SIZE,
-    RECENT_FILE_THUMBNAIL_SIZE
-  )
-  if (!bytes) {
-    console.warn('[Recent files] Cover thumbnail skipped because the Cover page was empty')
-    return
-  }
-  await cacheRecentFileThumbnail(path, bytes)
-}
-
-function watchOpenedFigCover(path: string, store: EditorStore): void {
-  coverThumbnailListeners.get(store)?.()
-  const coverPageId = findFigThumbnailPageId(store.graph.getPages())
-  if (!coverPageId) return
-  coverThumbnailListeners.set(
-    store,
-    store.onEditorEvent('page:changed', (pageId) => {
-      if (pageId !== coverPageId) return
-      void cacheOpenedFigCover(path, store).catch((error) => {
-        console.warn('[Recent files] Failed to cache the Cover thumbnail', error)
-      })
-    })
-  )
 }
 
 function findStorageTab(providerId: string, documentId: string): Tab | undefined {
@@ -376,6 +331,9 @@ export async function openStorageDocumentInNewTab(document: StorageDocument): Pr
       load
     )
     rememberRecentStorageDocument(providerId, document.id, document.name)
+    void cacheStorageDocumentPreview(document.id, store).catch((error) => {
+      console.warn('[Storage] Failed to draw the design preview', error)
+    })
     succeeded = true
   } catch (error) {
     if (!load.signal.aborted) {
@@ -490,7 +448,7 @@ export async function openFileInNewTab(
       },
       load
     )
-    if (isFig && path) {
+    if (path) {
       void cacheOpenedFigCover(path, store).catch((error) => {
         console.warn('[Recent files] Failed to cache the Cover thumbnail', error)
       })
