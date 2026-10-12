@@ -8,6 +8,7 @@
 
 ### Added
 
+- Settings → General → On startup chooses what OpenPencil shows when it starts: reopen the designs that were open last, with the last active one in front, show the open screen, or start a new design. The default stays as before. When a design cannot reopen, the open screen shows instead of a blank design, and a link or file opened at launch still opens just that one.
 - Settings → Cloud storage offers the OpenPencil Cloud waitlist: the web app signs you up there, with a confirmation email, and the desktop app opens the sign-up on openpencil.dev.
 - Drop design token files, `.tokens`, `.tokens.json`, or `.resolver.json`, on the editor to import them into the document's variables, as the Variables dialog's Import button does.
 
