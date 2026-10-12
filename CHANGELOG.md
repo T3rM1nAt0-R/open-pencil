@@ -26,6 +26,8 @@
 
 - Designs in cloud storage show a preview on the home screen: a design without a saved preview gets one drawn from its cover or first page the first time it opens, kept beside the design in the bucket. Recent files without a cover page get a preview from their first page the same way.
 
+- The cloud storage list on the home screen no longer flickers when it refreshes: designs and their previews stay on screen and update in place, and a changed preview is swapped only once the new one has loaded.
+
 ### Performance
 
 - Shader fills store their still frame as JPEG when no pixel is transparent, about 25 times smaller than PNG, so documents with shaders save and open faster; frames with transparency stay PNG. Figma opens both.
