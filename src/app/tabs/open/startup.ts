@@ -47,7 +47,8 @@ export async function reopenLastSession(messages: {
     joinRoom: (roomId) => joinRoom(roomId, { tabName: messages.sharedFile }) !== null,
     async storageMetadata(documentId) {
       const adapter = createActiveStorageAdapter(activeStorageProviderID.value)
-      return (await adapter.getDocumentMetadata?.(documentId)) ?? null
+      if (!adapter.getDocumentMetadata) return undefined
+      return adapter.getDocumentMetadata(documentId)
     },
     openStorageDocument: openStorageDocumentInNewTab,
     activeTabId: getActiveTabId,

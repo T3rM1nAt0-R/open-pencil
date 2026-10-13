@@ -70,7 +70,8 @@ describe('last session', () => {
         return true
       },
       async storageMetadata(documentId: string) {
-        return documentId === 'd1' ? { name: 'D1 renamed', updatedAt: '2026-10-13' } : null
+        if (documentId === 'deleted') return null
+        return documentId === 'd1' ? { name: 'D1 renamed', updatedAt: '2026-10-13' } : undefined
       },
       async openStorageDocument(document: StorageDocument) {
         current = document.id
@@ -107,12 +108,14 @@ describe('last session', () => {
         documents: [
           { kind: 'local', path: '/missing.fig' },
           { kind: 'storage', providerId: 'other', documentId: 'd2', name: 'D2' },
-          { kind: 'room', roomId: 'bad' }
+          { kind: 'room', roomId: 'bad' },
+          { kind: 'storage', providerId: 's3', documentId: 'deleted', name: 'Gone' }
         ],
         active: 0
       },
       openers
     )
     expect(partial).toBe(false)
+    expect(opened).not.toContain('deleted')
   })
 })

@@ -83,8 +83,11 @@ export type LastSessionOpeners = {
   activeProviderId: string
   openPath(path: string): Promise<void>
   joinRoom(roomId: string): boolean
-  /** The remote's current metadata, so a newer remote copy wins over a cached one. */
-  storageMetadata(documentId: string): Promise<StorageDocumentMetadata | null>
+  /**
+   * The remote's current metadata, so a newer remote copy wins over a cached one. Null when
+   * the design is gone from storage; undefined when the provider cannot tell.
+   */
+  storageMetadata(documentId: string): Promise<StorageDocumentMetadata | null | undefined>
   openStorageDocument(document: StorageDocument): Promise<void>
   activeTabId(): string
   focus(tabId: string): void
@@ -105,6 +108,11 @@ export async function restoreLastSession(
         if (!openers.joinRoom(document.roomId)) throw new Error('Not a room ID')
       } else if (document.providerId === openers.activeProviderId) {
         const metadata = await openers.storageMetadata(document.documentId)
+        // A design deleted from storage must not come back from a cached local copy.
+        if (metadata === null) {
+          allOpened = false
+          continue
+        }
         await openers.openStorageDocument(
           metadata
             ? { ...metadata, id: document.documentId, metadataAuthoritative: true }
