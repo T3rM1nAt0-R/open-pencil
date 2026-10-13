@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- Open, drag in or `openpencil convert` a draw.io file (`.drawio`, `.dio`, plain or compressed): each tab becomes a page with boxes, shapes, styled text, arrows and their labels. draw.io files are read only; Pencil does not save back to them.
+
 ## 0.15.1 — 2026-09-18
 
 ### Added

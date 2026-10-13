@@ -4,6 +4,7 @@ export {
   BUILTIN_IO_FORMATS,
   figFormat,
   penFormat,
+  drawioFormat,
   pngFormat,
   jpgFormat,
   webpFormat,
