@@ -31,6 +31,7 @@
   "startupReopen": "Reabrir los últimos diseños",
   "startupHome": "Mostrar la pantalla de inicio",
   "startupNew": "Nuevo diseño",
+  "startupReopenIncomplete": "Algunos diseños de la última vez no se pudieron volver a abrir.",
   "accentColor": "Color de acento",
   "accentBlue": "Azul",
   "accentPurple": "Morado",

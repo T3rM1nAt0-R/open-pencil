@@ -33,8 +33,12 @@ export function createDocumentPreviews<Item extends DocumentWorkspaceItem>(
   let disposed = false
 
   function removeURL(id: string): void {
-    stale.delete(id)
     previewGenerations.set(id, (previewGenerations.get(id) ?? 0) + 1)
+    dropURL(id)
+  }
+
+  function dropURL(id: string): void {
+    stale.delete(id)
     const url = previewUrls.value[id]
     if (!url) return
     URL.revokeObjectURL(url)
@@ -70,6 +74,9 @@ export function createDocumentPreviews<Item extends DocumentWorkspaceItem>(
         clearError(id)
         stale.delete(id)
         replaceURL(id, bytes)
+      } else if (generation === (previewGenerations.get(id) ?? 0) && stale.has(id)) {
+        // The design changed and has no preview now, so the old one would be wrong.
+        dropURL(id)
       }
     } catch (error: unknown) {
       if (!disposed && generation === (previewGenerations.get(id) ?? 0)) {

@@ -1,7 +1,11 @@
 import { useLocalStorage } from '@vueuse/core'
 import * as v from 'valibot'
 
-import type { StorageDocument, StorageDocumentBinding } from '@/app/integrations/storage'
+import type {
+  StorageDocument,
+  StorageDocumentBinding,
+  StorageDocumentMetadata
+} from '@/app/integrations/storage'
 
 const LAST_SESSION_STORAGE_KEY = 'open-pencil:last-session'
 
@@ -12,7 +16,8 @@ const sessionDocumentSchema = v.variant('kind', [
     providerId: v.string(),
     documentId: v.string(),
     name: v.string()
-  })
+  }),
+  v.object({ kind: v.literal('room'), roomId: v.string() })
 ])
 
 const lastSessionSchema = v.object({
@@ -28,6 +33,8 @@ export type LastSession = v.InferOutput<typeof lastSessionSchema>
 export type SessionTab = {
   id: string
   kind: 'home' | 'document'
+  /** The room this tab joined, if any; such a tab reopens by rejoining the room. */
+  roomId?: string | null
   store: {
     state: { documentName: string }
     getStorageBinding(): StorageDocumentBinding | null
@@ -37,6 +44,7 @@ export type SessionTab = {
 
 function describeTab(tab: SessionTab): LastSessionDocument | null {
   if (tab.kind !== 'document') return null
+  if (tab.roomId) return { kind: 'room', roomId: tab.roomId }
   const binding = tab.store.getStorageBinding()
   if (binding) return { kind: 'storage', ...binding, name: tab.store.state.documentName }
   const path = tab.store.getSourceIdentity().path
@@ -74,6 +82,9 @@ export const lastSession = useLocalStorage<LastSession | null>(LAST_SESSION_STOR
 export type LastSessionOpeners = {
   activeProviderId: string
   openPath(path: string): Promise<void>
+  joinRoom(roomId: string): boolean
+  /** The remote's current metadata, so a newer remote copy wins over a cached one. */
+  storageMetadata(documentId: string): Promise<StorageDocumentMetadata | null>
   openStorageDocument(document: StorageDocument): Promise<void>
   activeTabId(): string
   focus(tabId: string): void
@@ -90,12 +101,15 @@ export async function restoreLastSession(
     try {
       if (document.kind === 'local') {
         await openers.openPath(document.path)
+      } else if (document.kind === 'room') {
+        if (!openers.joinRoom(document.roomId)) throw new Error('Not a room ID')
       } else if (document.providerId === openers.activeProviderId) {
-        await openers.openStorageDocument({
-          id: document.documentId,
-          name: document.name,
-          updatedAt: ''
-        })
+        const metadata = await openers.storageMetadata(document.documentId)
+        await openers.openStorageDocument(
+          metadata
+            ? { ...metadata, id: document.documentId, metadataAuthoritative: true }
+            : { id: document.documentId, name: document.name, updatedAt: '' }
+        )
       } else {
         allOpened = false
         continue

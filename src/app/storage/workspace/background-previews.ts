@@ -10,8 +10,8 @@ import { getLocalCanvasStore } from '@/app/storage/local-store'
 import { enqueuePutThumb } from '@/app/storage/sync/engine'
 import { emitStorageWorkspaceEvent } from '@/app/storage/workspace/events'
 
-/** Designs being drawn or already drawn this session, so each is downloaded at most once. */
-const attempted = new Map<string, Promise<Uint8Array | null>>()
+/** Designs being drawn right now, so concurrent requests share one download. */
+const inFlight = new Map<string, Promise<Uint8Array | null>>()
 let queue: Promise<unknown> = Promise.resolve()
 
 function whenIdle(): Promise<void> {
@@ -47,10 +47,6 @@ async function drawPreview(providerId: StorageProviderID, id: string): Promise<U
   return preview
 }
 
-async function forgetUnlessDrawn(key: string, drawn: Promise<Uint8Array | null>): Promise<void> {
-  if (!(await drawn)) attempted.delete(key)
-}
-
 /**
  * Draws a preview for a storage design that has none, one design at a time and only when the
  * page is idle, then keeps it locally and uploads it once. Resolves to null when it cannot.
@@ -60,7 +56,7 @@ export function drawMissingStoragePreview(
   id: string
 ): Promise<Uint8Array | null> {
   const key = `${providerId}\0${id}`
-  const pending = attempted.get(key)
+  const pending = inFlight.get(key)
   if (pending) return pending
   const drawn = queue.then(() =>
     drawPreview(providerId, id).catch((error: unknown) => {
@@ -69,8 +65,8 @@ export function drawMissingStoragePreview(
     })
   )
   queue = drawn
-  attempted.set(key, drawn)
-  // Remember only success, so a later request can try a design that failed again.
-  void forgetUnlessDrawn(key, drawn)
+  inFlight.set(key, drawn)
+  // A drawn preview is kept locally, so a later request finds it there without a download.
+  void drawn.finally(() => inFlight.delete(key))
   return drawn
 }

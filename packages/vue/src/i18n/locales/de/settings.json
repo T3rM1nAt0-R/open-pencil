@@ -31,6 +31,7 @@
   "startupReopen": "Letzte Designs wieder öffnen",
   "startupHome": "Startbildschirm zeigen",
   "startupNew": "Neues Design",
+  "startupReopenIncomplete": "Einige Designs vom letzten Mal konnten nicht wieder geöffnet werden.",
   "accentColor": "Akzentfarbe",
   "accentBlue": "Blau",
   "accentPurple": "Lila",

@@ -13,6 +13,7 @@ export const settingsMessageDefaults = {
   startupReopen: 'Reopen last designs',
   startupHome: 'Show the open screen',
   startupNew: 'New design',
+  startupReopenIncomplete: 'Some designs from last time could not be reopened.',
   accentColor: 'Accent color',
   accentBlue: 'Blue',
   accentPurple: 'Purple',

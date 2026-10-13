@@ -31,6 +31,7 @@
   "startupReopen": "Otwórz ponownie ostatnie projekty",
   "startupHome": "Pokaż ekran otwierania",
   "startupNew": "Nowy projekt",
+  "startupReopenIncomplete": "Nie udało się ponownie otworzyć niektórych projektów z ostatniego razu.",
   "accentColor": "Kolor akcentu",
   "accentBlue": "Niebieski",
   "accentPurple": "Fioletowy",

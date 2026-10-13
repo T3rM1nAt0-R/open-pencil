@@ -1,10 +1,12 @@
 import { useEventListener } from '@vueuse/core'
 import { watch } from 'vue'
 
-import { activeStorageProviderID } from '@/app/integrations/storage'
+import { joinRoom, roomForStore } from '@/app/collab/rooms'
+import { activeStorageProviderID, createActiveStorageAdapter } from '@/app/integrations/storage'
 import { appRuntimeConfig } from '@/app/runtime/config'
 import { appPreferences, type StartupOpen } from '@/app/settings/preferences/store'
 import { openFileFromPath } from '@/app/shell/menu/files'
+import { toast } from '@/app/shell/ui'
 import {
   allTabs,
   getActiveTabId,
@@ -14,37 +16,58 @@ import {
   switchTab
 } from '@/app/tabs'
 import { describeOpenTabs, lastSession, restoreLastSession } from '@/app/tabs/open/last-session'
-import { isTauri } from '@/app/tauri/env'
+import { IS_TAURI } from '@/constants'
 
-/** The start screen chosen in Settings, or the platform's default when none was chosen. */
+/** The start screen chosen in Settings; reopening the last designs when none was chosen. */
 export function startupOpenChoice(): StartupOpen {
-  return (
-    appPreferences.value.startup.open ??
-    (isTauri() || appRuntimeConfig.recentFiles ? 'home' : 'new')
-  )
+  return appPreferences.value.startup.open ?? 'reopen'
+}
+
+/** The first tab to show: the open screen where the platform has one, else a new design. */
+export function startupFirstTab(choice: StartupOpen): 'home' | 'new' {
+  if (choice === 'new') return 'new'
+  if (choice === 'home') return 'home'
+  if (lastSession.value?.documents.length) return 'home'
+  return IS_TAURI || appRuntimeConfig.recentFiles ? 'home' : 'new'
 }
 
 /** Reopens the designs that were open last; shows the open screen when one cannot open. */
-export async function reopenLastSession(): Promise<void> {
+export async function reopenLastSession(messages: {
+  sharedFile: string
+  reopenIncomplete: string
+}): Promise<void> {
   const session = lastSession.value
   if (!session?.documents.length) return
   const allOpened = await restoreLastSession(session, {
     activeProviderId: activeStorageProviderID.value,
     async openPath(path) {
-      if (!isTauri()) throw new Error('Files open by path only in the desktop app')
+      if (!IS_TAURI) throw new Error('Files open by path only in the desktop app')
       await openFileFromPath(path)
+    },
+    joinRoom: (roomId) => joinRoom(roomId, { tabName: messages.sharedFile }) !== null,
+    async storageMetadata(documentId) {
+      const adapter = createActiveStorageAdapter(activeStorageProviderID.value)
+      return (await adapter.getDocumentMetadata?.(documentId)) ?? null
     },
     openStorageDocument: openStorageDocumentInNewTab,
     activeTabId: getActiveTabId,
     focus: switchTab
   })
-  if (!allOpened) showNewTab()
+  if (!allOpened) {
+    toast.info(messages.reopenIncomplete)
+    showNewTab()
+  }
 }
 
 /** Keeps the list of open designs current so the next start can reopen them. */
 export function recordOpenDocuments(ready: () => boolean): void {
   const record = () => {
-    if (ready()) lastSession.value = describeOpenTabs(getTabsSnapshot(), getActiveTabId())
+    if (!ready()) return
+    const tabs = getTabsSnapshot().map((tab) => {
+      const room = roomForStore(tab.store)
+      return { ...tab, roomId: room?.origin === 'joined' ? room.roomId : null }
+    })
+    lastSession.value = describeOpenTabs(tabs, getActiveTabId())
   }
   watch(allTabs, record)
   useEventListener(window, 'pagehide', record)

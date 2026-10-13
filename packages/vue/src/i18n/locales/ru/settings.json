@@ -31,6 +31,7 @@
   "startupReopen": "Открыть последние дизайны",
   "startupHome": "Показать экран открытия",
   "startupNew": "Новый дизайн",
+  "startupReopenIncomplete": "Некоторые дизайны с прошлого раза не удалось открыть снова.",
   "accentColor": "Акцентный цвет",
   "accentBlue": "Синий",
   "accentPurple": "Фиолетовый",

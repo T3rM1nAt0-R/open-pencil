@@ -31,6 +31,7 @@
   "startupReopen": "前回のデザインを再度開く",
   "startupHome": "開く画面を表示",
   "startupNew": "新規デザイン",
+  "startupReopenIncomplete": "前回のデザインの一部を再度開けませんでした。",
   "accentColor": "アクセントカラー",
   "accentBlue": "ブルー",
   "accentPurple": "パープル",

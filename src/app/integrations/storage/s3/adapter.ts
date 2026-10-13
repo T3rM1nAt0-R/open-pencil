@@ -16,7 +16,7 @@ import {
   DOCUMENT_THUMBNAIL_CONTENT_TYPE,
   legacyDocumentThumbnailKey
 } from '../namespace'
-import { usablePreview } from '../preview-bytes'
+import { previewMimeType, usablePreview } from '../preview-bytes'
 import type {
   StorageAdapter,
   StorageDocument,
@@ -272,7 +272,8 @@ export function createS3StorageAdapter(runtime: StorageProviderRuntime): S3Stora
       const config = await resolveConfig(runtime)
       const preview = usablePreview(bytes)
       if (!preview) return
-      await putObject(config, documentThumbnailKey(id), preview, DOCUMENT_THUMBNAIL_CONTENT_TYPE)
+      const contentType = previewMimeType(preview) ?? DOCUMENT_THUMBNAIL_CONTENT_TYPE
+      await putObject(config, documentThumbnailKey(id), preview, contentType)
     },
 
     async getThumbnail(id) {

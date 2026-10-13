@@ -39,7 +39,12 @@ import {
   tabCount,
   type Tab
 } from '@/app/tabs'
-import { recordOpenDocuments, reopenLastSession, startupOpenChoice } from '@/app/tabs/open/startup'
+import {
+  recordOpenDocuments,
+  reopenLastSession,
+  startupFirstTab,
+  startupOpenChoice
+} from '@/app/tabs/open/startup'
 import { isTauri } from '@/app/tauri/env'
 import { offerUsageStatsPrompt, startSharing } from '@/app/telemetry'
 import ColorSpaceBanner from '@/components/canvas/ColorSpaceBanner.vue'
@@ -57,7 +62,7 @@ const router = useRouter()
 const createdInitialTab = tabCount() === 0
 const startupOpen =
   route.path === '/' && !appRuntimeConfig.test && !route.meta.demo ? startupOpenChoice() : 'new'
-const { collaboration } = useI18n()
+const { collaboration, settings } = useI18n()
 const joinRoomFromInput = useJoinRoom()
 
 /** A share link opens its room in a tab of its own, so nothing editable shows before it. */
@@ -67,7 +72,7 @@ function openFirstTab(): Tab {
     if (joinRoomFromInput(roomId) && activeTab.value) return activeTab.value
     toast.error(collaboration.value.invalidRoomLink)
   }
-  return startupOpen === 'new' ? createTab() : createHomeTab()
+  return startupFirstTab(startupOpen) === 'new' ? createTab() : createHomeTab()
 }
 
 // Block-scoped so the view does not keep the first tab's store after that tab closes.
@@ -242,7 +247,10 @@ onMounted(async () => {
     activeTab.value?.kind === 'home'
   ) {
     try {
-      await reopenLastSession()
+      await reopenLastSession({
+        sharedFile: collaboration.value.sharedFile,
+        reopenIncomplete: settings.value.startupReopenIncomplete
+      })
     } catch (error) {
       console.error('[Startup]', error)
     }
