@@ -31,9 +31,9 @@ async function drawPreview(providerId: StorageProviderID, id: string): Promise<U
   const existing = usablePreview(await local.readThumb(id))
   if (existing) return existing
   const metadata = await local.getMeta(id)
-  const figBytes =
-    (metadata?.hasFig ? await local.readFig(id) : null) ??
-    (await createActiveStorageAdapter(providerId).getDocument(id))
+  const localFig = metadata?.hasFig ? await local.readFig(id) : null
+  if (!localFig && activeStorageProviderID.value !== providerId) return null
+  const figBytes = localFig ?? (await createActiveStorageAdapter(providerId).getDocument(id))
   const fileBytes = Uint8Array.from(figBytes)
   const graph = await readFigForDisplay(
     new File([fileBytes.buffer], `${id}.fig`, { type: 'application/octet-stream' })

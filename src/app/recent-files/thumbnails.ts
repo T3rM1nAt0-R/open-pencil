@@ -45,8 +45,13 @@ async function recentFileThumbnailCacheKey(path: string): Promise<string> {
 
 export async function loadCachedRecentFileThumbnail(path: string): Promise<Uint8Array | null> {
   if (!isTauri()) {
-    const database = await recentPreviewDatabase.open()
-    return usablePreview(await database.get('preview', path))
+    try {
+      const database = await recentPreviewDatabase.open()
+      return usablePreview(await database.get('preview', path))
+    } catch (error) {
+      console.warn('[Recent files] Could not read the preview database', error)
+      return null
+    }
   }
   const bytes = await readCacheBytes(await recentFileThumbnailCacheKey(path))
   return bytes ? usablePreview(new Uint8Array(bytes)) : null
@@ -56,8 +61,12 @@ export async function cacheRecentFileThumbnail(path: string, bytes: Uint8Array):
   const preview = usablePreview(bytes)
   if (!preview) return
   if (!isTauri()) {
-    const database = await recentPreviewDatabase.open()
-    await database.put('preview', Uint8Array.from(preview), path)
+    try {
+      const database = await recentPreviewDatabase.open()
+      await database.put('preview', Uint8Array.from(preview), path)
+    } catch (error) {
+      console.warn('[Recent files] Could not save the preview', error)
+    }
     return
   }
   await writeCacheBytes(await recentFileThumbnailCacheKey(path), Uint8Array.from(preview).buffer)
@@ -65,7 +74,11 @@ export async function cacheRecentFileThumbnail(path: string, bytes: Uint8Array):
 
 export async function clearRecentFileThumbnails(): Promise<void> {
   if (!isTauri()) {
-    await (await recentPreviewDatabase.open()).clear('preview')
+    try {
+      await (await recentPreviewDatabase.open()).clear('preview')
+    } catch (error) {
+      console.warn('[Recent files] Could not clear the preview database', error)
+    }
     return
   }
   await removeCachePrefix(RECENT_FILE_THUMBNAIL_CACHE_DIR)

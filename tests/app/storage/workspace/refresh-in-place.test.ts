@@ -26,6 +26,8 @@ describe('storage design list refresh', () => {
     let updatedAt = '2026-10-01'
     let failNext = false
     const pending: { release: (() => void) | null } = { release: null }
+    const held: { release: (() => void) | null } = { release: null }
+    let holdNext = false
     const holder: {
       workspace: ReturnType<typeof useDocumentWorkspace<DocumentWorkspaceItem>> | null
     } = { workspace: null }
@@ -35,6 +37,12 @@ describe('storage design list refresh', () => {
           holder.workspace = useDocumentWorkspace<DocumentWorkspaceItem>({
             source: {
               async refresh() {
+                if (holdNext) {
+                  holdNext = false
+                  await new Promise<void>((resolve) => {
+                    held.release = resolve
+                  })
+                }
                 if (failNext) throw new Error('offline')
                 return [{ id: 'design', name: 'Design', updatedAt }]
               },
@@ -70,8 +78,15 @@ describe('storage design list refresh', () => {
 
     failNext = true
     await current.refresh()
-    const refreshing = current.refresh()
     expect(current.error.value).toBeInstanceOf(Error)
+    failNext = false
+    holdNext = true
+    const refreshing = current.refresh()
+    await flushTasks()
+    expect(held.release).not.toBeNull()
+    expect(current.error.value).toBeInstanceOf(Error)
+    expect(current.documents.value).toHaveLength(1)
+    held.release?.()
     await refreshing
     expect(current.documents.value).toHaveLength(1)
     app.unmount()

@@ -20,16 +20,13 @@
 
 ### Fixed
 
-- Cloud design previews show on the home screen in the browser. Previews are saved as `.thumb.png` with an `image/png` type, matching their bytes; previews saved earlier under `.thumb.jpg` still load. A blank preview embedded in a `.fig` no longer hides or replaces a real one, and recent files keep their previews in the browser too.
+- Designs in cloud storage show their preview on the home screen in the browser, and recent files keep their previews there too. Previews are saved as `.thumb.png` with an `image/png` type, matching their bytes; previews saved earlier under `.thumb.jpg` still load. A blank preview embedded in a `.fig` no longer hides or replaces a real one.
 - Showing or hiding a layer of an instance that a boolean component property drives sets the property, as in Figma, so every layer it drives follows and Figma shows the instance as OpenPencil does. Before, only that layer changed, which Figma ignored.
 - Figma shows shader fills and images from older documents in `.fig` files OpenPencil writes: every image is stored under the SHA-1 of its bytes, the only name Figma reads, and a shader keeps its preset through `.fig` files and the Figma clipboard.
 - HTML, Vue, and React exports name a JPEG, GIF, or WebP image fill by its own type in the data URL instead of calling every image PNG.
 - Saving an opened `.fig` file writes only what an edit changed in a layer or variable, and keeps the rest as Figma saved it. That includes data OpenPencil does not model, an instance's library link and saved overrides, and an edited text's letter spacing in percent and font names. Before, saving rewrote each edited layer whole. Importing design tokens or adding a mode also rewrote every layer and variable in the file that uses variable modes.
 - Variables that alias library variables still point at the library after a save, and a collection's modes keep their order in Figma.
 - Importing design tokens adds them to the file's own collections, never to a collection copied from a library, where Figma did not show them. A token collection named like a library's, such as Tokens in Preline UI files, becomes a new collection of the file.
-
-- Designs in cloud storage show a preview on the home screen: a design without a saved preview gets one drawn from its cover or first page the first time it opens, kept beside the design in the bucket. Recent files without a cover page get a preview from their first page the same way.
-
 - The cloud storage list on the home screen no longer flickers when it refreshes: designs and their previews stay on screen and update in place, and a changed preview is swapped only once the new one has loaded.
 
 ### Performance
