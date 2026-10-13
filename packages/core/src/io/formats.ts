@@ -4,6 +4,7 @@ import type { SceneGraph } from '@open-pencil/scene-graph'
 
 import { layoutAuthoredNodes } from '#core/layout'
 
+import { readDrawioDocument } from './formats/drawio'
 import { exportFigFile, parseFigFile } from './formats/fig'
 import type { PPTXExportOptions } from './formats/pptx'
 import { headlessRenderNodes, renderNodesToImage, type RasterExportFormat } from './formats/raster'
@@ -238,6 +239,26 @@ export const penFormat: IOFormatAdapter<'pen'> = {
   }
 }
 
+export const drawioFormat: IOFormatAdapter<'drawio'> = {
+  id: 'drawio',
+  label: 'draw.io Diagram',
+  role: 'interchange-document',
+  category: 'document',
+  extensions: ['drawio', 'dio'],
+  mimeTypes: ['application/vnd.jgraph.mxfile', 'application/x-drawio'],
+  support: {
+    readDocument: true
+  },
+  matchesFile(fileName) {
+    return ['drawio', 'dio'].includes(lowerExt(fileName))
+  },
+  async readDocument(input) {
+    const graph = readDrawioDocument(new TextDecoder().decode(input.data))
+    if (!graph) throw new Error('Not a draw.io diagram')
+    return { graph, sourceFormat: 'drawio' }
+  }
+}
+
 export const pngFormat = rasterFormat('PNG')
 export const jpgFormat = rasterFormat('JPG')
 export const webpFormat = rasterFormat('WEBP')
@@ -420,6 +441,7 @@ export const tailwindJSXFormat: IOFormatAdapter<'tailwind-jsx'> = {
 export const BUILTIN_IO_FORMATS = [
   figFormat,
   penFormat,
+  drawioFormat,
   pngFormat,
   jpgFormat,
   webpFormat,

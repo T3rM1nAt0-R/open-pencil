@@ -5,6 +5,7 @@ export {
   type BuiltinIOFormatId,
   figFormat,
   penFormat,
+  drawioFormat,
   pngFormat,
   jpgFormat,
   webpFormat,
