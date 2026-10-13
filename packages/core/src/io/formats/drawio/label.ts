@@ -1,5 +1,6 @@
 import type { CharacterStyleOverride, Fill } from '@open-pencil/scene-graph'
-import { tryParseColor } from '@open-pencil/scene-graph/color'
+
+import { tryParseColor } from './color'
 
 export interface LabelRun {
   start: number

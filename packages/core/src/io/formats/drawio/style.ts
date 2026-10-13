@@ -1,5 +1,6 @@
 import type { Color } from '@open-pencil/scene-graph'
-import { tryParseColor } from '@open-pencil/scene-graph/color'
+
+import { tryParseColor } from './color'
 
 /** A draw.io `style` string: `key=value` pairs, plus bare words such as `ellipse` or `rhombus`. */
 export type DrawioStyle = Partial<Record<string, string>>
