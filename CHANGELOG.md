@@ -8,6 +8,7 @@
 
 ### Added
 
+- Open, drag in or `openpencil convert` a draw.io file (`.drawio`, `.dio`, plain or compressed): each tab becomes a page with boxes, shapes, styled text, arrows and their labels. draw.io files are read only; Pencil does not save back to them.
 - Settings → Cloud storage offers the OpenPencil Cloud waitlist: the web app signs you up there, with a confirmation email, and the desktop app opens the sign-up on openpencil.dev.
 - Drop design token files, `.tokens`, `.tokens.json`, or `.resolver.json`, on the editor to import them into the document's variables, as the Variables dialog's Import button does.
 
