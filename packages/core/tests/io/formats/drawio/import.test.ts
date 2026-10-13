@@ -85,6 +85,13 @@ describe('pages', () => {
     expect(firstPage(graph).childIds.length).toBeGreaterThan(0)
   })
 
+  test('a compressed page that unpacks past the size limit is skipped', () => {
+    const bomb = new Uint8Array(32 * 1024 * 1024 + 1).fill(32)
+    const packed = fromUint8Array(deflateSync(bomb, { level: 9 }))
+    const source = `<mxfile><diagram id="p1" name="First">${MODEL}</diagram><diagram id="x" name="Huge">${packed}</diagram></mxfile>`
+    expect(load(source).getPages().map((page) => page.name)).toEqual(['First'])
+  })
+
   test('a bare mxGraphModel is one page', () => {
     expect(parseDrawioDocument(MODEL)?.map((page) => page.name)).toEqual(['Page 1'])
   })

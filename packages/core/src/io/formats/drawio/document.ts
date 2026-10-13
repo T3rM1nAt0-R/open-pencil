@@ -1,5 +1,5 @@
 import { DOMParser, type Element } from '@xmldom/xmldom'
-import { inflateSync } from 'fflate'
+import { Inflate } from 'fflate'
 import { isValid, toUint8Array } from 'js-base64'
 
 import type { Vector } from '@open-pencil/scene-graph'
@@ -61,12 +61,39 @@ function childElements(element: Element, name?: string): Element[] {
   return found
 }
 
+/** Largest unpacked diagram accepted, so a small crafted file cannot exhaust memory. */
+const MAX_INFLATED_DIAGRAM_BYTES = 32 * 1024 * 1024
+/** Input fed per step; deflate expands at most ~1032x, which keeps each step's output small. */
+const INFLATE_STEP_BYTES = 4096
+
+/** Raw deflate with an output cap; throws once the unpacked size would exceed it. */
+function boundedInflate(data: Uint8Array): Uint8Array {
+  const chunks: Uint8Array[] = []
+  let size = 0
+  const inflater = new Inflate((chunk) => {
+    size += chunk.length
+    if (size > MAX_INFLATED_DIAGRAM_BYTES) throw new RangeError('draw.io diagram is too large')
+    chunks.push(chunk)
+  })
+  for (let start = 0; start < data.length; start += INFLATE_STEP_BYTES) {
+    const end = start + INFLATE_STEP_BYTES
+    inflater.push(data.subarray(start, end), end >= data.length)
+  }
+  const output = new Uint8Array(size)
+  let offset = 0
+  for (const chunk of chunks) {
+    output.set(chunk, offset)
+    offset += chunk.length
+  }
+  return output
+}
+
 /** The XML inside a compressed `<diagram>`: Base64, raw deflate, then percent-encoded text. */
 function inflateDiagram(text: string): string | null {
   const encoded = text.trim()
   if (!encoded || !isValid(encoded)) return null
   try {
-    const inflated = new TextDecoder().decode(inflateSync(toUint8Array(encoded)))
+    const inflated = new TextDecoder().decode(boundedInflate(toUint8Array(encoded)))
     return decodeURIComponent(inflated)
   } catch {
     return null
