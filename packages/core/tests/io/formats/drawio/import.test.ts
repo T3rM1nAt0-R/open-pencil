@@ -105,6 +105,8 @@ describe('boxes', () => {
     expect(box.fills[0].color.b).toBeGreaterThan(0.9)
     expect(box.strokes[0].weight).toBe(3)
     expect(box.strokes[0].dashPattern).toEqual([9, 9])
+    // The file format keeps dashes on the layer, so the layer carries them too.
+    expect(box.dashPattern).toEqual([9, 9])
   })
 
   test('the draw.io id, tooltip and link stay on the layer', () => {
