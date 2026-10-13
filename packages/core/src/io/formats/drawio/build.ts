@@ -183,7 +183,8 @@ function createVertex(cell: DrawioCell, box: Box, graph: SceneGraph, parentId: s
     pluginData: pluginData(cell),
     fills: geometry.kind === 'rect' ? fill : [],
     strokes: geometry.kind === 'rect' ? strokes : [],
-    cornerRadius: radius
+    cornerRadius: radius,
+    dashPattern: geometry.kind === 'rect' ? (strokes[0]?.dashPattern ?? []) : []
   })
   const inner = { x: 0, y: 0, width: box.width, height: box.height }
   if (geometry.kind === 'ellipse') {
