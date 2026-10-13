@@ -12,8 +12,11 @@ import {
   documentFigKey,
   documentIdFromFigKey,
   documentMetaKey,
-  documentThumbnailKey
+  documentThumbnailKey,
+  DOCUMENT_THUMBNAIL_CONTENT_TYPE,
+  legacyDocumentThumbnailKey
 } from '../namespace'
+import { usablePreview } from '../preview-bytes'
 import type {
   StorageAdapter,
   StorageDocument,
@@ -246,7 +249,8 @@ export function createS3StorageAdapter(runtime: StorageProviderRuntime): S3Stora
       const results = await Promise.allSettled([
         deleteObject(config, documentFigKey(id)),
         deleteObject(config, documentMetaKey(id)),
-        deleteObject(config, documentThumbnailKey(id))
+        deleteObject(config, documentThumbnailKey(id)),
+        deleteObject(config, legacyDocumentThumbnailKey(id))
       ])
       const failure = results.find(
         (result): result is PromiseRejectedResult => result.status === 'rejected'
@@ -266,22 +270,27 @@ export function createS3StorageAdapter(runtime: StorageProviderRuntime): S3Stora
 
     async putThumbnail(id, bytes) {
       const config = await resolveConfig(runtime)
-      await putObject(config, documentThumbnailKey(id), bytes, 'image/jpeg')
+      const preview = usablePreview(bytes)
+      if (!preview) return
+      await putObject(config, documentThumbnailKey(id), preview, DOCUMENT_THUMBNAIL_CONTENT_TYPE)
     },
 
     async getThumbnail(id) {
       const config = await resolveConfig(runtime)
-      const saved = await getObject(config, documentThumbnailKey(id))
-      if (saved?.byteLength) return saved
+      for (const key of [documentThumbnailKey(id), legacyDocumentThumbnailKey(id)]) {
+        const saved = usablePreview(await getObject(config, key))
+        if (saved) return saved
+      }
       const figKey = documentFigKey(id)
       const size = await headObjectSize(config, figKey)
       if (size == null) return null
-      return extractFigThumbnailFromReader({
+      const embedded = await extractFigThumbnailFromReader({
         size,
         async read(start: number, endExclusive: number) {
           return (await getObjectRange(config, figKey, start, endExclusive)) ?? new Uint8Array()
         }
       })
+      return usablePreview(embedded)
     },
 
     libraryObjects: {

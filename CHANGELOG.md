@@ -8,6 +8,7 @@
 
 ### Added
 
+- Designs in cloud storage that have no preview get one drawn in the background, one at a time while the app is idle, without opening them. It is kept on the device and uploaded once.
 - Settings → General → On startup chooses what OpenPencil shows when it starts: reopen the designs that were open last, with the last active one in front, show the open screen, or start a new design. The default stays as before. When a design cannot reopen, the open screen shows instead of a blank design, and a link or file opened at launch still opens just that one.
 - Settings → Cloud storage offers the OpenPencil Cloud waitlist: the web app signs you up there, with a confirmation email, and the desktop app opens the sign-up on openpencil.dev.
 - Drop design token files, `.tokens`, `.tokens.json`, or `.resolver.json`, on the editor to import them into the document's variables, as the Variables dialog's Import button does.
@@ -19,6 +20,7 @@
 
 ### Fixed
 
+- Cloud design previews show on the home screen in the browser. Previews are saved as `.thumb.png` with an `image/png` type, matching their bytes; previews saved earlier under `.thumb.jpg` still load. A blank preview embedded in a `.fig` no longer hides or replaces a real one, and recent files keep their previews in the browser too.
 - Showing or hiding a layer of an instance that a boolean component property drives sets the property, as in Figma, so every layer it drives follows and Figma shows the instance as OpenPencil does. Before, only that layer changed, which Figma ignored.
 - Figma shows shader fills and images from older documents in `.fig` files OpenPencil writes: every image is stored under the SHA-1 of its bytes, the only name Figma reads, and a shader keeps its preset through `.fig` files and the Figma clipboard.
 - HTML, Vue, and React exports name a JPEG, GIF, or WebP image fill by its own type in the data URL instead of calling every image PNG.

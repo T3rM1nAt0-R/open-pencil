@@ -2,10 +2,12 @@ import type { StorageDocument } from '@/app/integrations/storage'
 import {
   activeStorageProviderID,
   createActiveStorageAdapter,
-  isStorageConfigured
+  isStorageConfigured,
+  usablePreview
 } from '@/app/integrations/storage'
 import { getLocalCanvasStore } from '@/app/storage/local-store'
 import { reconcileStorageDocuments } from '@/app/storage/reconcile'
+import { drawMissingStoragePreview } from '@/app/storage/workspace/background-previews'
 import { onStorageWorkspaceEvent } from '@/app/storage/workspace/events'
 
 export type StorageWorkspaceSnapshot = {
@@ -19,7 +21,8 @@ export function createStorageWorkspaceSource(
   return {
     subscribe(listener: () => void): () => void {
       return onStorageWorkspaceEvent((event) => {
-        if (event.providerId === activeStorageProviderID.value) listener()
+        if (event.kind !== 'preview' && event.providerId === activeStorageProviderID.value)
+          listener()
       })
     },
 
@@ -66,14 +69,16 @@ export function createStorageWorkspaceSource(
     async loadPreview(id: string): Promise<Uint8Array | null> {
       const providerID = activeStorageProviderID.value
       const localStore = getLocalCanvasStore()
-      const local = await localStore.readThumb(id)
-      if (local?.byteLength) return local
+      const local = usablePreview(await localStore.readThumb(id))
+      if (local) return local
       const adapter = createActiveStorageAdapter(providerID)
-      if (!adapter.getThumbnail) return null
-      const remote = await adapter.getThumbnail(id)
-      if (!remote?.byteLength) return null
-      if (activeStorageProviderID.value === providerID) await localStore.writeThumb(id, remote)
-      return remote
+      const remote = usablePreview(adapter.getThumbnail ? await adapter.getThumbnail(id) : null)
+      if (remote) {
+        if (activeStorageProviderID.value === providerID) await localStore.writeThumb(id, remote)
+        return remote
+      }
+      // Nothing to show yet: draw one in the background, without opening the design.
+      return drawMissingStoragePreview(providerID, id)
     }
   }
 }

@@ -3,7 +3,8 @@ import type { StorageProviderID } from '@/app/integrations/storage/types'
 export type StorageWorkspaceEvent = {
   providerId: StorageProviderID
   documentId?: string
-  kind: 'changed' | 'synced'
+  /** `preview`: a design that had no preview now has one; only its card needs to reload. */
+  kind: 'changed' | 'synced' | 'preview'
 }
 
 type StorageWorkspaceListener = (event: StorageWorkspaceEvent) => void

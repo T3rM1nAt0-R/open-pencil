@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useLocalStorage } from '@vueuse/core'
-import { computed, ref, watch } from 'vue'
+import { computed, onScopeDispose, ref, watch } from 'vue'
 
 import { useDocumentWorkspace, useI18n, useViewportKind } from '@open-pencil/vue'
 
@@ -21,6 +21,7 @@ import {
 import { useCredentialSettings } from '@/app/settings/credentials/preferences/use'
 import { openSettingsDialog } from '@/app/settings/dialog'
 import { openFileFromPath } from '@/app/shell/menu/use'
+import { onStorageWorkspaceEvent } from '@/app/storage/workspace/events'
 import { createStorageWorkspaceSource } from '@/app/storage/workspace/source'
 import { openStorageDocumentInNewTab } from '@/app/tabs'
 import DocumentEntry from '@/components/home/document/DocumentEntry.vue'
@@ -98,6 +99,20 @@ const storageDescription = computed(() => {
   return bucket ? `${label} · ${bucket}` : label
 })
 const storagePreviewURL = storageWorkspace.previewURL
+// A design drawn after its card asked shows its preview without a reload.
+onScopeDispose(
+  onStorageWorkspaceEvent((event) => {
+    if (event.kind !== 'preview' || !event.documentId) return
+    storageWorkspace.loadPreview(event.documentId)
+    const recent = recentFiles.value.find(
+      (document) =>
+        document.kind === 'storage' &&
+        document.providerId === event.providerId &&
+        document.documentId === event.documentId
+    )
+    if (recent) workspace.loadPreview(recent.id)
+  })
+)
 const vStoragePreview = storageWorkspace.previewDirective
 const normalizedQuery = computed(() => query.value.trim().toLocaleLowerCase(locale.value))
 const filteredRecentFiles = computed(() => {

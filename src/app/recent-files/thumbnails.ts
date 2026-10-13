@@ -1,7 +1,28 @@
+import type { DBSchema } from 'idb'
+
 import { extractFigThumbnailFromReader } from '@open-pencil/fig'
 
 import { readCacheBytes, removeCachePrefix, writeCacheBytes } from '@/app/cache'
+import { usablePreview } from '@/app/integrations/storage/preview-bytes'
+import { APP_DATABASE_NAMES, connectAppDatabase, defineAppDatabase } from '@/app/storage/idb'
 import { isTauri } from '@/app/tauri/env'
+
+interface RecentPreviewDatabase extends DBSchema {
+  preview: { key: string; value: Uint8Array }
+}
+
+/** The browser has no app cache directory, so recent-file previews live in IndexedDB there. */
+const recentPreviewDatabase = connectAppDatabase(
+  defineAppDatabase<RecentPreviewDatabase>({
+    name: APP_DATABASE_NAMES.recentPreviews,
+    version: 1,
+    callbacks: {
+      upgrade(database) {
+        if (!database.objectStoreNames.contains('preview')) database.createObjectStore('preview')
+      }
+    }
+  })
+)
 
 const RECENT_FILE_THUMBNAIL_CACHE_DIR = 'recent-file-thumbnails/v2'
 
@@ -23,29 +44,41 @@ async function recentFileThumbnailCacheKey(path: string): Promise<string> {
 }
 
 export async function loadCachedRecentFileThumbnail(path: string): Promise<Uint8Array | null> {
-  if (!isTauri()) return null
+  if (!isTauri()) {
+    const database = await recentPreviewDatabase.open()
+    return usablePreview(await database.get('preview', path))
+  }
   const bytes = await readCacheBytes(await recentFileThumbnailCacheKey(path))
-  return bytes ? new Uint8Array(bytes) : null
+  return bytes ? usablePreview(new Uint8Array(bytes)) : null
 }
 
 export async function cacheRecentFileThumbnail(path: string, bytes: Uint8Array): Promise<void> {
-  if (!isTauri()) return
-  await writeCacheBytes(await recentFileThumbnailCacheKey(path), Uint8Array.from(bytes).buffer)
+  const preview = usablePreview(bytes)
+  if (!preview) return
+  if (!isTauri()) {
+    const database = await recentPreviewDatabase.open()
+    await database.put('preview', Uint8Array.from(preview), path)
+    return
+  }
+  await writeCacheBytes(await recentFileThumbnailCacheKey(path), Uint8Array.from(preview).buffer)
 }
 
-export function clearRecentFileThumbnails(): Promise<void> {
-  return removeCachePrefix(RECENT_FILE_THUMBNAIL_CACHE_DIR)
+export async function clearRecentFileThumbnails(): Promise<void> {
+  if (!isTauri()) {
+    await (await recentPreviewDatabase.open()).clear('preview')
+    return
+  }
+  await removeCachePrefix(RECENT_FILE_THUMBNAIL_CACHE_DIR)
 }
 
 export async function loadRecentFileThumbnail(path: string): Promise<Uint8Array | null> {
-  if (!isTauri()) return null
   const cached = await loadCachedRecentFileThumbnail(path)
-  if (cached || !path.toLowerCase().endsWith('.fig')) return cached
+  if (cached || !isTauri() || !path.toLowerCase().endsWith('.fig')) return cached
   const { open, SeekMode } = await import('@tauri-apps/plugin-fs')
   const file = await open(path, { read: true })
   try {
     const info = await file.stat()
-    return await extractFigThumbnailFromReader({
+    const embedded = await extractFigThumbnailFromReader({
       size: info.size,
       async read(start, endExclusive) {
         await file.seek(start, SeekMode.Start)
@@ -59,6 +92,7 @@ export async function loadRecentFileThumbnail(path: string): Promise<Uint8Array 
         return offset === bytes.byteLength ? bytes : bytes.subarray(0, offset)
       }
     })
+    return usablePreview(embedded)
   } finally {
     await file.close()
   }

@@ -1,5 +1,6 @@
 import { extractFigThumbnailFromReader } from '@open-pencil/fig'
 
+import { usablePreview } from '@/app/integrations/storage/preview-bytes'
 import type { StorageProviderID } from '@/app/integrations/storage/types'
 import { evictLocalFigCache } from '@/app/storage/cache-eviction'
 import { getLocalCanvasStore } from '@/app/storage/local-store'
@@ -39,7 +40,8 @@ export async function persistStorageCanvasLocally(
     providerId: options.providerId,
     name: options.name,
     figBytes: options.figBytes,
-    thumbBytes: thumbnailBytes,
+    // A blank embedded thumbnail must not replace a preview drawn earlier.
+    thumbBytes: usablePreview(thumbnailBytes) ?? undefined,
     syncStatus: 'pending'
   })
   await runtime.enqueueCanvas(options.canvasId, metadata.revision)
@@ -70,7 +72,7 @@ export async function seedStorageCanvasFromRemote(
     name: options.name,
     updatedAt: options.updatedAt,
     figBytes: options.figBytes,
-    thumbBytes: options.thumbnailBytes,
+    thumbBytes: usablePreview(options.thumbnailBytes) ?? undefined,
     syncStatus: options.markSynced === false ? 'pending' : 'synced'
   })
   if (options.markSynced === false) return

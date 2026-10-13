@@ -3,12 +3,14 @@ import { promiseTimeout } from '@vueuse/core'
 import { findFigThumbnailPageId } from '@open-pencil/core/io/formats/fig'
 import { renderThumbnail } from '@open-pencil/core/io/formats/raster'
 
+import { DOCUMENT_PREVIEW_SIZE, documentPreviewPageId } from '@/app/document/io/preview-render'
 import type { EditorStore } from '@/app/editor/session'
+import { usablePreview } from '@/app/integrations/storage'
 import { cacheRecentFileThumbnail, loadCachedRecentFileThumbnail } from '@/app/recent-files'
 import { getLocalCanvasStore } from '@/app/storage/local-store'
 import { enqueuePutThumb } from '@/app/storage/sync/engine'
+import { emitStorageWorkspaceEvent } from '@/app/storage/workspace/events'
 
-const PREVIEW_SIZE = 512
 const coverThumbnailListeners = new WeakMap<EditorStore, () => void>()
 
 export function stopWatchingFigCover(store: EditorStore): void {
@@ -17,8 +19,7 @@ export function stopWatchingFigCover(store: EditorStore): void {
 }
 
 async function renderDocumentPreview(store: EditorStore): Promise<Uint8Array | null> {
-  const pages = store.graph.getPages()
-  const pageId = findFigThumbnailPageId(pages) ?? pages[0]?.id
+  const pageId = documentPreviewPageId(store.graph)
   if (!pageId) return null
   for (let attempt = 0; attempt < 240 && !store.renderer; attempt++) {
     await promiseTimeout(250)
@@ -33,15 +34,15 @@ async function renderDocumentPreview(store: EditorStore): Promise<Uint8Array | n
     renderer,
     store.graph,
     pageId,
-    PREVIEW_SIZE,
-    PREVIEW_SIZE
+    DOCUMENT_PREVIEW_SIZE,
+    DOCUMENT_PREVIEW_SIZE
   )
   if (!bytes) console.warn('[Previews] Preview skipped because the page was empty')
-  return bytes ?? null
+  return usablePreview(bytes)
 }
 
 export async function cacheOpenedFigCover(path: string, store: EditorStore): Promise<void> {
-  if (await loadCachedRecentFileThumbnail(path)) return
+  if (usablePreview(await loadCachedRecentFileThumbnail(path))) return
   const bytes = await renderDocumentPreview(store)
   if (bytes) await cacheRecentFileThumbnail(path, bytes)
 }
@@ -52,11 +53,13 @@ export async function cacheStorageDocumentPreview(
   store: EditorStore
 ): Promise<void> {
   const local = getLocalCanvasStore()
-  if ((await local.readThumb(documentId))?.byteLength) return
+  if (usablePreview(await local.readThumb(documentId))) return
   const bytes = await renderDocumentPreview(store)
   if (!bytes) return
   const metadata = await local.writeThumb(documentId, bytes)
-  if (metadata) await enqueuePutThumb(documentId, metadata.revision)
+  if (!metadata) return
+  await enqueuePutThumb(documentId, metadata.revision)
+  emitStorageWorkspaceEvent({ providerId: metadata.providerId, documentId, kind: 'preview' })
 }
 
 export function watchOpenedFigCover(path: string, store: EditorStore): void {

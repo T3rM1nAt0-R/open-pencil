@@ -5,6 +5,7 @@ export {
   writeStoragePreference
 } from './preferences'
 export type { StoragePreferences } from './preferences'
+export { MIN_PREVIEW_BYTES, previewMimeType, usablePreview } from './preview-bytes'
 export { S3_STORAGE_PROVIDER, storageProviderRegistry } from './providers'
 export { defineStorageProvider, StorageProviderRegistry } from './registry'
 export { createS3StorageAdapter } from './s3/adapter'

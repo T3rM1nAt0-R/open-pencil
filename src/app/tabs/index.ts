@@ -1,8 +1,6 @@
 import { shallowRef, computed, triggerRef } from 'vue'
 
 import { BUILTIN_IO_FORMATS, IORegistry } from '@open-pencil/core/io'
-import { findFigThumbnailPageId, populateFigPage } from '@open-pencil/core/io/formats/fig'
-import { computeAllLayouts } from '@open-pencil/core/layout'
 import type { SceneGraph } from '@open-pencil/scene-graph'
 
 import { setOpenPencilStore } from '@/app/browser-bridge'
@@ -10,7 +8,7 @@ import { describeDiagnosticError, recordStorageFailure } from '@/app/diagnostics
 import { confirmAllDocuments } from '@/app/document/close/all'
 import { confirmDocumentClose } from '@/app/document/close/controller'
 import { requestDocumentClose } from '@/app/document/close/prompt'
-import { readFigDocument } from '@/app/document/io/fig'
+import { readFigForDisplay } from '@/app/document/io/fig'
 import { applyImportedDocument } from '@/app/document/io/imported-document'
 import type { DocumentSourceIdentity } from '@/app/document/io/types'
 import { getRecoveryStore, type RecoverySnapshotMeta } from '@/app/document/recovery'
@@ -212,20 +210,6 @@ function reusableTabStore(): { store: EditorStore; created: boolean } {
   return { store: createTab().store, created: true }
 }
 
-async function readFigForTab(file: File, signal?: AbortSignal): Promise<SceneGraph> {
-  const imported = await readFigDocument(file, signal)
-  const firstPageId = imported.getPages()[0]?.id
-  const layOut = (pageId: string) =>
-    imported.applyDerivedLayoutDuring(() => computeAllLayouts(imported, pageId))
-  if (firstPageId) layOut(firstPageId)
-  const coverPageId = findFigThumbnailPageId(imported.getPages())
-  if (coverPageId && coverPageId !== firstPageId) {
-    populateFigPage(imported, coverPageId)
-    layOut(coverPageId)
-  }
-  return imported
-}
-
 async function showImportedGraph(
   store: EditorStore,
   graph: SceneGraph,
@@ -323,7 +307,7 @@ export async function openStorageDocumentInNewTab(document: StorageDocument): Pr
       type: 'application/octet-stream'
     })
     load.update({ phase: 'decoding', detail: document.name })
-    const imported = await readFigForTab(file, load.signal)
+    const imported = await readFigForDisplay(file, load.signal)
     await showImportedGraph(
       store,
       imported,
@@ -427,7 +411,7 @@ export async function openFileInNewTab(
     let sourceFormat: string
     if (isFig) {
       load.update({ phase: 'decoding', detail: file.name })
-      imported = await readFigForTab(file, load.signal)
+      imported = await readFigForDisplay(file, load.signal)
       sourceFormat = 'fig'
     } else {
       const result = await io.readDocument({
@@ -494,7 +478,7 @@ export async function restoreRecoverySnapshot(id: string): Promise<void> {
       type: 'application/octet-stream'
     })
     load.update({ phase: 'decoding', detail: snapshot.documentName })
-    const imported = await readFigForTab(file, load.signal)
+    const imported = await readFigForDisplay(file, load.signal)
 
     await showImportedGraph(
       store,
