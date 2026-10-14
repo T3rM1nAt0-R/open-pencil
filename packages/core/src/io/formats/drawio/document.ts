@@ -13,6 +13,10 @@ export interface DrawioGeometry {
   height: number
   /** Waypoints of an edge, in the coordinates of its parent. */
   points: Vector[]
+  /** Where an edge starts when it is not attached to a source shape. */
+  sourcePoint: Vector | null
+  /** Where an edge ends when it is not attached to a target shape. */
+  targetPoint: Vector | null
 }
 
 export interface DrawioCell {
@@ -107,8 +111,14 @@ function number(element: Element, name: string, fallback = 0): number {
 
 function readGeometry(cell: Element): DrawioGeometry {
   const geometry = childElements(cell, 'mxGeometry').at(0)
-  if (!geometry) return { x: 0, y: 0, width: 0, height: 0, points: [] }
+  if (!geometry) {
+    return { x: 0, y: 0, width: 0, height: 0, points: [], sourcePoint: null, targetPoint: null }
+  }
   const array = childElements(geometry, 'Array').find((e) => e.getAttribute('as') === 'points')
+  const point = (as: string): Vector | null => {
+    const found = childElements(geometry, 'mxPoint').find((p) => p.getAttribute('as') === as)
+    return found ? { x: number(found, 'x'), y: number(found, 'y') } : null
+  }
   return {
     x: number(geometry, 'x'),
     y: number(geometry, 'y'),
@@ -116,7 +126,9 @@ function readGeometry(cell: Element): DrawioGeometry {
     height: number(geometry, 'height'),
     points: array
       ? childElements(array, 'mxPoint').map((p) => ({ x: number(p, 'x'), y: number(p, 'y') }))
-      : []
+      : [],
+    sourcePoint: point('sourcePoint'),
+    targetPoint: point('targetPoint')
   }
 }
 

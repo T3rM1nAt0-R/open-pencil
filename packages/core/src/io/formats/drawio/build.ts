@@ -160,7 +160,8 @@ function vectorNode(
   })
 }
 
-function createVertex(cell: DrawioCell, box: Box, graph: SceneGraph, parentId: string): void {
+/** Creates a shape's frame at `box`, in the coordinates of `parentId`, and returns its id. */
+function createVertex(cell: DrawioCell, box: Box, graph: SceneGraph, parentId: string): string {
   const style = cell.style
   const bare = style.text !== undefined || style.shape === 'text'
   const fill = fillOf(style, bare ? null : WHITE)
@@ -194,6 +195,7 @@ function createVertex(cell: DrawioCell, box: Box, graph: SceneGraph, parentId: s
     vectorNode(graph, frame.id, 'Shape', network, inner, geometry.outlineOnly ? [] : fill, strokes)
   }
   textNode(cell, labelBox(style, box.width, box.height), graph, frame.id)
+  return frame.id
 }
 
 function arrowCap(name: string | undefined, fallback: string): StrokeCap | null {
@@ -319,21 +321,54 @@ function absoluteBoxes(cells: DrawioCell[]): Map<string, Box> {
   return boxes
 }
 
+/** Shapes ordered so each container comes before the shapes inside it. */
+function containersFirst(cells: DrawioCell[]): DrawioCell[] {
+  const byId = new Map(cells.map((cell) => [cell.id, cell]))
+  const depth = (cell: DrawioCell): number => {
+    let level = 0
+    for (let up = cell.parent ? byId.get(cell.parent) : undefined; up && level < 50; level++) {
+      up = up.parent ? byId.get(up.parent) : undefined
+    }
+    return level
+  }
+  return cells
+    .filter((cell) => cell.kind === 'vertex')
+    .map((cell, order) => ({ cell, order, level: depth(cell) }))
+    .sort((a, b) => a.level - b.level || a.order - b.order)
+    .map(({ cell }) => cell)
+}
+
 function buildPage(page: DrawioPage, graph: SceneGraph): void {
   const canvas = graph.addPage(page.name)
   const boxes = absoluteBoxes(page.cells)
   const byId = new Map(page.cells.map((cell) => [cell.id, cell]))
+  const frames = new Map<string, string>()
+  const zero = { x: 0, y: 0 }
+  /** The frame a cell goes into, and where that frame sits on the page. */
+  const holder = (cell: DrawioCell): { id: string; at: Point } => {
+    const parentId = cell.parent ? frames.get(cell.parent) : undefined
+    const parentBox = cell.parent ? boxes.get(cell.parent) : undefined
+    return parentId && parentBox ? { id: parentId, at: parentBox } : { id: canvas.id, at: zero }
+  }
+  for (const cell of containersFirst(page.cells)) {
+    const box = boxes.get(cell.id)
+    if (!box) continue
+    const into = holder(cell)
+    const local = { ...box, x: box.x - into.at.x, y: box.y - into.at.y }
+    frames.set(cell.id, createVertex(cell, local, graph, into.id))
+  }
   for (const cell of page.cells) {
-    if (cell.kind === 'vertex') {
-      const box = boxes.get(cell.id)
-      if (box) createVertex(cell, box, graph, canvas.id)
-      continue
-    }
+    if (cell.kind !== 'edge') continue
     const parent = cell.parent ? byId.get(cell.parent) : undefined
-    const origin = parent ? (boxes.get(parent.id) ?? { x: 0, y: 0 }) : { x: 0, y: 0 }
+    const origin = parent ? (boxes.get(parent.id) ?? zero) : zero
     const source = cell.source ? (boxes.get(cell.source) ?? null) : null
     const target = cell.target ? (boxes.get(cell.target) ?? null) : null
-    createEdge(cell, routeEdge(cell, source, target, origin), graph, canvas.id)
+    const into = holder(cell)
+    const points = routeEdge(cell, source, target, origin).map((p) => ({
+      x: p.x - into.at.x,
+      y: p.y - into.at.y
+    }))
+    createEdge(cell, points, graph, into.id)
   }
 }
 

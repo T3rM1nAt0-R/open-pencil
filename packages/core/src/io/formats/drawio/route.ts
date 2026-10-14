@@ -119,10 +119,37 @@ function simplify(points: Point[]): Point[] {
   return result
 }
 
+interface LooseEnds {
+  start: Point | null
+  end: Point | null
+}
+
+/** The edge's own start and end points on the page, for ends not attached to a shape. */
+function looseEnds(cell: DrawioCell, origin: Point): LooseEnds {
+  const place = (p: Point | null): Point | null =>
+    p ? { x: p.x + origin.x, y: p.y + origin.y } : null
+  return { start: place(cell.geometry.sourcePoint), end: place(cell.geometry.targetPoint) }
+}
+
+/** An edge with at least one end not attached to a shape: its shape ends, loose ends, waypoints. */
+function partlyAttached(
+  from: End | null,
+  to: End | null,
+  loose: LooseEnds,
+  waypoints: Point[],
+  orthogonal: boolean
+): Point[] {
+  const start = from?.point ?? loose.start
+  const end = to?.point ?? loose.end
+  const through = [...(start ? [start] : []), ...waypoints, ...(end ? [end] : [])]
+  return simplify(orthogonal ? squareOff(through, from ? isHorizontal(from.side) : true) : through)
+}
+
 /**
  * The corner points of an edge on the page. draw.io routes edges at draw time and stores only
- * their waypoints, so a connected edge is placed once from its ends and waypoints, with right
- * angles when its style asks for them.
+ * their waypoints, so an edge is placed once from its ends and waypoints, with right angles when
+ * its style asks for them. An end not attached to a shape uses the edge's own source or target
+ * point.
  */
 export function routeEdge(
   cell: DrawioCell,
@@ -131,13 +158,13 @@ export function routeEdge(
   origin: Point
 ): Point[] {
   const waypoints = cell.geometry.points.map((p) => ({ x: p.x + origin.x, y: p.y + origin.y }))
+  const loose = looseEnds(cell, origin)
   const orthogonal = (cell.style.edgeStyle ?? '').startsWith('orthogonal')
-  const firstAim = waypoints.at(0) ?? (target ? center(target) : null)
-  const lastAim = waypoints.at(-1) ?? (source ? center(source) : null)
+  const firstAim = waypoints.at(0) ?? (target ? center(target) : loose.end)
+  const lastAim = waypoints.at(-1) ?? (source ? center(source) : loose.start)
   const from: End | null = source && firstAim ? endpoint(cell, source, 'exit', firstAim) : null
   const to: End | null = target && lastAim ? endpoint(cell, target, 'entry', lastAim) : null
-  if (!from || !to)
-    return simplify([...(from ? [from.point] : []), ...waypoints, ...(to ? [to.point] : [])])
+  if (!from || !to) return partlyAttached(from, to, loose, waypoints, orthogonal)
   if (waypoints.length > 0) {
     const through = [from.point, ...waypoints, to.point]
     return simplify(orthogonal ? squareOff(through, isHorizontal(from.side)) : through)

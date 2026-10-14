@@ -131,6 +131,20 @@ describe('boxes', () => {
     expect(shape.strokes).toEqual([])
   })
 
+  test('a box inside a container is the container\'s child at the same place', () => {
+    const graph = load(`<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>
+      <mxCell id="inner" value="Inner" style="rounded=0;" vertex="1" parent="lane">
+        <mxGeometry x="20" y="40" width="80" height="30" as="geometry"/>
+      </mxCell>
+      <mxCell id="lane" value="Lane" style="swimlane;" vertex="1" parent="1">
+        <mxGeometry x="100" y="50" width="300" height="200" as="geometry"/>
+      </mxCell>
+    </root></mxGraphModel>`)
+    const lane = child(graph, firstPage(graph), 'Lane')
+    const inner = child(graph, lane, 'Inner')
+    expect([lane.x, lane.y, inner.x, inner.y]).toEqual([100, 50, 20, 40])
+  })
+
   test('cylinders and diamonds are vectors with their own outline', () => {
     const graph = load()
     const store = child(graph, child(graph, firstPage(graph), 'Store'), 'Shape')
@@ -204,6 +218,18 @@ describe('arrows', () => {
     // Alpha's right edge is x=240; Beta's left edge is x=400.
     expect(arrow.x).toBe(240)
     expect(arrow.x + arrow.width).toBe(400)
+  })
+
+  test('an arrow with loose ends runs from its source point to its target point', () => {
+    const graph = load(`<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/>
+      <mxCell id="e" value="" style="endArrow=classic;" edge="1" parent="1">
+        <mxGeometry relative="1" as="geometry">
+          <mxPoint x="10" y="20" as="sourcePoint"/><mxPoint x="110" y="20" as="targetPoint"/>
+        </mxGeometry>
+      </mxCell>
+    </root></mxGraphModel>`)
+    const arrow = child(graph, firstPage(graph), 'Arrow')
+    expect([arrow.x, arrow.y, arrow.width, arrow.height]).toEqual([10, 20, 100, 0])
   })
 
   test('waypoints are kept and an arrow with no head has no cap', () => {
