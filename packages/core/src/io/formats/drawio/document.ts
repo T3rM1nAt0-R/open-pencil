@@ -98,9 +98,18 @@ function inflateDiagram(text: string): string | null {
   if (!encoded || !isValid(encoded)) return null
   try {
     const inflated = new TextDecoder().decode(boundedInflate(toUint8Array(encoded)))
-    return decodeURIComponent(inflated)
+    return percentDecoded(inflated)
   } catch {
     return null
+  }
+}
+
+/** The text with its percent escapes decoded; text with a stray `%` is already plain. */
+function percentDecoded(text: string): string {
+  try {
+    return decodeURIComponent(text)
+  } catch {
+    return text
   }
 }
 

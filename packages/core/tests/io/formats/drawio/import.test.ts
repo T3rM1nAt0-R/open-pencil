@@ -85,6 +85,15 @@ describe('pages', () => {
     expect(firstPage(graph).childIds.length).toBeGreaterThan(0)
   })
 
+  test('a compressed page with a stray percent sign still opens', () => {
+    const raw = new TextEncoder().encode(MODEL.replace('goes', '50% done'))
+    const packed = fromUint8Array(deflateSync(raw, { level: 9 }))
+    const source = `<mxfile><diagram id="z" name="Packed">${packed}</diagram></mxfile>`
+    const page = firstPage(load(source))
+    expect(page.name).toBe('Packed')
+    expect(page.childIds.length).toBeGreaterThan(0)
+  })
+
   test('a compressed page that unpacks past the size limit is skipped', () => {
     const bomb = new Uint8Array(32 * 1024 * 1024 + 1).fill(32)
     const packed = fromUint8Array(deflateSync(bomb, { level: 9 }))
