@@ -17,9 +17,12 @@ import {
 import type {
   SceneGraph,
   SceneNode,
+  StyleRun,
   TextParagraphSpacingField,
   TextParagraphStyle
 } from '@open-pencil/scene-graph'
+
+import { adjustRunsForDelete, adjustRunsForInsert } from '#core/text/style-runs'
 
 import { assertTextRange } from './style'
 
@@ -67,8 +70,32 @@ export function insertCharacters(
     start,
     characters
   )
-  graph.updateNode(node.id, { text, textParagraphs })
-  recordInstanceOverride(graph, node.id, ['text', 'textParagraphs'])
+  const styleRuns = adjustRunsForInsert(node.styleRuns, start, characters.length)
+  graph.updateNode(node.id, { text, textParagraphs, styleRuns })
+  recordInstanceOverride(graph, node.id, ['text', 'textParagraphs', 'styleRuns'])
+}
+
+/**
+ * The style runs of a text that becomes `next`: what the old and new text share at the start and
+ * the end keeps its styles, and the part between them is removed and inserted as an edit would.
+ */
+export function styleRunsAfterReplace(
+  runs: StyleRun[],
+  previous: string,
+  next: string
+): StyleRun[] {
+  let head = 0
+  const limit = Math.min(previous.length, next.length)
+  while (head < limit && previous[head] === next[head]) head++
+  let tail = 0
+  while (
+    tail < limit - head &&
+    previous[previous.length - 1 - tail] === next[next.length - 1 - tail]
+  )
+    tail++
+  const removed = previous.length - head - tail
+  const added = next.length - head - tail
+  return adjustRunsForInsert(adjustRunsForDelete(runs, head, removed), head, added)
 }
 
 export function deleteCharacters(
@@ -79,8 +106,9 @@ export function deleteCharacters(
 ): void {
   const text = node.text.slice(0, start) + node.text.slice(end)
   const textParagraphs = paragraphStylesAfterEdit(node.textParagraphs, node.text, start, end, '')
-  graph.updateNode(node.id, { text, textParagraphs })
-  recordInstanceOverride(graph, node.id, ['text', 'textParagraphs'])
+  const styleRuns = adjustRunsForDelete(node.styleRuns, start, end - start)
+  graph.updateNode(node.id, { text, textParagraphs, styleRuns })
+  recordInstanceOverride(graph, node.id, ['text', 'textParagraphs', 'styleRuns'])
 }
 
 type ListType = TextListOptions['type']
