@@ -95,7 +95,19 @@ export function styleRunsAfterReplace(
     tail++
   const removed = previous.length - head - tail
   const added = next.length - head - tail
-  return adjustRunsForInsert(adjustRunsForDelete(runs, head, removed), head, added)
+  const end = head + removed
+  const holder = runs.find(
+    (run) => removed > 0 && run.start <= head && end <= run.start + run.length
+  )
+  if (!holder) return adjustRunsForInsert(adjustRunsForDelete(runs, head, removed), head, added)
+  // The change sits inside one run, so the new characters take that run's style.
+  const delta = added - removed
+  return runs
+    .map((run) => {
+      if (run === holder) return { ...run, length: run.length + delta }
+      return run.start >= end ? { ...run, start: run.start + delta } : run
+    })
+    .filter((run) => run.length > 0)
 }
 
 export function deleteCharacters(

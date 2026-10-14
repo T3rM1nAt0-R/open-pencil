@@ -38,6 +38,20 @@ describe('editing coloured text', () => {
     expect(redCharacters(text)).toEqual(['three'])
   })
 
+  test('replacing a whole coloured word gives the new word its colour', () => {
+    const text = coloured('one two three', 4, 7)
+    text.characters = 'one six three'
+
+    expect(redCharacters(text)).toEqual(['six'])
+  })
+
+  test('replacing letters inside a coloured word keeps the word coloured', () => {
+    const text = coloured('one seven three', 4, 9)
+    text.characters = 'one sexen three'
+
+    expect(redCharacters(text)).toEqual(['sexen'])
+  })
+
   test('setting new characters keeps the colour of the text around the change', () => {
     const text = coloured('dot ● one\ndot ● two', 4, 5)
     text.characters = 'dot ● one\nnew line\ndot ● two'
