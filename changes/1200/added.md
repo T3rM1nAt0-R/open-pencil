@@ -1,0 +1,1 @@
+- Open, drag and drop, and `openpencil convert` read draw.io diagrams (`.drawio`, `.dio`), plain or compressed: each tab becomes a page, and boxes, labels and arrows keep their look.
