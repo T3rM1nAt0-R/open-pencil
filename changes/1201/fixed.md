@@ -1,0 +1,1 @@
+- Inserting, deleting or replacing characters through the plugin API, `openpencil eval` or MCP keeps each colour and other character style on the letters it was applied to.
