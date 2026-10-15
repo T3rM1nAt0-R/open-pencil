@@ -1,0 +1,53 @@
+name: e2e (fork, on push)
+
+# Fork-only: runs OpenPencil's Playwright suite for a branch before it goes upstream, on macOS
+# because OpenPencil's canvas snapshots are recorded there (`-darwin.png`). Push a branch named
+# e2e/<name> holding the change plus this file. .github/e2e-specs.txt lists the specs to run;
+# .github/e2e-update.txt, when present, lists specs whose snapshots are recorded first.
+on:
+  push:
+    branches:
+      - 'e2e/**'
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: macos-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/setup-bun
+        with:
+          lfs: 'true'
+
+      - run: bunx playwright install chromium
+
+      - run: bun run build:packages
+
+      - name: Record new snapshots
+        if: hashFiles('.github/e2e-update.txt') != ''
+        env:
+          OPENPENCIL_TEST_SERVER: app
+        run: |
+          bunx playwright test --project=openpencil $(grep -v '^#' .github/e2e-update.txt | tr '\n' ' ') --update-snapshots=all --retries=2
+
+      - name: Playwright
+        env:
+          OPENPENCIL_TEST_SERVER: app
+        run: |
+          specs=""
+          if [ -f .github/e2e-specs.txt ]; then specs="$(grep -v '^#' .github/e2e-specs.txt | tr '\n' ' ')"; fi
+          bunx playwright test --project=openpencil --grep-invert @real-llm --retries=1 $specs
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-snapshots-and-results
+          path: |
+            tests/e2e/**/*-snapshots/*darwin.png
+            test-results
+          retention-days: 7
