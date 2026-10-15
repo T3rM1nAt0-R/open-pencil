@@ -35,11 +35,13 @@ describe('shape with text records', () => {
       shapeWithTextType: 'DIAMOND',
       text: 'Paid?',
       width: 120,
-      height: 120
+      height: 140,
+      shapeUserHeight: 120
     })
     expect(nodeChangeToProps(written(graph, shape.id), [])).toMatchObject({
       nodeType: 'SHAPE_WITH_TEXT',
       shapeWithTextType: 'DIAMOND',
+      shapeUserHeight: 120,
       text: 'Paid?'
     })
   })

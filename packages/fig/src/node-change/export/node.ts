@@ -852,6 +852,7 @@ function serializeShapeWithText(
 ): void {
   if (node.type !== 'SHAPE_WITH_TEXT') return
   nc.shapeWithTextType = node.shapeWithTextType
+  if (node.shapeUserHeight > 0) nc.shapeUserHeight = node.shapeUserHeight
   serializeText(context, node, nc)
 }
 

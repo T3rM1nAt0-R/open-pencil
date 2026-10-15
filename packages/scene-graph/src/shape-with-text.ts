@@ -550,3 +550,11 @@ export function shapeWithTextLabelBox(
     height: fit(height, y, 1 - top - bottom)
   }
 }
+
+/** The height a shape of `type` needs so a label `labelHeight` tall fits inside it. */
+export function shapeWithTextHeightFor(type: ShapeWithTextType, labelHeight: number): number {
+  const [, top, , bottom] = LABEL_INSET[type] ?? [0, 0, 0, 0]
+  const share = 1 - top - bottom
+  if (labelHeight <= 0 || share <= 0) return 0
+  return Math.ceil((labelHeight + LABEL_PADDING * 2) / share)
+}

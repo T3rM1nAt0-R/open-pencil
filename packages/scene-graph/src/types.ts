@@ -684,6 +684,8 @@ export interface SceneNode {
   starInnerRadius: number
   /** The FigJam kind a SHAPE_WITH_TEXT draws; its label is the node's own text. */
   shapeWithTextType: ShapeWithTextType
+  /** The height a shape with text was given; it grows past it to fit its label. 0 is unset. */
+  shapeUserHeight: number
 
   componentId: string | null
   instanceOverrides: InstanceOverrideState

@@ -66,6 +66,28 @@ describe('shapes with text in the plugin API', () => {
     expect(shape.fontSize).toBe(20)
   })
 
+  test('a shape grows to fit its label and returns to the height it was given', () => {
+    const shape = api().createShapeWithText()
+    shape.resize(120, 60)
+    const label = shape.text
+    if (!label) throw new Error('no label')
+    label.characters = 'A label long enough to need several lines inside this small box'
+    expect(shape.height).toBeGreaterThan(60)
+    label.characters = 'Short'
+    expect(shape.height).toBe(60)
+  })
+
+  test('a resize sets the height the shape returns to', () => {
+    const shape = api().createShapeWithText()
+    const label = shape.text
+    if (!label) throw new Error('no label')
+    label.characters = 'Short'
+    shape.resize(160, 90)
+    expect(shape.height).toBe(90)
+    shape.resize(160, 20)
+    expect(shape.height).toBeGreaterThan(20)
+  })
+
   test('other layers have no shape type and no label', () => {
     const rectangle = api().createRectangle()
     expect(rectangle.shapeType).toBeUndefined()

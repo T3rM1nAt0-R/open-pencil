@@ -126,7 +126,8 @@ export const INSTANCE_FOLLOWED_FIELDS = [
   'arcData',
   'pointCount',
   'starInnerRadius',
-  'shapeWithTextType'
+  'shapeWithTextType',
+  'shapeUserHeight'
 ] as const
 
 /** Fields an edit to a layer inside an instance records as that instance's override. */

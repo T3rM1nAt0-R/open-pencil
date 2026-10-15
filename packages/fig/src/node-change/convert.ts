@@ -443,16 +443,19 @@ function withLabelFills(runs: StyleRun[], length: number, fills: Fill[]): StyleR
 function convertShapeWithTextProps(
   nc: NodeChange,
   blobs: Uint8Array[]
-): Partial<Pick<SceneNode, 'shapeWithTextType'> & TextProps> {
+): Partial<Pick<SceneNode, 'shapeWithTextType' | 'shapeUserHeight'> & TextProps> {
   if (nc.type !== 'SHAPE_WITH_TEXT') return {}
   const kind = isShapeWithTextType(nc.shapeWithTextType) ? nc.shapeWithTextType : 'SQUARE'
-  if (nc.textData) return { shapeWithTextType: kind }
+  const shapeUserHeight =
+    typeof nc.shapeUserHeight === 'number' && nc.shapeUserHeight > 0 ? nc.shapeUserHeight : 0
+  if (nc.textData) return { shapeWithTextType: kind, shapeUserHeight }
   const label = generatedLayers(nc).find((layer) => layer.textData)
-  if (!label) return { shapeWithTextType: kind }
+  if (!label) return { shapeWithTextType: kind, shapeUserHeight }
   const text = convertTextProps(label, blobs)
   return {
     ...text,
     shapeWithTextType: kind,
+    shapeUserHeight,
     styleRuns: withLabelFills(text.styleRuns, text.text.length, convertFills(label.fillPaints))
   }
 }

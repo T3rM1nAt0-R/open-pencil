@@ -1,4 +1,8 @@
 import { TEXT_METRIC_FIELDS, type SceneGraph, type SceneNode } from '@open-pencil/scene-graph'
+import {
+  shapeWithTextHeightFor,
+  shapeWithTextLabelBox
+} from '@open-pencil/scene-graph/shape-with-text'
 
 import { estimateTextSize, getTextMeasurer } from './text-measurement'
 
@@ -20,10 +24,45 @@ function hasTextAutoWidthChange(changes: Partial<SceneNode>): boolean {
   return Object.keys(changes).some((key) => TEXT_AUTO_WIDTH_KEYS.has(key as keyof SceneNode))
 }
 
+const SHAPE_FIT_KEYS = new Set<keyof SceneNode>([
+  ...TEXT_METRIC_FIELDS,
+  'lineHeight',
+  'width',
+  'height',
+  'shapeWithTextType',
+  'shapeUserHeight'
+])
+
+/**
+ * A shape with text grows taller to fit its label and goes back to the height it was given once
+ * the label fits again, as FigJam does. A change to the height sets the height it was given.
+ */
+export function shapeWithTextFitChanges(
+  node: SceneNode,
+  changes: Partial<SceneNode>
+): Partial<Pick<SceneNode, 'height' | 'shapeUserHeight'>> {
+  if (!Object.keys(changes).some((key) => SHAPE_FIT_KEYS.has(key as keyof SceneNode))) return {}
+  const next = { ...node, ...changes }
+  const given =
+    changes.shapeUserHeight ??
+    changes.height ??
+    (next.shapeUserHeight > 0 ? next.shapeUserHeight : next.height)
+  const box = shapeWithTextLabelBox(next.shapeWithTextType, next.width, given)
+  const label: SceneNode = { ...next, type: 'TEXT', width: box.width, textAutoResize: 'HEIGHT' }
+  const measured = next.text
+    ? (getTextMeasurer()?.(label, box.width) ?? estimateTextSize(label, box.width))
+    : { height: 0 }
+  const needed = shapeWithTextHeightFor(next.shapeWithTextType, measured.height)
+  return { height: Math.max(given, needed), shapeUserHeight: given }
+}
+
 export function textAutoResizeChanges(
   node: SceneNode | undefined,
   changes: Partial<SceneNode>
-): Partial<Pick<SceneNode, 'width' | 'height' | 'derivedLayout' | 'derivedTextGlyphs'>> {
+): Partial<
+  Pick<SceneNode, 'width' | 'height' | 'derivedLayout' | 'derivedTextGlyphs' | 'shapeUserHeight'>
+> {
+  if (node?.type === 'SHAPE_WITH_TEXT') return shapeWithTextFitChanges(node, changes)
   if (node?.type !== 'TEXT' || !hasTextAutoResizeChange(changes)) return {}
   // Path text is laid out along its path (derivedTextGlyphs on textPathBox),
   // not by paragraph auto-resize. Running the measurement here would null the
