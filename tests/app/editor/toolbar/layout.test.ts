@@ -17,7 +17,14 @@ import {
 } from '@/app/editor/toolbar/layout'
 import { toolShortcutLabels } from '@/app/editor/toolbar/shortcuts'
 
-const SHAPES: ToolbarEntry[] = ['RECTANGLE', 'LINE', 'ELLIPSE', 'POLYGON', 'STAR']
+const SHAPES: ToolbarEntry[] = [
+  'RECTANGLE',
+  'LINE',
+  'ELLIPSE',
+  'POLYGON',
+  'STAR',
+  'SHAPE_WITH_TEXT'
+]
 const SHORTCUTS = toolShortcutLabels('mac')
 const LABELS = { ...SHORTCUTS }
 
@@ -48,7 +55,7 @@ describe('normalizeToolbarLayout', () => {
 
   test('puts a tool the stored layout lacks into its default flyout', () => {
     const result = layout([['SELECT'], ['STAR', 'RECTANGLE', 'ELLIPSE'], ['LINE']])
-    expect(result.groups[2]).toEqual(['STAR', 'RECTANGLE', 'ELLIPSE', 'POLYGON'])
+    expect(result.groups[2]).toEqual(['STAR', 'SHAPE_WITH_TEXT', 'RECTANGLE', 'ELLIPSE', 'POLYGON'])
     expect(result.groups.at(-1)).toEqual(['LINE'])
   })
 
@@ -84,7 +91,7 @@ describe('toolbarItems', () => {
         key: 'LINE',
         label: 'L',
         shortcut: 'L',
-        flyout: ['LINE', 'ELLIPSE', 'POLYGON', 'STAR']
+        flyout: ['LINE', 'ELLIPSE', 'POLYGON', 'STAR', 'SHAPE_WITH_TEXT']
       }
     })
     expect(items.at(-1)).toEqual({ kind: 'action', action: 'insert-icon' })
@@ -138,7 +145,7 @@ describe('editing', () => {
 
   test('removing a tool from its flyout leaves only it a button, after the flyout', () => {
     expect(detachToolbarEntry(base, 'ELLIPSE').groups.slice(2, 4)).toEqual([
-      ['RECTANGLE', 'LINE', 'POLYGON', 'STAR'],
+      ['RECTANGLE', 'LINE', 'POLYGON', 'STAR', 'SHAPE_WITH_TEXT'],
       ['ELLIPSE']
     ])
     expect(detachToolbarEntry(base, 'TEXT')).toBe(base)
@@ -175,7 +182,15 @@ describe('dragging', () => {
 
   test('a tool dropped between two flyout members joins the flyout', () => {
     const dropped = placeToolbarEntry(base, 'PEN', indexOf('LINE'))
-    expect(dropped.groups[2]).toEqual(['RECTANGLE', 'PEN', 'LINE', 'ELLIPSE', 'POLYGON', 'STAR'])
+    expect(dropped.groups[2]).toEqual([
+      'RECTANGLE',
+      'PEN',
+      'LINE',
+      'ELLIPSE',
+      'POLYGON',
+      'STAR',
+      'SHAPE_WITH_TEXT'
+    ])
   })
 
   test('a tool dropped between groups becomes a button there', () => {
@@ -209,7 +224,8 @@ describe('dragging', () => {
       'PEN',
       'ELLIPSE',
       'POLYGON',
-      'STAR'
+      'STAR',
+      'SHAPE_WITH_TEXT'
     ])
     expect(combineToolbarEntry(base, 'LINE', 'STAR')).toBe(base)
     expect(combineToolbarEntry(base, 'PEN', 'insert-icon')).toBe(base)

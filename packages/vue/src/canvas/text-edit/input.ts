@@ -9,6 +9,11 @@ type GetCoords = (e: MouseEvent) => { cx: number; cy: number }
 type HitTest = (cx: number, cy: number, deep: boolean) => SceneNode | null
 type SetDrag = (drag: DragState) => void
 
+/** Layers whose text is typed on the canvas: text, and a shape with text's label. */
+function editsText(node: SceneNode | null | undefined): boolean {
+  return node?.type === 'TEXT' || node?.type === 'SHAPE_WITH_TEXT'
+}
+
 type TextEditInputOptions = {
   editor: Editor
   getCoords: GetCoords
@@ -51,7 +56,7 @@ export function createTextEditInput(options: TextEditInputOptions) {
     if (localX < 0 || localY < 0 || localX > editNode.width || localY > editNode.height) {
       editor.commitTextEdit()
       const hit = hitTestInScope(cx, cy, true)
-      if (hit?.type === 'TEXT' && hit.id !== editNode.id) {
+      if (hit && editsText(hit) && hit.id !== editNode.id) {
         startTextEditingAt(hit, cx, cy)
         return true
       }
@@ -131,7 +136,7 @@ export function createTextEditInput(options: TextEditInputOptions) {
     }
     const hit = getContainerDescendantHit(selectedId, cx, cy)
     editor.enterContainer(selectedId)
-    if (hit?.type === 'TEXT') startTextEditingAt(hit, cx, cy)
+    if (hit && editsText(hit)) startTextEditingAt(hit, cx, cy)
     else if (hit) editor.select([hit.id])
     else editor.clearSelection()
     return true
@@ -151,7 +156,7 @@ export function createTextEditInput(options: TextEditInputOptions) {
     const hit = hitTestInScope(cx, cy, true)
     if (!hit) return
 
-    if (hit.type === 'TEXT') {
+    if (editsText(hit)) {
       const isTopLevelText = hit.parentId === editor.state.currentPageId
       if (!isTopLevelText && selectedId !== hit.id && !wasSelectedBeforeClickSequence(hit.id)) {
         editor.select([hit.id])

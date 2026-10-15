@@ -103,6 +103,9 @@ function settleDrawnSize(preview: ReturnType<Editor['beginNodePreview']>, node: 
       height: clicked ? DEFAULT_TEXT_HEIGHT : node.height,
       textAutoResize: clicked ? 'WIDTH_AND_HEIGHT' : 'NONE'
     })
+  } else if (node.type === 'SHAPE_WITH_TEXT' && clicked) {
+    // A shape with text placed by a click takes FigJam's default size.
+    preview.update(node.id, { width: 208, height: 208 })
   } else if (node.type === 'LINE' && node.width < 2) {
     preview.update(node.id, { width: 100, height: 0, rotation: 0 })
     return true
@@ -158,7 +161,8 @@ function createDraw(
       throw error
     }
     editor.setTool('SELECT')
-    if (node?.type === 'TEXT') editor.startTextEditing(node.id)
+    // Text, and a shape with text's label, take typing as soon as they are drawn.
+    if (node?.type === 'TEXT' || node?.type === 'SHAPE_WITH_TEXT') editor.startTextEditing(node.id)
   }
 
   // Creation itself is already an edit: avoid rebuilding the backing on the first held frame.

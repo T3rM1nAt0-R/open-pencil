@@ -27,7 +27,8 @@ export function shapeWithTextLabel(node: SceneNode): SceneNode {
   const box = shapeWithTextLabelBox(node.shapeWithTextType, node.width, node.height)
   const label: SceneNode = {
     ...node,
-    id: `${node.id}:label`,
+    // The label keeps the shape's id, so its text edits and layout belong to the shape.
+    id: node.id,
     type: 'TEXT',
     x: box.x,
     y: box.y,
@@ -46,6 +47,11 @@ export function shapeWithTextLabel(node: SceneNode): SceneNode {
   }
   labels.set(node, label)
   return label
+}
+
+/** The layer text is laid out on: a shape with text's label, or a text layer itself. */
+export function textLayoutNode(node: SceneNode): SceneNode {
+  return node.type === 'SHAPE_WITH_TEXT' ? shapeWithTextLabel(node) : node
 }
 
 /** Draws a shape with text's label over its fills and strokes. */
