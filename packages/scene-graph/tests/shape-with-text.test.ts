@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
+import type { Vector } from '@open-pencil/scene-graph'
 import type { PolygonOutlineCommand } from '@open-pencil/scene-graph/polygon'
 import {
   SHAPE_WITH_TEXT_TYPES,
@@ -8,7 +9,7 @@ import {
   shapeWithTextLabelBox
 } from '@open-pencil/scene-graph/shape-with-text'
 
-function points(commands: PolygonOutlineCommand[]): { x: number; y: number }[] {
+function points(commands: PolygonOutlineCommand[]): Vector[] {
   return commands.flatMap((command) => {
     if (command.type === 'Z') return []
     if (command.type === 'C') {

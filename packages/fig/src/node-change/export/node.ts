@@ -844,6 +844,17 @@ function applySharedStyleProps(
 }
 
 /** A text's props, and what its ranges refer to, which needs the document's identities. */
+/** A shape with text writes its kind and, as a text does, its label. */
+function serializeShapeWithText(
+  context: SceneNodeToKiwiContext,
+  node: SceneNode,
+  nc: KiwiNodeChange
+): void {
+  if (node.type !== 'SHAPE_WITH_TEXT') return
+  nc.shapeWithTextType = node.shapeWithTextType
+  serializeText(context, node, nc)
+}
+
 function serializeText(context: SceneNodeToKiwiContext, node: SceneNode, nc: KiwiNodeChange): void {
   context.serializeTextProps(
     node,
@@ -889,8 +900,8 @@ function applyNodeVisualProps(
     }))
   }
 
-  if (node.type === 'TEXT' || node.type === 'SHAPE_WITH_TEXT') serializeText(context, node, nc)
-  if (node.type === 'SHAPE_WITH_TEXT') nc.shapeWithTextType = node.shapeWithTextType
+  if (node.type === 'TEXT') serializeText(context, node, nc)
+  serializeShapeWithText(context, node, nc)
 
   if (node.type !== 'VECTOR') nc.frameMaskDisabled = !node.clipsContent
   applySharedStyleProps(context, node, nc)

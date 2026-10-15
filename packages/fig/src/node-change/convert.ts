@@ -406,6 +406,17 @@ function convertParagraphProps(
   }
 }
 
+function isNodeChange(value: unknown): value is NodeChange {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/** The layers FigJam generates inside a shape with text, as it writes them. */
+function generatedLayers(nc: NodeChange): NodeChange[] {
+  const data = nc.nodeGenerationData
+  if (!isNodeChange(data) || !Array.isArray(data.overrides)) return []
+  return data.overrides.filter(isNodeChange)
+}
+
 /** Gives every character of a label `fills` unless a run already paints it. */
 function withLabelFills(runs: StyleRun[], length: number, fills: Fill[]): StyleRun[] {
   if (fills.length === 0 || length === 0) return runs
@@ -436,7 +447,7 @@ function convertShapeWithTextProps(
   if (nc.type !== 'SHAPE_WITH_TEXT') return {}
   const kind = isShapeWithTextType(nc.shapeWithTextType) ? nc.shapeWithTextType : 'SQUARE'
   if (nc.textData) return { shapeWithTextType: kind }
-  const label = nc.nodeGenerationData?.overrides?.find((override) => override.textData)
+  const label = generatedLayers(nc).find((layer) => layer.textData)
   if (!label) return { shapeWithTextType: kind }
   const text = convertTextProps(label, blobs)
   return {

@@ -3,12 +3,14 @@ import type { Canvas } from 'canvaskit-wasm'
 import type { Fill, SceneNode } from '@open-pencil/scene-graph'
 import { shapeWithTextLabelBox } from '@open-pencil/scene-graph/shape-with-text'
 
+import { BLACK } from '#core/constants'
+
 import type { SkiaRenderer } from './renderer'
 
 /** FigJam writes a shape's label in black unless its characters say otherwise. */
 const LABEL_FILL: Fill = {
   type: 'SOLID',
-  color: { r: 0, g: 0, b: 0, a: 1 },
+  color: BLACK,
   opacity: 1,
   visible: true
 }

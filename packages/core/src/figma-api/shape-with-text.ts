@@ -1,6 +1,12 @@
 /// <reference types="@figma/plugin-typings" />
 
-import type { Fill } from '@open-pencil/scene-graph'
+import type { Fill, SceneNode } from '@open-pencil/scene-graph'
+import {
+  isShapeWithTextType,
+  type ShapeWithTextType
+} from '@open-pencil/scene-graph/shape-with-text'
+
+import { BLACK as BLACK_COLOR } from '#core/constants'
 
 import type { FigmaPaint } from './accessors/visual'
 import type { FigmaNodeProxy } from './proxy'
@@ -57,7 +63,7 @@ const PASSED_METHODS = [
   'setRangeIndentation'
 ] as const
 
-const BLACK: Fill = { type: 'SOLID', color: { r: 0, g: 0, b: 0, a: 1 }, opacity: 1, visible: true }
+const BLACK: Fill = { type: 'SOLID', color: BLACK_COLOR, opacity: 1, visible: true }
 
 /**
  * A shape with text's label, as Figma's plugin API gives it (`ShapeWithTextNode.text`). The label
@@ -69,18 +75,17 @@ export class ShapeWithTextLabel {
 
   constructor(host: LabelHost) {
     this.#host = host
-    const target = host as unknown as Record<string, unknown>
     for (const name of PASSED_PROPERTIES) {
       Object.defineProperty(this, name, {
         enumerable: true,
-        get: () => target[name],
+        get: (): unknown => Reflect.get(host, name),
         set: (value: unknown) => {
-          target[name] = value
+          Reflect.set(host, name, value)
         }
       })
     }
     for (const name of PASSED_METHODS) {
-      const method = target[name]
+      const method: unknown = Reflect.get(host, name)
       if (typeof method === 'function') {
         Object.defineProperty(this, name, { value: method.bind(host) })
       }
@@ -97,4 +102,20 @@ export class ShapeWithTextLabel {
     const length = this.#host.characters.length
     if (length > 0) this.#host.setRangeFills(0, length, [...value])
   }
+}
+
+/** A layer's shape-with-text kind, or none for any other layer. */
+export function shapeTypeOf(node: SceneNode): ShapeWithTextType | undefined {
+  return node.type === 'SHAPE_WITH_TEXT' ? node.shapeWithTextType : undefined
+}
+
+/** `value` as a kind for `node`, refused as Figma refuses it. */
+export function checkedShapeType(node: SceneNode, value: unknown): ShapeWithTextType {
+  if (node.type !== 'SHAPE_WITH_TEXT') {
+    throw new Error('in set_shapeType: Only a shape with text has a shape type')
+  }
+  if (!isShapeWithTextType(value)) {
+    throw new Error(`in set_shapeType: Invalid shape type "${String(value)}"`)
+  }
+  return value
 }
