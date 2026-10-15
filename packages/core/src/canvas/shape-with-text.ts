@@ -15,15 +15,52 @@ const LABEL_FILL: Fill = {
   visible: true
 }
 
-const labels = new WeakMap<SceneNode, SceneNode>()
+interface CachedLabel {
+  label: SceneNode
+  width: number
+  height: number
+}
+
+const labels = new WeakMap<SceneNode, CachedLabel>()
+
+/** The fields a label sets for itself rather than copying from its shape. */
+const LABEL_OWN_FIELDS = new Set<string>([
+  'id',
+  'type',
+  'x',
+  'y',
+  'width',
+  'height',
+  'rotation',
+  'textAutoResize',
+  'textAlignVertical',
+  'fills',
+  'strokes',
+  'effects',
+  'textPicture',
+  'derivedTextGlyphs',
+  'textPathData',
+  'textPathBox'
+])
+
+// The scene graph edits nodes in place, so a cached label is reused only while every field
+// it copied still holds the shape's current value.
+function labelIsCurrent(node: SceneNode, cached: CachedLabel): boolean {
+  if (cached.width !== node.width || cached.height !== node.height) return false
+  for (const key of Object.keys(node)) {
+    if (LABEL_OWN_FIELDS.has(key)) continue
+    if (Reflect.get(cached.label, key) !== Reflect.get(node, key)) return false
+  }
+  return true
+}
 
 /**
- * A shape with text's label as a text layer in its label box. Nodes are replaced when they
- * change, so the label is reused for as long as its shape is the same object.
+ * A shape with text's label as a text layer in its label box. The same label object is
+ * returned until the shape changes, so text caches keyed by it stay warm between edits.
  */
 export function shapeWithTextLabel(node: SceneNode): SceneNode {
   const known = labels.get(node)
-  if (known) return known
+  if (known && labelIsCurrent(node, known)) return known.label
   const box = shapeWithTextLabelBox(node.shapeWithTextType, node.width, node.height)
   const label: SceneNode = {
     ...node,
@@ -45,7 +82,7 @@ export function shapeWithTextLabel(node: SceneNode): SceneNode {
     textPathData: null,
     textPathBox: null
   }
-  labels.set(node, label)
+  labels.set(node, { label, width: node.width, height: node.height })
   return label
 }
 
