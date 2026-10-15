@@ -14,6 +14,9 @@ import {
 
 const BLACK_FILL: Fill = { type: 'SOLID', color: BLACK, opacity: 1, visible: true }
 const BLACK_STROKE: Stroke = { ...BLACK_FILL, weight: DEFAULT_STROKE_WEIGHT, align: 'CENTER' }
+/** FigJam's plugin API makes a shape with text 208 px square with 16 px words. */
+const SHAPE_WITH_TEXT_SIZE = 208
+const SHAPE_WITH_TEXT_FONT_SIZE = 16
 
 /**
  * What a new layer starts with, as Figma gives it from a drawing tool and from the plugin API:
@@ -46,6 +49,16 @@ export function newLayerDefaults(
       return { fills: [], strokes: copyStrokes([BLACK_STROKE]) }
     case 'TEXT':
       return { fills: copyFills([BLACK_FILL]) }
+    case 'SHAPE_WITH_TEXT':
+      return {
+        fills: copyFills([DEFAULT_SHAPE_FILL]),
+        strokes: copyStrokes([BLACK_STROKE]),
+        width: SHAPE_WITH_TEXT_SIZE,
+        height: SHAPE_WITH_TEXT_SIZE,
+        shapeWithTextType: 'SQUARE',
+        textAlignHorizontal: 'CENTER',
+        fontSize: SHAPE_WITH_TEXT_FONT_SIZE
+      }
     default:
       return {}
   }

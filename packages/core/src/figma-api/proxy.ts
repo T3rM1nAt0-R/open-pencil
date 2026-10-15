@@ -22,6 +22,10 @@ import {
 } from '@open-pencil/scene-graph/color'
 import type { OkHCLColor, OkHCLPayload } from '@open-pencil/scene-graph/color'
 import type { Rect, Vector } from '@open-pencil/scene-graph/primitives'
+import {
+  isShapeWithTextType,
+  type ShapeWithTextType
+} from '@open-pencil/scene-graph/shape-with-text'
 
 import { assertNodeEditable } from '#core/editor/capabilities'
 import type { FigmaEffect } from '#core/figma-api/effects'
@@ -50,6 +54,7 @@ import { installInstanceOverrideAccessors, type FigmaInstanceOverride } from './
 import { getPageBackgrounds, setPageBackgrounds } from './page-backgrounds'
 import * as PluginData from './plugin-data'
 import { nodeProxyToJSON } from './serialization'
+import { ShapeWithTextLabel } from './shape-with-text'
 import { installSlotAccessors, prepareSlotMove, prepareSlotRemoval } from './slots'
 import type { FigmaLetterSpacing, FigmaLineHeight } from './text'
 import * as TextProxy from './text'
@@ -281,6 +286,27 @@ export class FigmaNodeProxy {
 
   deleteCharacters(start: number, end: number): void {
     TextProxy.deleteCharacters(this[INTERNAL_GRAPH], this._raw(), start, end)
+  }
+
+  /** A shape with text's FigJam kind; other layers have none. */
+  get shapeType(): ShapeWithTextType | undefined {
+    const node = this._raw()
+    return node.type === 'SHAPE_WITH_TEXT' ? node.shapeWithTextType : undefined
+  }
+
+  set shapeType(value: ShapeWithTextType) {
+    if (this._raw().type !== 'SHAPE_WITH_TEXT') {
+      throw new Error('in set_shapeType: Only a shape with text has a shape type')
+    }
+    if (!isShapeWithTextType(value)) {
+      throw new Error(`in set_shapeType: Invalid shape type "${String(value)}"`)
+    }
+    this._update({ shapeWithTextType: value })
+  }
+
+  /** A shape with text's label, as Figma's text sublayer; other layers have none. */
+  get text(): ShapeWithTextLabel | undefined {
+    return this._raw().type === 'SHAPE_WITH_TEXT' ? new ShapeWithTextLabel(this) : undefined
   }
 
   get isMask(): boolean {

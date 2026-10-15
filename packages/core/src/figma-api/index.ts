@@ -44,6 +44,7 @@ import type {
   FigmaPolygonNode,
   FigmaRectangleNode,
   FigmaSectionNode,
+  FigmaShapeWithTextNode,
   FigmaStarNode,
   FigmaTextNode,
   FigmaVectorNode
@@ -213,6 +214,11 @@ export class FigmaAPI implements NodeProxyHost {
 
   createStar(): FigmaStarNode {
     return this._createNode('STAR') as FigmaStarNode
+  }
+
+  /** A FigJam shape with an empty label, a square until its `shapeType` changes. */
+  createShapeWithText(): FigmaShapeWithTextNode {
+    return this._createNode('SHAPE_WITH_TEXT') as FigmaShapeWithTextNode
   }
 
   createVector(): FigmaVectorNode {
