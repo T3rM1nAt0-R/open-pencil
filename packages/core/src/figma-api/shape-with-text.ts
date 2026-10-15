@@ -19,7 +19,6 @@ const PASSED_PROPERTIES = [
   'fontSize',
   'fontName',
   'fontWeight',
-  'textAlignHorizontal',
   'letterSpacing',
   'lineHeight',
   'textCase',
@@ -30,8 +29,7 @@ const PASSED_PROPERTIES = [
   'hangingPunctuation',
   'hangingList',
   'hyperlink',
-  'hasMissingFont',
-  'autoRename'
+  'hasMissingFont'
 ] as const
 
 /** Methods Figma's `TextSublayerNode` shares with a text node, called on the shape. */

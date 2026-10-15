@@ -152,25 +152,34 @@ function onEllipse(w: number, h: number, angle: number): Point {
   return [w / 2 + (Math.cos(angle) * w) / 2, h / 2 + (Math.sin(angle) * h) / 2]
 }
 
+/** A plain box with stroke-only inner lines. */
+function boxWithLines(
+  w: number,
+  h: number,
+  details: PolygonOutlineCommand[]
+): ShapeWithTextGeometry {
+  return {
+    outline: polygon([
+      [0, 0],
+      [w, 0],
+      [w, h],
+      [0, h]
+    ]),
+    details
+  }
+}
+
+/** A rounded box with a tail below its left side; the tail joins the bottom edge. */
 function speechBubble(w: number, h: number): PolygonOutlineCommand[] {
   const body = h * 0.8
-  const r = Math.min(w, body) * 0.2
-  const k = r * (1 - KAPPA)
-  return [
-    { type: 'M', x: r, y: 0 },
-    { type: 'L', x: w - r, y: 0 },
-    curve(w - k, 0, w, k, w, r),
-    { type: 'L', x: w, y: body - r },
-    curve(w, body - k, w - k, body, w - r, body),
+  const box = roundedRect(w, body, Math.min(w, body) * 0.2)
+  // The fifth command draws the bottom edge leftwards; the tail goes just before it.
+  const tail: PolygonOutlineCommand[] = [
     { type: 'L', x: w * 0.38, y: body },
     { type: 'L', x: w * 0.18, y: h },
-    { type: 'L', x: w * 0.22, y: body },
-    { type: 'L', x: r, y: body },
-    curve(k, body, 0, body - k, 0, body - r),
-    { type: 'L', x: 0, y: r },
-    curve(0, k, k, 0, r, 0),
-    { type: 'Z' }
+    { type: 'L', x: w * 0.22, y: body }
   ]
+  return [...box.slice(0, 5), ...tail, ...box.slice(5)]
 }
 
 const plain = (outline: PolygonOutlineCommand[]): ShapeWithTextGeometry => ({
@@ -322,15 +331,7 @@ const BUILDERS: Record<ShapeWithTextType, Builder> = {
   },
   PREDEFINED_PROCESS: (w, h) => {
     const e = Math.min(w * 0.1, h * 0.5)
-    return {
-      outline: polygon([
-        [0, 0],
-        [w, 0],
-        [w, h],
-        [0, h]
-      ]),
-      details: [...line([e, 0], [e, h]), ...line([w - e, 0], [w - e, h])]
-    }
+    return boxWithLines(w, h, [...line([e, 0], [e, h]), ...line([w - e, 0], [w - e, h])])
   },
   SHIELD: (w, h) =>
     plain([
@@ -482,15 +483,7 @@ const BUILDERS: Record<ShapeWithTextType, Builder> = {
   SPEECH_BUBBLE: (w, h) => plain(speechBubble(w, h)),
   INTERNAL_STORAGE: (w, h, min) => {
     const e = min * 0.15
-    return {
-      outline: polygon([
-        [0, 0],
-        [w, 0],
-        [w, h],
-        [0, h]
-      ]),
-      details: [...line([e, 0], [e, h]), ...line([0, e], [w, e])]
-    }
+    return boxWithLines(w, h, [...line([e, 0], [e, h]), ...line([0, e], [w, e])])
   }
 }
 

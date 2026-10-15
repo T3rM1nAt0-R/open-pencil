@@ -22,7 +22,7 @@ describe('shapes with text in the plugin API', () => {
     expect(shape.shapeType).toBe('SQUARE')
     expect([shape.width, shape.height]).toEqual([208, 208])
     expect(shape.text?.characters).toBe('')
-    expect(shape.text?.textAlignHorizontal).toBe('CENTER')
+    expect(shape.textAlignHorizontal).toBe('CENTER')
   })
 
   test('the shape type changes the kind and refuses names FigJam does not have', () => {

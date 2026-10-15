@@ -31,26 +31,30 @@ describe('shape-with-text geometry', () => {
     expect(isShapeWithTextType(undefined)).toBe(false)
   })
 
-  test.each(SHAPE_WITH_TEXT_TYPES)('%s is one closed outline inside its box', (type) => {
-    const { outline, details } = shapeWithTextGeometry(type, 200, 100)
-    expect(outline[0]?.type).toBe('M')
-    expect(outline.at(-1)?.type).toBe('Z')
-    expect(outline.filter((command) => command.type === 'M')).toHaveLength(1)
-    for (const point of [...points(outline), ...points(details)]) {
-      expect(point.x).toBeGreaterThanOrEqual(-1e-9)
-      expect(point.x).toBeLessThanOrEqual(200 + 1e-9)
-      expect(point.y).toBeGreaterThanOrEqual(-1e-9)
-      expect(point.y).toBeLessThanOrEqual(100 + 1e-9)
-    }
-  })
+  for (const type of SHAPE_WITH_TEXT_TYPES) {
+    test(`${type} is one closed outline inside its box`, () => {
+      const { outline, details } = shapeWithTextGeometry(type, 200, 100)
+      expect(outline[0]?.type).toBe('M')
+      expect(outline.at(-1)?.type).toBe('Z')
+      expect(outline.filter((command) => command.type === 'M')).toHaveLength(1)
+      for (const point of [...points(outline), ...points(details)]) {
+        expect(point.x).toBeGreaterThanOrEqual(-1e-9)
+        expect(point.x).toBeLessThanOrEqual(200 + 1e-9)
+        expect(point.y).toBeGreaterThanOrEqual(-1e-9)
+        expect(point.y).toBeLessThanOrEqual(100 + 1e-9)
+      }
+    })
+  }
 
-  test.each(SHAPE_WITH_TEXT_TYPES)('%s keeps its label inside the box', (type) => {
-    const box = shapeWithTextLabelBox(type, 200, 100)
-    expect(box.width).toBeGreaterThan(0)
-    expect(box.height).toBeGreaterThan(0)
-    expect(box.x + box.width).toBeLessThanOrEqual(200)
-    expect(box.y + box.height).toBeLessThanOrEqual(100)
-  })
+  for (const type of SHAPE_WITH_TEXT_TYPES) {
+    test(`${type} keeps its label inside the box`, () => {
+      const box = shapeWithTextLabelBox(type, 200, 100)
+      expect(box.width).toBeGreaterThan(0)
+      expect(box.height).toBeGreaterThan(0)
+      expect(box.x + box.width).toBeLessThanOrEqual(200)
+      expect(box.y + box.height).toBeLessThanOrEqual(100)
+    })
+  }
 
   test('a diamond reaches the middle of each side and nothing else', () => {
     const { outline } = shapeWithTextGeometry('DIAMOND', 200, 100)
