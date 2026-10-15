@@ -15,6 +15,7 @@ import {
   type ProxyThis
 } from '#core/figma-api/accessor-utils'
 import type { FigmaNodeProxy, NodeProxyHost } from '#core/figma-api/proxy'
+import { ShapeWithTextLabel } from '#core/figma-api/shape-with-text'
 
 /**
  * The layers a script sees inside a node. A generated frame, such as a sticky note, shows none:
@@ -34,14 +35,21 @@ function wrap(target: ProxyThis, internals: NodeProxyInternals, id: string): Fig
   return (target[internals.api] as NodeProxyHost).wrapNode(id)
 }
 
-/** `StickyNode`'s members: its body as `text`, its author line, and its wide shape. */
+/**
+ * `StickyNode`'s members: its body as `text`, its author line, and its wide shape. `text` is
+ * also `ShapeWithTextNode`'s label.
+ */
 export function installStickyNodeProxyAccessors(
   prototype: object,
   internals: NodeProxyInternals
 ): void {
   Object.defineProperties(prototype, {
     text: {
-      get(this: ProxyThis): FigmaNodeProxy | undefined {
+      get(this: ProxyThis): FigmaNodeProxy | ShapeWithTextLabel | undefined {
+        const node = raw(this, internals)
+        if (node.type === 'SHAPE_WITH_TEXT') {
+          return new ShapeWithTextLabel(wrap(this, internals, node.id))
+        }
         const layers = sublayers(this, internals)
         return layers ? wrap(this, internals, layers.body.id) : undefined
       }

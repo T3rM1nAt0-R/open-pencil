@@ -5,6 +5,7 @@ import type { Rect } from '@open-pencil/scene-graph/primitives'
 import { resolveNodeTextDirection } from '@open-pencil/scene-graph/text-direction'
 
 import type { SkiaRenderer } from '#core/canvas'
+import { textLayoutNode } from '#core/canvas/shape-with-text'
 import type { TextLayout } from '#core/canvas/text/layout'
 
 export interface TextCaret {
@@ -28,6 +29,8 @@ export class TextEditor {
   private renderer: SkiaRenderer | null = null
   private _state: TextEditorState | null = null
   private paragraphNode: SceneNode | null = null
+  /** Where the laid-out text starts inside the edited node: a shape's label sits inside it. */
+  private origin = { x: 0, y: 0 }
   /** The edited node as it changed outside the editor, laid out again on the next read. */
   private staleNode: SceneNode | null = null
   caretVisible = true
@@ -47,7 +50,11 @@ export class TextEditor {
   }
 
   private paragraphY(y: number): number {
-    return y - this.paragraphVerticalOffset()
+    return y - this.origin.y - this.paragraphVerticalOffset()
+  }
+
+  private paragraphX(x: number): number {
+    return x - this.origin.x
   }
 
   private prepareMove(extend: boolean): TextEditorState | null {
@@ -150,9 +157,12 @@ export class TextEditor {
     this.staleNode = null
     if (!s || !this.renderer) return
     s.paragraph?.delete()
-    this.paragraphNode = node
-    s.textDirection = resolveNodeTextDirection(node)
-    s.paragraph = this.renderer.buildParagraph({ ...node, text: s.text })
+    // A shape with text lays its label out in its label box, not across the whole shape.
+    const layout = textLayoutNode(node)
+    this.origin = layout === node ? { x: 0, y: 0 } : { x: layout.x, y: layout.y }
+    this.paragraphNode = layout
+    s.textDirection = resolveNodeTextDirection(layout)
+    s.paragraph = this.renderer.buildParagraph({ ...layout, text: s.text })
     s.paragraphFontGeneration = this.renderer.fontGeneration
   }
 
@@ -214,7 +224,7 @@ export class TextEditor {
   setCursorAt(x: number, y: number, extend = false): void {
     const s = this.current()
     if (!s?.paragraph) return
-    const pos = s.paragraph.getGlyphPositionAtCoordinate(x, this.paragraphY(y)).pos
+    const pos = s.paragraph.getGlyphPositionAtCoordinate(this.paragraphX(x), this.paragraphY(y)).pos
     if (extend) {
       if (s.selectionAnchor === null) s.selectionAnchor = s.cursor
     } else {
@@ -237,14 +247,14 @@ export class TextEditor {
   selectWordAt(x: number, y: number): void {
     const s = this.current()
     if (!s?.paragraph) return
-    const pos = s.paragraph.getGlyphPositionAtCoordinate(x, this.paragraphY(y)).pos
+    const pos = s.paragraph.getGlyphPositionAtCoordinate(this.paragraphX(x), this.paragraphY(y)).pos
     this.selectWord(pos)
   }
 
   selectLineAt(x: number, y: number): void {
     const s = this.current()
     if (!s?.paragraph) return
-    const pos = s.paragraph.getGlyphPositionAtCoordinate(x, this.paragraphY(y)).pos
+    const pos = s.paragraph.getGlyphPositionAtCoordinate(this.paragraphX(x), this.paragraphY(y)).pos
     this.selectLine(pos)
   }
 
@@ -300,7 +310,10 @@ export class TextEditor {
     if (!caret) return
     const fontSize = s.paragraph.getLineMetrics()[0]?.height ?? 14
     const y = edge === 'up' ? caret.y0 - fontSize / 2 : caret.y1 + fontSize / 2
-    s.cursor = s.paragraph.getGlyphPositionAtCoordinate(caret.x, this.paragraphY(y)).pos
+    s.cursor = s.paragraph.getGlyphPositionAtCoordinate(
+      this.paragraphX(caret.x),
+      this.paragraphY(y)
+    ).pos
   }
 
   moveUp(extend = false): void {
@@ -380,7 +393,7 @@ export class TextEditor {
     const line = paragraph.getLineMetrics().at(0)
     if (line) {
       const offsetY = this.paragraphVerticalOffset()
-      return { x: line.left, y0: offsetY, y1: offsetY + line.height }
+      return this.toNode({ x: line.left, y0: offsetY, y1: offsetY + line.height })
     }
     if (!node || !this.renderer) return null
     const probe = this.renderer.buildParagraph({ ...node, text: ' ' })
@@ -393,7 +406,15 @@ export class TextEditor {
     let x = 0
     if (node.textAlignHorizontal === 'CENTER') x = node.width / 2
     if (node.textAlignHorizontal === 'RIGHT') x = node.width
-    return { x, y0: offsetY, y1: offsetY + height }
+    return this.toNode({ x, y0: offsetY, y1: offsetY + height })
+  }
+
+  private toNode(caret: TextCaret): TextCaret {
+    return {
+      x: caret.x + this.origin.x,
+      y0: caret.y0 + this.origin.y,
+      y1: caret.y1 + this.origin.y
+    }
   }
 
   getCaretRect(): TextCaret | null {
@@ -408,7 +429,7 @@ export class TextEditor {
     const caret = s.paragraph.getCaretRect(cursor, s.textDirection === 'RTL')
     if (!caret) return null
     const offsetY = this.paragraphVerticalOffset()
-    return { x: caret.x, y0: caret.top + offsetY, y1: caret.bottom + offsetY }
+    return this.toNode({ x: caret.x, y0: caret.top + offsetY, y1: caret.bottom + offsetY })
   }
 
   getSelectionRects(): Rect[] {
@@ -426,7 +447,12 @@ export class TextEditor {
     const offsetY = this.paragraphVerticalOffset()
     return rects.map((r) => {
       const [left, top, right, bottom] = r.rect
-      return { x: left, y: top + offsetY, width: right - left, height: bottom - top }
+      return {
+        x: left + this.origin.x,
+        y: top + offsetY + this.origin.y,
+        width: right - left,
+        height: bottom - top
+      }
     })
   }
 }

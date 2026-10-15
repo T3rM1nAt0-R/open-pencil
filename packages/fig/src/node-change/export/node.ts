@@ -845,6 +845,18 @@ function applySharedStyleProps(
   if (node.guides.length > 0) nc.guides = exportCanvasGuides(node.guides)
 }
 
+/** A shape with text writes its kind and, as a text does, its label. */
+function serializeShapeWithText(
+  context: SceneNodeToKiwiContext,
+  node: SceneNode,
+  nc: KiwiNodeChange
+): void {
+  if (node.type !== 'SHAPE_WITH_TEXT') return
+  nc.shapeWithTextType = node.shapeWithTextType
+  if (node.shapeUserHeight > 0) nc.shapeUserHeight = node.shapeUserHeight
+  serializeText(context, node, nc)
+}
+
 function applyNodeVisualProps(
   context: SceneNodeToKiwiContext,
   node: SceneNode,
@@ -879,6 +891,7 @@ function applyNodeVisualProps(
   }
 
   if (node.type === 'TEXT') serializeText(context, node, nc)
+  serializeShapeWithText(context, node, nc)
 
   if (node.type !== 'VECTOR') nc.frameMaskDisabled = !node.clipsContent
   applySharedStyleProps(context, node, nc)
