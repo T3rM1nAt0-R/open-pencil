@@ -1,0 +1,2 @@
+# Specs for e2e-on-push.yml
+tests/e2e/canvas

@@ -1,0 +1,2 @@
+# Snapshots recorded first
+tests/e2e/canvas/shape-with-text-visual.spec.ts
