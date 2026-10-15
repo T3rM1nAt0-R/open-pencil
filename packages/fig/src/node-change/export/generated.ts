@@ -1,9 +1,9 @@
 import { pick } from 'es-toolkit'
 
-import { stickySublayers } from '@open-pencil/scene-graph'
+import { shapeWithTextLabel, stickySublayers } from '@open-pencil/scene-graph'
 import type { SceneNode } from '@open-pencil/scene-graph'
 
-import { generatedSlotPath, STICKY_SLOTS } from '../generated/records'
+import { generatedSlotPath, SHAPE_WITH_TEXT_SLOTS, STICKY_SLOTS } from '../generated/records'
 import type { GeneratedEntry } from '../generated/records'
 import { createFillPaints } from './context'
 import type { KiwiNodeChange, SceneNodeToKiwiContext } from './context'
@@ -31,6 +31,25 @@ const STICKY_RECORD_FIELDS = [
   'exportSettings',
   'pluginData',
   'pluginRelaunchData'
+] as const
+
+/**
+ * The fields a SHAPE_WITH_TEXT's own record keeps, as FigJam writes it: those of a sticky but its
+ * effects. Its paint, corners and effects live on its background, its text on its label.
+ */
+const SHAPE_WITH_TEXT_RECORD_FIELDS = STICKY_RECORD_FIELDS.filter((field) => field !== 'effects')
+
+/** What a shape with text's background keeps: the shape's own paint, corners and effects. */
+const SHAPE_WITH_TEXT_BACKGROUND_FIELDS = [
+  'fillPaints',
+  'strokePaints',
+  'strokeWeight',
+  'strokeAlign',
+  'strokeCap',
+  'strokeJoin',
+  'dashPattern',
+  'cornerRadius',
+  'effects'
 ] as const
 
 function placement(node: SceneNode): Pick<GeneratedEntry, 'size' | 'transform'> {
@@ -70,7 +89,47 @@ function shaped(node: SceneNode, derived: GeneratedEntry): boolean {
  * One that lost them is written as a plain frame with its children, so nothing it shows is lost.
  */
 export function writesGeneratedFrame(context: SceneNodeToKiwiContext, node: SceneNode): boolean {
+  if (node.type === 'SHAPE_WITH_TEXT') return shapeWithTextLabel(context.graph, node) !== null
   return node.type === 'STICKY' && stickySublayers(context.graph, node) !== null
+}
+
+/**
+ * A shape with text's record as FigJam writes it: its kind on it, its paint on its generated
+ * background and its text on its generated label.
+ */
+function shapeWithTextRecord(
+  context: SceneNodeToKiwiContext,
+  node: SceneNode,
+  nc: KiwiNodeChange
+): KiwiNodeChange | null {
+  const label = shapeWithTextLabel(context.graph, node)
+  if (!label) return null
+  const record: KiwiNodeChange = pick(nc, SHAPE_WITH_TEXT_RECORD_FIELDS)
+  record.shapeWithTextType = node.shapeWithTextType
+  if (node.shapeUserHeight > 0) record.shapeUserHeight = node.shapeUserHeight
+  const { background: backgroundSlot, label: labelSlot } = SHAPE_WITH_TEXT_SLOTS
+  const background: GeneratedEntry = {
+    guidPath: generatedSlotPath(backgroundSlot),
+    ...pick(nc, SHAPE_WITH_TEXT_BACKGROUND_FIELDS),
+    cornerRadius: node.cornerRadius
+  }
+  const text = textSublayer(context, labelSlot, label)
+  record.nodeGenerationData = {
+    overrides: [background, text.entry],
+    useFineGrainedSyncing: false,
+    diffOnlyRemovals: []
+  }
+  if (shaped(label, text.derived)) {
+    const backgroundPlacement: GeneratedEntry = {
+      guidPath: generatedSlotPath(backgroundSlot),
+      ...placement({ ...node, x: 0, y: 0 })
+    }
+    record.derivedImmutableFrameData = {
+      overrides: [backgroundPlacement, text.derived],
+      version: 1
+    }
+  }
+  return record
 }
 
 /**
@@ -84,6 +143,7 @@ export function generatedFrameRecord(
   node: SceneNode,
   nc: KiwiNodeChange
 ): KiwiNodeChange | null {
+  if (node.type === 'SHAPE_WITH_TEXT') return shapeWithTextRecord(context, node, nc)
   const sublayers = node.type === 'STICKY' ? stickySublayers(context.graph, node) : null
   if (!sublayers) return null
   const record: KiwiNodeChange = pick(nc, STICKY_RECORD_FIELDS)

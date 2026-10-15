@@ -1,6 +1,11 @@
+import { pick } from 'es-toolkit'
+
 import type { NodeChange } from '@open-pencil/kiwi/fig/codec'
 import {
+  buildShapeWithTextLabel,
   buildStickySublayers,
+  SHAPE_WITH_TEXT_LABEL_LAYOUT,
+  shapeWithTextFrameFields,
   STICKY_SUBLAYER_LAYOUT,
   stickyFrameFields,
   stickyScale
@@ -10,7 +15,12 @@ import type { SceneGraph, SceneNode } from '@open-pencil/scene-graph'
 import { cloneRecord } from '../clone'
 import { nodeChangeToProps } from '../convert'
 import { convertFills } from '../paint'
-import { derivedFrameEntriesOf, generationOverridesOf, STICKY_SLOTS } from './records'
+import {
+  derivedFrameEntriesOf,
+  generationOverridesOf,
+  SHAPE_WITH_TEXT_SLOTS,
+  STICKY_SLOTS
+} from './records'
 import type { GeneratedEntry } from './records'
 
 /** A sublayer as a whole TEXT record: what the user set, placed and shaped as Figma derived it. */
@@ -26,14 +36,15 @@ function sublayerRecord(entry: GeneratedEntry | undefined, derived: GeneratedEnt
 function sublayerProps(
   entry: GeneratedEntry | undefined,
   derived: GeneratedEntry | undefined,
-  blobs: Uint8Array[]
+  blobs: Uint8Array[],
+  layout: Partial<SceneNode> = STICKY_SUBLAYER_LAYOUT
 ): Partial<SceneNode> {
   const {
     nodeType: _type,
     name: _name,
     ...props
   } = nodeChangeToProps(sublayerRecord(entry, derived), blobs, 'occurrence')
-  return { ...props, ...STICKY_SUBLAYER_LAYOUT }
+  return { ...props, ...layout }
 }
 
 /**
@@ -58,4 +69,47 @@ export function materializeStickyContent(
     ...stickyFrameFields(scale)
   })
   buildStickySublayers(graph, sticky, { scale }, { body: bodyProps, author: authorProps })
+}
+
+/** A shape with text's own paint, corners and effects, which FigJam keeps on its background. */
+function backgroundProps(
+  entry: GeneratedEntry | undefined,
+  blobs: Uint8Array[]
+): Partial<SceneNode> {
+  if (!entry) return {}
+  const { guidPath: _slot, ...fields } = cloneRecord(entry)
+  const props = nodeChangeToProps({ ...fields, type: 'RECTANGLE' }, blobs, 'occurrence')
+  return pick(props, [
+    'fills',
+    'strokes',
+    'strokeCap',
+    'strokeJoin',
+    'dashPattern',
+    'cornerRadius',
+    'effects'
+  ])
+}
+
+/**
+ * Gives an imported SHAPE_WITH_TEXT the label its record describes, centred in the label box of
+ * its kind. A shape without a generated label gets an empty one, which typing fills.
+ */
+export function materializeShapeWithTextContent(
+  graph: SceneGraph,
+  shape: SceneNode,
+  record: NodeChange,
+  blobs: Uint8Array[]
+): void {
+  const { background, label } = SHAPE_WITH_TEXT_SLOTS
+  const overrides = generationOverridesOf(record)
+  const entry = overrides.get(label)
+  const derived = derivedFrameEntriesOf(record).get(label)
+  graph.updateNode(shape.id, {
+    ...backgroundProps(overrides.get(background), blobs),
+    shapeUserWidth: shape.width,
+    shapeUserHeight: shape.shapeUserHeight > 0 ? shape.shapeUserHeight : shape.height,
+    ...shapeWithTextFrameFields(shape.shapeWithTextType, shape.width, shape.height)
+  })
+  const props = entry ? sublayerProps(entry, derived, blobs, SHAPE_WITH_TEXT_LABEL_LAYOUT) : {}
+  buildShapeWithTextLabel(graph, shape, props)
 }

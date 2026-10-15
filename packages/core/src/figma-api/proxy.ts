@@ -53,7 +53,6 @@ import { getPageBackgrounds, setPageBackgrounds } from './page-backgrounds'
 import * as PluginData from './plugin-data'
 import { nodeProxyToJSON } from './serialization'
 import { checkedShapeType, shapeTypeOf } from './shape-with-text'
-import type { ShapeWithTextLabel } from './shape-with-text'
 import { installSlotAccessors, prepareSlotMove, prepareSlotRemoval } from './slots'
 import type { FigmaLetterSpacing, FigmaLineHeight } from './text'
 import * as TextProxy from './text'
@@ -168,9 +167,9 @@ export class FigmaNodeProxy {
   declare readonly overrides: FigmaInstanceOverride[] | undefined
   /**
    * A sticky note's body, its author line, and whether it is wide; undefined on other layers.
-   * A shape with text has `text` too: its label, as Figma's text sublayer.
+   * A shape with text has `text` too: its label.
    */
-  declare readonly text: FigmaNodeProxy | ShapeWithTextLabel | undefined
+  declare readonly text: FigmaNodeProxy | undefined
   declare readonly authorName: string | undefined
   declare authorVisible: boolean | undefined
   declare isWideWidth: boolean | undefined

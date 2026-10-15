@@ -1,6 +1,7 @@
 import {
   isGeneratedFrame,
   isWideSticky,
+  shapeWithTextLabel,
   stickyScale,
   stickySublayers,
   stickyWidth
@@ -15,7 +16,6 @@ import {
   type ProxyThis
 } from '#core/figma-api/accessor-utils'
 import type { FigmaNodeProxy, NodeProxyHost } from '#core/figma-api/proxy'
-import { ShapeWithTextLabel } from '#core/figma-api/shape-with-text'
 
 /**
  * The layers a script sees inside a node. A generated frame, such as a sticky note, shows none:
@@ -45,10 +45,11 @@ export function installStickyNodeProxyAccessors(
 ): void {
   Object.defineProperties(prototype, {
     text: {
-      get(this: ProxyThis): FigmaNodeProxy | ShapeWithTextLabel | undefined {
+      get(this: ProxyThis): FigmaNodeProxy | undefined {
         const node = raw(this, internals)
         if (node.type === 'SHAPE_WITH_TEXT') {
-          return new ShapeWithTextLabel(wrap(this, internals, node.id))
+          const label = shapeWithTextLabel(graph(this, internals), node)
+          return label ? wrap(this, internals, label.id) : undefined
         }
         const layers = sublayers(this, internals)
         return layers ? wrap(this, internals, layers.body.id) : undefined

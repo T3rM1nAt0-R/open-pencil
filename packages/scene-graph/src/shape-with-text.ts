@@ -1,4 +1,5 @@
 import type { PolygonOutlineCommand } from './polygon'
+import { databaseCap } from './shape-with-text-fit'
 
 /**
  * FigJam's shape-with-text kinds, as Figma names them in `.fig` files and in its plugin API
@@ -182,6 +183,11 @@ const plain = (outline: PolygonOutlineCommand[]): ShapeWithTextGeometry => ({
 
 type Builder = (w: number, h: number, min: number) => ShapeWithTextGeometry
 
+/** How far a parallelogram's sides lean: FigJam leans them with the height, not the width. */
+export function parallelogramSlant(w: number, h: number): number {
+  return Math.min(h * 0.43, w * 0.45)
+}
+
 /** Each kind's outline and inner lines for a `w` × `h` box, `min` being its shorter side. */
 const BUILDERS: Record<ShapeWithTextType, Builder> = {
   SQUARE: (w, h) =>
@@ -219,9 +225,10 @@ const BUILDERS: Record<ShapeWithTextType, Builder> = {
         [w / 2, h]
       ])
     ),
-  ROUNDED_RECTANGLE: (w, h, min) => plain(roundedRect(w, h, min * 0.2)),
+  // FigJam rounds the ends to 0.4 of the shorter side, as its saved outlines show.
+  ROUNDED_RECTANGLE: (w, h, min) => plain(roundedRect(w, h, min * 0.4)),
   PARALLELOGRAM_RIGHT: (w, h) => {
-    const s = Math.min(w * 0.2, h * 0.5)
+    const s = parallelogramSlant(w, h)
     return plain(
       polygon([
         [s, 0],
@@ -232,7 +239,7 @@ const BUILDERS: Record<ShapeWithTextType, Builder> = {
     )
   },
   PARALLELOGRAM_LEFT: (w, h) => {
-    const s = Math.min(w * 0.2, h * 0.5)
+    const s = parallelogramSlant(w, h)
     return plain(
       polygon([
         [0, 0],
@@ -243,7 +250,7 @@ const BUILDERS: Record<ShapeWithTextType, Builder> = {
     )
   },
   ENG_DATABASE: (w, h) => {
-    const ry = Math.min(h * 0.15, w * 0.25)
+    const ry = databaseCap(w, h)
     const kx = (w / 2) * KAPPA
     const ky = ry * KAPPA
     return {
@@ -481,17 +488,56 @@ const BUILDERS: Record<ShapeWithTextType, Builder> = {
 }
 
 /** The outline and inner lines of a shape of `type` filling a `width` × `height` box. */
+/**
+ * The outline with each straight corner rounded to `radius` (FigJam rounds them all to its corner
+ * radius), shortened where an edge is too short for it. Outlines with curves keep their shape.
+ */
+function roundCorners(commands: PolygonOutlineCommand[], radius: number): PolygonOutlineCommand[] {
+  if (radius <= 0 || commands.some((command) => command.type === 'C')) return commands
+  const points: Point[] = []
+  for (const command of commands) if (command.type !== 'Z') points.push([command.x, command.y])
+  if (points.length < 3) return commands
+  const rounded: PolygonOutlineCommand[] = []
+  points.forEach((vertex, index) => {
+    const before = points[(index + points.length - 1) % points.length]
+    const after = points[(index + 1) % points.length]
+    const toward = (to: Point): Point => {
+      const length = Math.hypot(to[0] - vertex[0], to[1] - vertex[1])
+      const t = length > 0 ? Math.min(radius, length / 2) / length : 0
+      return [vertex[0] + (to[0] - vertex[0]) * t, vertex[1] + (to[1] - vertex[1]) * t]
+    }
+    const [inX, inY] = toward(before)
+    const [outX, outY] = toward(after)
+    rounded.push({ type: index === 0 ? 'M' : 'L', x: inX, y: inY })
+    rounded.push(
+      curve(
+        inX + (vertex[0] - inX) * KAPPA,
+        inY + (vertex[1] - inY) * KAPPA,
+        outX + (vertex[0] - outX) * KAPPA,
+        outY + (vertex[1] - outY) * KAPPA,
+        outX,
+        outY
+      )
+    )
+  })
+  rounded.push({ type: 'Z' })
+  return rounded
+}
+
 export function shapeWithTextGeometry(
   type: ShapeWithTextType,
   width: number,
-  height: number
+  height: number,
+  cornerRadius = 0
 ): ShapeWithTextGeometry {
   const w = Math.max(0, width)
   const h = Math.max(0, height)
-  return BUILDERS[type](w, h, Math.min(w, h))
+  const geometry = BUILDERS[type](w, h, Math.min(w, h))
+  return { ...geometry, outline: roundCorners(geometry.outline, cornerRadius) }
 }
 
 export {
+  databaseCap,
   fitShapeWithText,
   shapeWithTextLabelBox,
   type LabelBox,

@@ -3,7 +3,7 @@ import { describe, expect, test } from 'bun:test'
 import { FigmaAPI } from '@open-pencil/core/figma-api'
 import { SceneGraph } from '@open-pencil/scene-graph'
 
-const RED = [{ type: 'SOLID' as const, color: { r: 1, g: 0, b: 0 } }]
+const RED = [{ type: 'SOLID' as const, color: { r: 1, g: 0, b: 0, a: 1 }, opacity: 1, visible: true }]
 
 function api() {
   return new FigmaAPI(new SceneGraph())
@@ -22,7 +22,7 @@ describe('shapes with text in the plugin API', () => {
     expect(shape.shapeType).toBe('SQUARE')
     expect([shape.width, shape.height]).toEqual([208, 208])
     expect(shape.text?.characters).toBe('')
-    expect(shape.textAlignHorizontal).toBe('CENTER')
+    expect(shape.text?.textAlignHorizontal).toBe('CENTER')
   })
 
   test('the shape type changes the kind and refuses names FigJam does not have', () => {
@@ -34,14 +34,15 @@ describe('shapes with text in the plugin API', () => {
     }).toThrow('Invalid shape type "CLOUD"')
   })
 
-  test('the label is the shape\'s own text, and its fills colour the words, not the shape', () => {
+  test('the label is a text layer of its own, whose fills colour the words, not the shape', () => {
     const shape = api().createShapeWithText()
     const before = colour(shape.fills)
     const label = shape.text
     if (!label) throw new Error('no label')
+    expect(label.type).toBe('TEXT')
     label.characters = 'Check stock'
     label.fills = RED
-    expect(shape.characters).toBe('Check stock')
+    expect(shape.text?.characters).toBe('Check stock')
     expect(colour(label.fills)).toEqual([1, 0, 0])
     expect(colour(shape.fills)).toEqual(before)
   })
@@ -50,29 +51,13 @@ describe('shapes with text in the plugin API', () => {
     const label = api().createShapeWithText().text
     if (!label) throw new Error('no label')
     label.fills = RED
-    expect(colour(label.fills)).toEqual([1, 0, 0])
     label.characters = 'Later'
     expect(colour(label.fills)).toEqual([1, 0, 0])
   })
 
-  test('fills set on an empty label colour text given to the shape directly', () => {
+  test('the label is not one of the shape\'s children', () => {
     const shape = api().createShapeWithText()
-    const label = shape.text
-    if (!label) throw new Error('no label')
-    label.fills = RED
-    shape.characters = 'Direct'
-    expect(colour(label.fills)).toEqual([1, 0, 0])
-  })
-
-  test('label edits pass through to the shape', () => {
-    const shape = api().createShapeWithText()
-    const label = shape.text
-    if (!label) throw new Error('no label')
-    label.characters = 'stock'
-    label.insertCharacters(0, 'Check ')
-    label.fontSize = 20
-    expect(shape.characters).toBe('Check stock')
-    expect(shape.fontSize).toBe(20)
+    expect(shape.children).toEqual([])
   })
 
   test('a shape grows to fit its label and returns to the height it was given', () => {

@@ -1,5 +1,10 @@
 import { getNodeEditCapability, type Editor } from '@open-pencil/core/editor'
-import { generatedFrameOwner, stickySublayers, type SceneNode } from '@open-pencil/scene-graph'
+import {
+  generatedFrameOwner,
+  shapeWithTextLabel,
+  stickySublayers,
+  type SceneNode
+} from '@open-pencil/scene-graph'
 
 import type { CanvasLabelKind } from '#vue/canvas/labels/edit'
 import type { DragState } from '#vue/shared/input/types'
@@ -8,11 +13,6 @@ type NodeEditMethods = Partial<{ enterNodeEditMode: (nodeId: string) => void }>
 type GetCoords = (e: MouseEvent) => { cx: number; cy: number }
 type HitTest = (cx: number, cy: number, deep: boolean) => SceneNode | null
 type SetDrag = (drag: DragState) => void
-
-/** Layers whose text is typed on the canvas: text, and a shape with text's label. */
-function editsText(node: SceneNode | null | undefined): boolean {
-  return node?.type === 'TEXT' || node?.type === 'SHAPE_WITH_TEXT'
-}
 
 type TextEditInputOptions = {
   editor: Editor
@@ -56,7 +56,7 @@ export function createTextEditInput(options: TextEditInputOptions) {
     if (localX < 0 || localY < 0 || localX > editNode.width || localY > editNode.height) {
       editor.commitTextEdit()
       const hit = hitTestInScope(cx, cy, true)
-      if (hit && editsText(hit) && hit.id !== editNode.id) {
+      if (hit?.type === 'TEXT' && hit.id !== editNode.id) {
         startTextEditingAt(hit, cx, cy)
         return true
       }
@@ -94,6 +94,17 @@ export function createTextEditInput(options: TextEditInputOptions) {
     editor.select([sticky.id])
     editor.startTextEditing(body.id)
     if (editor.state.editingTextId !== body.id) return
+    editor.textEditor?.selectAll()
+    editor.textSelectionChanged()
+  }
+
+  /** A shape with text keeps its selection while its label is edited, all of it selected. */
+  function startShapeLabelEditing(shape: SceneNode) {
+    const label = shapeWithTextLabel(editor.graph, shape)
+    if (!label) return
+    editor.select([shape.id])
+    editor.startTextEditing(label.id)
+    if (editor.state.editingTextId !== label.id) return
     editor.textEditor?.selectAll()
     editor.textSelectionChanged()
   }
@@ -147,7 +158,7 @@ export function createTextEditInput(options: TextEditInputOptions) {
     }
     const hit = getContainerDescendantHit(selectedId, cx, cy)
     editor.enterContainer(selectedId)
-    if (hit && editsText(hit)) startTextEditingAt(hit, cx, cy)
+    if (hit?.type === 'TEXT') startTextEditingAt(hit, cx, cy)
     else if (hit) editor.select([hit.id])
     else editor.clearSelection()
     return true
@@ -169,7 +180,7 @@ export function createTextEditInput(options: TextEditInputOptions) {
     // A generated frame's sublayers are edited through the frame.
     const hit = generatedFrameOwner(editor.graph, found) ?? found
 
-    if (editsText(hit)) {
+    if (hit.type === 'TEXT') {
       const isTopLevelText = hit.parentId === editor.state.currentPageId
       if (!isTopLevelText && selectedId !== hit.id && !wasSelectedBeforeClickSequence(hit.id)) {
         editor.select([hit.id])
@@ -186,6 +197,11 @@ export function createTextEditInput(options: TextEditInputOptions) {
 
     if (hit.type === 'STICKY') {
       startStickyEditing(hit)
+      return
+    }
+
+    if (hit.type === 'SHAPE_WITH_TEXT') {
+      startShapeLabelEditing(hit)
       return
     }
 

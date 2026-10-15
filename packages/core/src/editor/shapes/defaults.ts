@@ -1,5 +1,5 @@
 import type { Fill, NodeType, SceneNode, Stroke } from '@open-pencil/scene-graph'
-import { DEFAULT_STROKE_WEIGHT } from '@open-pencil/scene-graph'
+import { DEFAULT_STROKE_WEIGHT, SHAPE_WITH_TEXT_SIZE } from '@open-pencil/scene-graph'
 import { copyFills, copyStrokes } from '@open-pencil/scene-graph/copy'
 
 import {
@@ -14,9 +14,6 @@ import {
 
 const BLACK_FILL: Fill = { type: 'SOLID', color: BLACK, opacity: 1, visible: true }
 const BLACK_STROKE: Stroke = { ...BLACK_FILL, weight: DEFAULT_STROKE_WEIGHT, align: 'CENTER' }
-/** FigJam's plugin API makes a shape with text 208 px square with 16 px words. */
-const SHAPE_WITH_TEXT_SIZE = 208
-const SHAPE_WITH_TEXT_FONT_SIZE = 16
 
 /**
  * What a new layer starts with, as Figma gives it from a drawing tool and from the plugin API:
@@ -55,9 +52,7 @@ export function newLayerDefaults(
         strokes: copyStrokes([BLACK_STROKE]),
         width: SHAPE_WITH_TEXT_SIZE,
         height: SHAPE_WITH_TEXT_SIZE,
-        shapeWithTextType: 'SQUARE',
-        textAlignHorizontal: 'CENTER',
-        fontSize: SHAPE_WITH_TEXT_FONT_SIZE
+        shapeWithTextType: 'SQUARE'
       }
     default:
       return {}

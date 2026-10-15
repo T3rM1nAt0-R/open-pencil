@@ -78,8 +78,7 @@ import type {
   SymbolLink,
   VariantPropSpec,
   VariableModeMap,
-  Vector,
-  StyleRun
+  Vector
 } from '@open-pencil/scene-graph'
 import type { GUID } from '@open-pencil/scene-graph/primitives'
 
@@ -407,58 +406,15 @@ function convertParagraphProps(
   }
 }
 
-function isNodeChange(value: unknown): value is NodeChange {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-/** The layers FigJam generates inside a shape with text, as it writes them. */
-function generatedLayers(nc: NodeChange): NodeChange[] {
-  const data = nc.nodeGenerationData
-  if (!isNodeChange(data) || !Array.isArray(data.overrides)) return []
-  return data.overrides.filter(isNodeChange)
-}
-
-/** Gives every character of a label `fills` unless a run already paints it. */
-function withLabelFills(runs: StyleRun[], length: number, fills: Fill[]): StyleRun[] {
-  if (fills.length === 0 || length === 0) return runs
-  const painted = runs.map((run) =>
-    run.style.fills ? run : { ...run, style: { ...run.style, fills } }
-  )
-  const sorted = [...painted].sort((a, b) => a.start - b.start)
-  const gaps: StyleRun[] = []
-  let at = 0
-  for (const run of sorted) {
-    if (run.start > at) gaps.push({ start: at, length: run.start - at, style: { fills } })
-    at = Math.max(at, run.start + run.length)
-  }
-  if (at < length) gaps.push({ start: at, length: length - at, style: { fills } })
-  return [...painted, ...gaps].sort((a, b) => a.start - b.start)
-}
-
-/**
- * A FigJam shape with text: its kind, and its label. FigJam keeps the label in the text layer it
- * generates inside the shape rather than on the shape, so it is read from there when the shape
- * has none of its own; the label's fills colour its characters, since the shape's fills paint the
- * shape.
- */
+/** A FigJam shape with text's kind and the height it was given; its label is read as a sublayer. */
 function convertShapeWithTextProps(
-  nc: NodeChange,
-  blobs: Uint8Array[]
-): Partial<Pick<SceneNode, 'shapeWithTextType' | 'shapeUserHeight'> & TextProps> {
+  nc: NodeChange
+): Partial<Pick<SceneNode, 'shapeWithTextType' | 'shapeUserHeight'>> {
   if (nc.type !== 'SHAPE_WITH_TEXT') return {}
   const kind = isShapeWithTextType(nc.shapeWithTextType) ? nc.shapeWithTextType : 'SQUARE'
   const shapeUserHeight =
     typeof nc.shapeUserHeight === 'number' && nc.shapeUserHeight > 0 ? nc.shapeUserHeight : 0
-  if (nc.textData) return { shapeWithTextType: kind, shapeUserHeight }
-  const label = generatedLayers(nc).find((layer) => layer.textData)
-  if (!label) return { shapeWithTextType: kind, shapeUserHeight }
-  const text = convertTextProps(label, blobs)
-  return {
-    ...text,
-    shapeWithTextType: kind,
-    shapeUserHeight,
-    styleRuns: withLabelFills(text.styleRuns, text.text.length, convertFills(label.fillPaints))
-  }
+  return { shapeWithTextType: kind, shapeUserHeight }
 }
 
 function convertTextProps(nc: NodeChange, blobs: Uint8Array[]): TextProps {
@@ -763,7 +719,7 @@ export function nodeChangeToProps(
     ...convertCornerProps(nc),
     ...convertPolygonProps(nc),
     ...convertTextProps(nc, blobs),
-    ...convertShapeWithTextProps(nc, blobs),
+    ...convertShapeWithTextProps(nc),
     horizontalConstraint: mapConstraint(nc.horizontalConstraint as string),
     verticalConstraint: mapConstraint(nc.verticalConstraint as string),
     ...convertLayoutProps(nc),

@@ -426,7 +426,8 @@ export function makePolygonPath(r: SkiaRenderer, node: SceneNode): Path {
   if (node.type === 'SHAPE_WITH_TEXT') {
     return outlinePath(
       r,
-      shapeWithTextGeometry(node.shapeWithTextType, node.width, node.height).outline
+      shapeWithTextGeometry(node.shapeWithTextType, node.width, node.height, node.cornerRadius)
+        .outline
     )
   }
   return outlinePath(r, polygonOutline(node))

@@ -1,5 +1,10 @@
 import type { ShapeWithTextType } from './shape-with-text'
 
+/** The height of a database's elliptical cap: FigJam keeps it 24 px tall at any size. */
+export function databaseCap(w: number, h: number): number {
+  return Math.min(24, h * 0.25, w * 0.25)
+}
+
 export interface LabelBox {
   x: number
   y: number
@@ -12,13 +17,9 @@ const LABEL_INSET: Partial<Record<ShapeWithTextType, readonly [number, number, n
   ELLIPSE: [0.15, 0.15, 0.15, 0.15],
   SUMMING_JUNCTION: [0.15, 0.15, 0.15, 0.15],
   OR: [0.15, 0.15, 0.15, 0.15],
-  DIAMOND: [0.25, 0.25, 0.25, 0.25],
   TRIANGLE_UP: [0.25, 0.45, 0.25, 0.05],
   TRIANGLE_DOWN: [0.25, 0.05, 0.25, 0.45],
-  PARALLELOGRAM_RIGHT: [0.2, 0, 0.2, 0],
-  PARALLELOGRAM_LEFT: [0.2, 0, 0.2, 0],
   TRAPEZOID: [0.2, 0, 0.2, 0],
-  ENG_DATABASE: [0, 0.3, 0, 0.15],
   ENG_QUEUE: [0.15, 0, 0.3, 0],
   ENG_FOLDER: [0, 0.18, 0, 0],
   PREDEFINED_PROCESS: [0.1, 0, 0.1, 0],
@@ -38,9 +39,42 @@ const LABEL_INSET: Partial<Record<ShapeWithTextType, readonly [number, number, n
   INTERNAL_STORAGE: [0.15, 0.15, 0, 0]
 }
 
-/** Padding inside the label area along a side `size` long, as FigJam leaves; small shapes leave less. */
+/** Padding FigJam leaves around a label, 16 px, less on small shapes. */
 function labelPadding(size: number): number {
-  return Math.min(8, size * 0.08)
+  return Math.min(16, size * 0.1)
+}
+
+/** Left, top, right and bottom insets of the label, in px, for kinds FigJam was measured on. */
+function measuredInsets(
+  type: ShapeWithTextType,
+  width: number,
+  height: number
+): readonly [number, number, number, number] | null {
+  const padX = labelPadding(width)
+  const padY = labelPadding(height)
+  switch (type) {
+    case 'SQUARE':
+    case 'ROUNDED_RECTANGLE':
+      return [padX, padY, padX, padY]
+    case 'DIAMOND': {
+      // The middle half, 4 px in from it.
+      const x = width * 0.25 + Math.min(4, width * 0.02)
+      const y = height * 0.25 + Math.min(4, height * 0.02)
+      return [x, y, x, y]
+    }
+    case 'PARALLELOGRAM_RIGHT':
+    case 'PARALLELOGRAM_LEFT': {
+      const x = Math.min(height * 0.35 + padX, width * 0.4)
+      return [x, padY, x, padY]
+    }
+    case 'ENG_DATABASE': {
+      // Below the cap and its rim, above the bottom curve.
+      const cap = databaseCap(width, height)
+      return [padX, cap * 2 + padY, padX, cap]
+    }
+    default:
+      return null
+  }
 }
 
 /** Where a shape's label sits inside its `width` × `height` box. */
@@ -49,16 +83,20 @@ export function shapeWithTextLabelBox(
   width: number,
   height: number
 ): LabelBox {
-  const [left, top, right, bottom] = LABEL_INSET[type] ?? [0, 0, 0, 0]
-  const fit = (size: number, start: number, free: number) =>
-    Math.max(0, Math.min(size * free - labelPadding(size) * 2, size - start))
-  const x = Math.min(width * left + labelPadding(width), width / 2)
-  const y = Math.min(height * top + labelPadding(height), height / 2)
+  const measured = measuredInsets(type, width, height)
+  const [left, top, right, bottom] =
+    measured ??
+    (LABEL_INSET[type] ?? [0, 0, 0, 0]).map((free, side) => {
+      const size = side % 2 === 0 ? width : height
+      return size * free + labelPadding(size)
+    })
+  const x = Math.min(left, width / 2)
+  const y = Math.min(top, height / 2)
   return {
     x,
     y,
-    width: fit(width, x, 1 - left - right),
-    height: fit(height, y, 1 - top - bottom)
+    width: Math.max(0, width - x - right),
+    height: Math.max(0, height - y - bottom)
   }
 }
 

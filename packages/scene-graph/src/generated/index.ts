@@ -7,7 +7,7 @@ import type { NodeType, SceneNode } from '../types'
  * body and author are such sublayers. They are real children here, so layout, drawing and text
  * editing treat them as any other layer, but nothing may add, move or remove them.
  */
-export const GENERATED_FRAME_TYPES: ReadonlySet<NodeType> = new Set(['STICKY'])
+export const GENERATED_FRAME_TYPES: ReadonlySet<NodeType> = new Set(['SHAPE_WITH_TEXT', 'STICKY'])
 
 export function isGeneratedFrame(node: Pick<SceneNode, 'type'>): boolean {
   return GENERATED_FRAME_TYPES.has(node.type)
@@ -23,4 +23,5 @@ export function generatedFrameOwner(graph: SceneGraph, node: SceneNode): SceneNo
   return undefined
 }
 
+export * from './shape-with-text'
 export * from './sticky'

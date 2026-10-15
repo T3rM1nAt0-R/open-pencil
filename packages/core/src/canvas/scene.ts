@@ -29,7 +29,6 @@ import {
   effectRasterScale,
   effectRasterScaleMatches
 } from './renderer/effect-raster-cache'
-import { renderShapeWithTextLabel } from './shape-with-text'
 import { makeSmoothRRectPath, nodeHasRadius, nodeHasSmoothCorners } from './shapes'
 import {
   configureStrokePaint,
@@ -902,7 +901,6 @@ export function renderShapeUncached(
   if (!pathTextStrokeFirst && !reflowedPathText) {
     paintNodeStrokes(r, canvas, node, graph, rect, hasRadius, sg, vectorPaths, vectorStroke)
   }
-  renderShapeWithTextLabel(r, canvas, node)
   r.renderEffects(canvas, node, rect, hasRadius, 'front', shadowChild)
 }
 
