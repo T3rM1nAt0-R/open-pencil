@@ -1,5 +1,3 @@
-import type { CanvasKit } from 'canvaskit-wasm'
-
 import {
   figCheckpointRecords,
   type FigArchiveRecordInfo,
@@ -10,6 +8,7 @@ import { stringToGuid } from '@open-pencil/kiwi/fig/guid'
 import {
   computeImageHash,
   layersUsingVariables,
+  isGeneratedFrame,
   ownsSlotContent,
   type SceneGraph,
   type SceneNode
@@ -17,15 +16,15 @@ import {
 import { siblingOrderKeys } from '@open-pencil/scene-graph/order-keys'
 import type { GUID } from '@open-pencil/scene-graph/primitives'
 
-import type { SkiaRenderer } from '#core/canvas'
 import {
   figExportRecordOptions,
   figFileExtras,
   prepareFigExport,
+  type FigFileExtrasOptions,
   type FigExportSetup,
   type KiwiNodeChange
-} from '#core/io/formats/fig/export-setup'
-import { appendVariableNodeChanges } from '#core/io/formats/fig/variable-export'
+} from '#core/io/formats/fig/export/setup'
+import { appendVariableNodeChanges } from '#core/io/formats/fig/export/variables'
 import { sceneNodeToKiwi } from '#core/kiwi/fig/node-change/serialize'
 import { figArchive, type FigArchiveAccess } from '#core/kiwi/fig/session/archive'
 import { archiveChanges, type ArchiveChangeSummary } from '#core/kiwi/fig/session/archive-changes'
@@ -37,21 +36,14 @@ import {
 
 import { narrowToChangedFields, type RecordWriter } from './fields'
 
-export interface PatchedFigFileOptions {
-  ck?: CanvasKit
-  renderer?: SkiaRenderer
-  pageId?: string
-  renderHeadlessThumbnail?: boolean
-}
-
 /** Slot content an instance writes as records of its own, which this path leaves alone. */
 class UnpatchableChangeError extends Error {
   override name = 'UnpatchableChangeError'
 }
 
 /**
- * The layer whose record holds a layer: itself, or the outermost instance it sits in, since an
- * instance writes its contents as overrides and derived data on its own record.
+ * The layer whose record holds a layer: itself, or the outermost instance or generated frame it
+ * sits in, since both write their contents as overrides and derived data on their own record.
  */
 function recordOwner(graph: SceneGraph, id: string): string | null {
   const start = graph.getNode(id)
@@ -59,7 +51,7 @@ function recordOwner(graph: SceneGraph, id: string): string | null {
   let owner: SceneNode = start
   for (let node: SceneNode | undefined = start; node;) {
     if (ownsSlotContent(graph, node)) throw new UnpatchableChangeError()
-    if (node.type === 'INSTANCE') owner = node
+    if (node.type === 'INSTANCE' || isGeneratedFrame(node)) owner = node
     if (node.type === 'CANVAS') return owner.id
     node = node.parentId ? graph.getNode(node.parentId) : undefined
   }
@@ -416,7 +408,7 @@ export function archiveImagesNamedForFigma(graph: SceneGraph): Promise<boolean> 
 export async function writePatchedFigFile(
   source: SceneGraph,
   runtime: FigNodeChangeExportRuntime,
-  options: PatchedFigFileOptions = {}
+  options: FigFileExtrasOptions = {}
 ): Promise<Uint8Array | null> {
   const archive = figArchive(source)
   const changes = archiveChanges(source)
@@ -437,14 +429,7 @@ export async function writePatchedFigFile(
   }
   if (!built) return null
   const imageNames = nameImagesForFigma(built.patch.records, built.graph.images)
-  const extras = await figFileExtras(
-    built.graph,
-    imageNames,
-    options.pageId,
-    options.ck,
-    options.renderer,
-    options.renderHeadlessThumbnail ?? false
-  )
+  const extras = await figFileExtras(built.graph, imageNames, options)
   const archivedImages = new Set(info.imageHashes.map((hash) => `images/${hash}`))
   return archive.patch(built.patch, {
     thumbnailPNG: extras.thumbnailPNG,
