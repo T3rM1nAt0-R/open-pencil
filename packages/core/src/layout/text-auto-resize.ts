@@ -1,3 +1,5 @@
+import { compact } from 'es-toolkit'
+
 import { TEXT_METRIC_FIELDS, type SceneGraph, type SceneNode } from '@open-pencil/scene-graph'
 import { fitShapeWithText } from '@open-pencil/scene-graph/shape-with-text'
 
@@ -55,7 +57,7 @@ export function shapeWithTextFitChanges(
     changes.height ??
     (next.shapeUserHeight > 0 ? next.shapeUserHeight : next.height)
   const label: SceneNode = { ...next, type: 'TEXT', textAutoResize: 'HEIGHT' }
-  const words = next.text.split(/\s+/).filter(Boolean)
+  const words = compact(next.text.split(/\s+/))
   const longestWord = Math.max(
     0,
     ...words.map((word) => measureText({ ...label, text: word, styleRuns: [] }).width)

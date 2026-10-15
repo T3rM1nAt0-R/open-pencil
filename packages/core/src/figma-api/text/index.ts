@@ -21,6 +21,8 @@ import type {
   TextParagraphStyle
 } from '@open-pencil/scene-graph'
 
+import { takePendingLabelFills } from '#core/figma-api/shape-with-text'
+
 import { assertTextRange } from './style'
 
 /** Figma's plugin API line height: automatic, or a size in pixels or percent of the font size. */
@@ -67,8 +69,15 @@ export function insertCharacters(
     start,
     characters
   )
-  graph.updateNode(node.id, { text, textParagraphs })
-  recordInstanceOverride(graph, node.id, ['text', 'textParagraphs'])
+  // A shape's label coloured while it was empty colours its first characters.
+  const fills = node.text ? undefined : takePendingLabelFills(node, characters)
+  const styleRuns = fills ? [{ start: 0, length: text.length, style: { fills } }] : undefined
+  graph.updateNode(node.id, { text, textParagraphs, ...(styleRuns ? { styleRuns } : {}) })
+  recordInstanceOverride(graph, node.id, [
+    'text',
+    'textParagraphs',
+    ...(styleRuns ? ['styleRuns'] : [])
+  ])
 }
 
 export function deleteCharacters(

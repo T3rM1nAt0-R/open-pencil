@@ -51,12 +51,7 @@ import { installInstanceOverrideAccessors, type FigmaInstanceOverride } from './
 import { getPageBackgrounds, setPageBackgrounds } from './page-backgrounds'
 import * as PluginData from './plugin-data'
 import { nodeProxyToJSON } from './serialization'
-import {
-  ShapeWithTextLabel,
-  checkedShapeType,
-  shapeTypeOf,
-  takePendingLabelFills
-} from './shape-with-text'
+import { ShapeWithTextLabel, checkedShapeType, shapeTypeOf } from './shape-with-text'
 import { installSlotAccessors, prepareSlotMove, prepareSlotRemoval } from './slots'
 import type { FigmaLetterSpacing, FigmaLineHeight } from './text'
 import * as TextProxy from './text'
@@ -283,11 +278,7 @@ export class FigmaNodeProxy {
   }
 
   insertCharacters(start: number, characters: string): void {
-    const node = this._raw()
-    const fills = node.text ? undefined : takePendingLabelFills(node, characters)
-    TextProxy.insertCharacters(this[INTERNAL_GRAPH], node, start, characters)
-    if (fills)
-      this._update({ styleRuns: [{ start: 0, length: characters.length, style: { fills } }] })
+    TextProxy.insertCharacters(this[INTERNAL_GRAPH], this._raw(), start, characters)
   }
 
   deleteCharacters(start: number, end: number): void {
