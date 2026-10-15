@@ -539,12 +539,14 @@ export function shapeWithTextLabelBox(
   height: number
 ): LabelBox {
   const [left, top, right, bottom] = LABEL_INSET[type] ?? [0, 0, 0, 0]
-  const x = width * left + LABEL_PADDING
-  const y = height * top + LABEL_PADDING
+  const x = Math.min(width * left + LABEL_PADDING, width / 2)
+  const y = Math.min(height * top + LABEL_PADDING, height / 2)
+  const fit = (size: number, start: number, free: number) =>
+    Math.max(0, Math.min(size * free - LABEL_PADDING * 2, size - start))
   return {
-    x: Math.min(x, width / 2),
-    y: Math.min(y, height / 2),
-    width: Math.max(0, width * (1 - left - right) - LABEL_PADDING * 2),
-    height: Math.max(0, height * (1 - top - bottom) - LABEL_PADDING * 2)
+    x,
+    y,
+    width: fit(width, x, 1 - left - right),
+    height: fit(height, y, 1 - top - bottom)
   }
 }

@@ -46,6 +46,15 @@ describe('shapes with text in the plugin API', () => {
     expect(colour(shape.fills)).toEqual(before)
   })
 
+  test('fills set on an empty label colour the words typed afterwards', () => {
+    const label = api().createShapeWithText().text
+    if (!label) throw new Error('no label')
+    label.fills = RED
+    expect(colour(label.fills)).toEqual([1, 0, 0])
+    label.characters = 'Later'
+    expect(colour(label.fills)).toEqual([1, 0, 0])
+  })
+
   test('label edits pass through to the shape', () => {
     const shape = api().createShapeWithText()
     const label = shape.text

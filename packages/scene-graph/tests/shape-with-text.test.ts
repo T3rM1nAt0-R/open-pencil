@@ -56,6 +56,14 @@ describe('shape-with-text geometry', () => {
     })
   }
 
+  test('a small shape keeps every label box inside it', () => {
+    for (const type of SHAPE_WITH_TEXT_TYPES) {
+      const box = shapeWithTextLabelBox(type, 20, 20)
+      expect(box.x + box.width).toBeLessThanOrEqual(20)
+      expect(box.y + box.height).toBeLessThanOrEqual(20)
+    }
+  })
+
   test('a diamond reaches the middle of each side and nothing else', () => {
     const { outline } = shapeWithTextGeometry('DIAMOND', 200, 100)
     expect(points(outline)).toEqual([

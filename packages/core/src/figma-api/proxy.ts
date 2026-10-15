@@ -290,7 +290,9 @@ export class FigmaNodeProxy {
     return shapeTypeOf(this._raw())
   }
   set shapeType(value: ShapeWithTextType) {
-    this._update({ shapeWithTextType: checkedShapeType(this._raw(), value) })
+    const kind = checkedShapeType(this._raw(), value)
+    prepareFollowedFieldEdit(this[INTERNAL_GRAPH], this._raw(), 'shapeType', 'shape-type')
+    this._update({ shapeWithTextType: kind })
   }
   /** A shape with text's label, as Figma's text sublayer; other layers have none. */
   get text(): ShapeWithTextLabel | undefined {

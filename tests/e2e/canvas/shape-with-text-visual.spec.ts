@@ -37,7 +37,7 @@ test('shapes with text draw their kind with the label inside', async () => {
         textAlignHorizontal: 'CENTER',
         fills: [solid(0.86, 0.92, 1)],
         strokes: outline,
-        // The label's own colour on its first word, as FigJam keeps it per character.
+        // The label's own colour, kept per character as FigJam keeps it.
         styleRuns: [{ start: 0, length: text.length, style: { fills: [solid(0.75, 0.1, 0.1)] } }]
       })
     })

@@ -11,11 +11,16 @@ import { BLACK as BLACK_COLOR } from '#core/constants'
 import type { FigmaPaint } from './accessors/visual'
 import type { FigmaNodeProxy } from './proxy'
 
-type LabelHost = Pick<FigmaNodeProxy, 'characters' | 'getRangeFills' | 'setRangeFills'>
+type LabelHost = Pick<
+  FigmaNodeProxy,
+  'id' | 'characters' | 'insertCharacters' | 'getRangeFills' | 'setRangeFills'
+>
+
+/** Fills set on an empty label, applied to the first characters it gets, as Figma keeps them. */
+const pendingFills = new Map<string, FigmaPaint[]>()
 
 /** Properties Figma's `TextSublayerNode` shares with a text node, read and written on the shape. */
 const PASSED_PROPERTIES = [
-  'characters',
   'fontSize',
   'fontName',
   'fontWeight',
@@ -34,7 +39,6 @@ const PASSED_PROPERTIES = [
 
 /** Methods Figma's `TextSublayerNode` shares with a text node, called on the shape. */
 const PASSED_METHODS = [
-  'insertCharacters',
   'deleteCharacters',
   'getStyledTextSegments',
   'getRangeFontSize',
@@ -90,15 +94,38 @@ export class ShapeWithTextLabel {
     }
   }
 
-  get fills(): ReturnType<LabelHost['getRangeFills']> {
+  get characters(): string {
+    return this.#host.characters
+  }
+
+  set characters(value: string) {
+    this.#host.characters = value
+    this.#applyPendingFills()
+  }
+
+  insertCharacters(start: number, characters: string): void {
+    this.#host.insertCharacters(start, characters)
+    this.#applyPendingFills()
+  }
+
+  get fills(): ReturnType<LabelHost['getRangeFills']> | readonly FigmaPaint[] {
     const length = this.#host.characters.length
-    if (length === 0) return [BLACK]
-    return this.#host.getRangeFills(0, length)
+    if (length > 0) return this.#host.getRangeFills(0, length)
+    return pendingFills.get(this.#host.id) ?? [BLACK]
   }
 
   set fills(value: readonly FigmaPaint[]) {
     const length = this.#host.characters.length
     if (length > 0) this.#host.setRangeFills(0, length, [...value])
+    else pendingFills.set(this.#host.id, [...value])
+  }
+
+  #applyPendingFills(): void {
+    const fills = pendingFills.get(this.#host.id)
+    const length = this.#host.characters.length
+    if (!fills || length === 0) return
+    pendingFills.delete(this.#host.id)
+    this.#host.setRangeFills(0, length, fills)
   }
 }
 
