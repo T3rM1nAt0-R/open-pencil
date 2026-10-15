@@ -80,6 +80,19 @@ const PASSED_METHODS = [
 
 const BLACK: Fill = { type: 'SOLID', color: BLACK_COLOR, opacity: 1, visible: true }
 
+/** The text members a label passes through to its shape, typed as the shape types them. */
+type PassedMembers = Pick<
+  FigmaNodeProxy,
+  Extract<
+    (typeof PASSED_PROPERTIES)[number] | (typeof PASSED_METHODS)[number],
+    keyof FigmaNodeProxy
+  >
+>
+
+// Declaration merging types the members the constructor defines from the lists above.
+// oxlint-disable-next-line typescript/no-empty-object-type, typescript/no-unsafe-declaration-merging
+export interface ShapeWithTextLabel extends PassedMembers {}
+
 /**
  * A shape with text's label, as Figma's plugin API gives it (`ShapeWithTextNode.text`). The label
  * is the shape's own text, so every member reads and writes the shape; only `fills` differs: a
