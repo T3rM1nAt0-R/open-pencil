@@ -1,0 +1,6 @@
+# Specs for e2e-on-push.yml
+tests/e2e/canvas
+tests/e2e/text
+tests/e2e/toolbar
+tests/e2e/clipboard
+tests/e2e/editor
