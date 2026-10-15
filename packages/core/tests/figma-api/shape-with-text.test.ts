@@ -55,6 +55,15 @@ describe('shapes with text in the plugin API', () => {
     expect(colour(label.fills)).toEqual([1, 0, 0])
   })
 
+  test('fills set on an empty label colour text given to the shape directly', () => {
+    const shape = api().createShapeWithText()
+    const label = shape.text
+    if (!label) throw new Error('no label')
+    label.fills = RED
+    shape.characters = 'Direct'
+    expect(colour(label.fills)).toEqual([1, 0, 0])
+  })
+
   test('label edits pass through to the shape', () => {
     const shape = api().createShapeWithText()
     const label = shape.text
@@ -86,6 +95,28 @@ describe('shapes with text in the plugin API', () => {
     expect(shape.height).toBe(90)
     shape.resize(160, 20)
     expect(shape.height).toBeGreaterThan(20)
+  })
+
+  test('a word too long for the shape widens it instead of being split', () => {
+    const shape = api().createShapeWithText()
+    shape.resize(60, 60)
+    const label = shape.text
+    if (!label) throw new Error('no label')
+    label.characters = 'Internationalisation'
+    expect(shape.width).toBeGreaterThan(60)
+    label.characters = 'Go'
+    expect([shape.width, shape.height]).toEqual([60, 60])
+  })
+
+  test('a diamond grows in proportion instead of only taller', () => {
+    const shape = api().createShapeWithText()
+    shape.shapeType = 'DIAMOND'
+    shape.resize(120, 80)
+    const label = shape.text
+    if (!label) throw new Error('no label')
+    label.characters = 'Is the order paid in full yet?'
+    expect(shape.width).toBeGreaterThan(120)
+    expect(shape.width / shape.height).toBeCloseTo(1.5, 1)
   })
 
   test('other layers have no shape type and no label', () => {

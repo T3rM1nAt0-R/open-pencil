@@ -4,6 +4,7 @@ import type { Vector } from '@open-pencil/scene-graph'
 import type { PolygonOutlineCommand } from '@open-pencil/scene-graph/polygon'
 import {
   SHAPE_WITH_TEXT_TYPES,
+  fitShapeWithText,
   isShapeWithTextType,
   shapeWithTextGeometry,
   shapeWithTextLabelBox
@@ -83,4 +84,37 @@ describe('shape-with-text geometry', () => {
   test('a zero-sized shape gives an empty label box instead of a negative one', () => {
     expect(shapeWithTextLabelBox('SQUARE', 0, 0)).toEqual({ x: 0, y: 0, width: 0, height: 0 })
   })
+
+  // A label of 40 characters 8 px wide on 20 px lines, wrapped at `maxWidth`.
+  const measure = (maxWidth: number) => ({
+    width: Math.min(320, maxWidth),
+    height: Math.ceil(320 / Math.max(maxWidth, 1)) * 20
+  })
+
+  test('a shape keeps the size it was given while its label fits', () => {
+    expect(
+      fitShapeWithText('SQUARE', { width: 400, height: 100, longestWord: 40, measure })
+    ).toEqual({ width: 400, height: 100 })
+  })
+
+  test('a box grows taller, not wider, for a label that wraps', () => {
+    const fitted = fitShapeWithText('SQUARE', { width: 120, height: 40, longestWord: 40, measure })
+    expect(fitted.width).toBe(120)
+    expect(fitted.height).toBeGreaterThan(40)
+  })
+
+  test('a word wider than the label widens the shape just enough, without splitting it', () => {
+    const fitted = fitShapeWithText('SQUARE', { width: 60, height: 60, longestWord: 100, measure })
+    expect(fitted.width).toBeGreaterThan(60)
+    expect(fitShapeWithText('SQUARE', { ...fitted, longestWord: 100, measure })).toEqual(fitted)
+  })
+
+  test('ellipses and diamonds grow in proportion', () => {
+    for (const type of ['ELLIPSE', 'DIAMOND'] as const) {
+      const fitted = fitShapeWithText(type, { width: 120, height: 80, longestWord: 40, measure })
+      expect(fitted.width).toBeGreaterThan(120)
+      expect(fitted.width / fitted.height).toBeCloseTo(1.5, 1)
+    }
+  })
 })
+

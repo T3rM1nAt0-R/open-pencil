@@ -8,7 +8,7 @@ import {
 
 import { BLACK as BLACK_COLOR } from '#core/constants'
 
-import type { FigmaPaint } from './accessors/visual'
+import { figmaPaintToFill, type FigmaPaint } from './accessors/visual'
 import type { FigmaNodeProxy } from './proxy'
 
 type LabelHost = Pick<
@@ -17,10 +17,22 @@ type LabelHost = Pick<
 >
 
 /** Fills set on an empty label, applied to the first characters it gets, as Figma keeps them. */
-const pendingFills = new Map<string, FigmaPaint[]>()
+const pendingFills = new Map<string, Fill[]>()
+
+/**
+ * Fills set on an empty label, which the first characters it gets take. Every way of giving a
+ * shape characters takes them from here.
+ */
+export function takePendingLabelFills(node: SceneNode, characters: string): Fill[] | undefined {
+  if (node.type !== 'SHAPE_WITH_TEXT' || characters.length === 0) return undefined
+  const fills = pendingFills.get(node.id)
+  pendingFills.delete(node.id)
+  return fills
+}
 
 /** Properties Figma's `TextSublayerNode` shares with a text node, read and written on the shape. */
 const PASSED_PROPERTIES = [
+  'characters',
   'fontSize',
   'fontName',
   'fontWeight',
@@ -39,6 +51,7 @@ const PASSED_PROPERTIES = [
 
 /** Methods Figma's `TextSublayerNode` shares with a text node, called on the shape. */
 const PASSED_METHODS = [
+  'insertCharacters',
   'deleteCharacters',
   'getStyledTextSegments',
   'getRangeFontSize',
@@ -94,20 +107,6 @@ export class ShapeWithTextLabel {
     }
   }
 
-  get characters(): string {
-    return this.#host.characters
-  }
-
-  set characters(value: string) {
-    this.#host.characters = value
-    this.#applyPendingFills()
-  }
-
-  insertCharacters(start: number, characters: string): void {
-    this.#host.insertCharacters(start, characters)
-    this.#applyPendingFills()
-  }
-
   get fills(): ReturnType<LabelHost['getRangeFills']> | readonly FigmaPaint[] {
     const length = this.#host.characters.length
     if (length > 0) return this.#host.getRangeFills(0, length)
@@ -117,15 +116,7 @@ export class ShapeWithTextLabel {
   set fills(value: readonly FigmaPaint[]) {
     const length = this.#host.characters.length
     if (length > 0) this.#host.setRangeFills(0, length, [...value])
-    else pendingFills.set(this.#host.id, [...value])
-  }
-
-  #applyPendingFills(): void {
-    const fills = pendingFills.get(this.#host.id)
-    const length = this.#host.characters.length
-    if (!fills || length === 0) return
-    pendingFills.delete(this.#host.id)
-    this.#host.setRangeFills(0, length, fills)
+    else pendingFills.set(this.#host.id, value.map(figmaPaintToFill))
   }
 }
 

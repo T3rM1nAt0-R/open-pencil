@@ -1,8 +1,5 @@
 import { TEXT_METRIC_FIELDS, type SceneGraph, type SceneNode } from '@open-pencil/scene-graph'
-import {
-  shapeWithTextHeightFor,
-  shapeWithTextLabelBox
-} from '@open-pencil/scene-graph/shape-with-text'
+import { fitShapeWithText } from '@open-pencil/scene-graph/shape-with-text'
 
 import { estimateTextSize, getTextMeasurer } from './text-measurement'
 
@@ -30,37 +27,63 @@ const SHAPE_FIT_KEYS = new Set<keyof SceneNode>([
   'width',
   'height',
   'shapeWithTextType',
-  'shapeUserHeight'
+  'shapeUserHeight',
+  'shapeUserWidth'
 ])
 
+function measureText(node: SceneNode, maxWidth?: number): { width: number; height: number } {
+  return getTextMeasurer()?.(node, maxWidth) ?? estimateTextSize(node, maxWidth)
+}
+
 /**
- * A shape with text grows taller to fit its label and goes back to the height it was given once
- * the label fits again, as FigJam does. A change to the height sets the height it was given.
+ * A shape with text fits its label as FigJam does (see fitShapeWithText): it keeps the size it was
+ * given while the label fits and grows when it does not. A change to the width or height sets the
+ * size it was given.
  */
 export function shapeWithTextFitChanges(
   node: SceneNode,
   changes: Partial<SceneNode>
-): Partial<Pick<SceneNode, 'height' | 'shapeUserHeight'>> {
+): Partial<Pick<SceneNode, 'width' | 'height' | 'shapeUserHeight' | 'shapeUserWidth'>> {
   if (!Object.keys(changes).some((key) => SHAPE_FIT_KEYS.has(key as keyof SceneNode))) return {}
   const next = { ...node, ...changes }
-  const given =
+  const givenWidth =
+    changes.shapeUserWidth ??
+    changes.width ??
+    (next.shapeUserWidth > 0 ? next.shapeUserWidth : next.width)
+  const givenHeight =
     changes.shapeUserHeight ??
     changes.height ??
     (next.shapeUserHeight > 0 ? next.shapeUserHeight : next.height)
-  const box = shapeWithTextLabelBox(next.shapeWithTextType, next.width, given)
-  const label: SceneNode = { ...next, type: 'TEXT', width: box.width, textAutoResize: 'HEIGHT' }
-  const measured = next.text
-    ? (getTextMeasurer()?.(label, box.width) ?? estimateTextSize(label, box.width))
-    : { height: 0 }
-  const needed = shapeWithTextHeightFor(next.shapeWithTextType, measured.height)
-  return { height: Math.max(given, needed), shapeUserHeight: given }
+  const label: SceneNode = { ...next, type: 'TEXT', textAutoResize: 'HEIGHT' }
+  const words = next.text.split(/\s+/).filter(Boolean)
+  const longestWord = Math.max(
+    0,
+    ...words.map((word) => measureText({ ...label, text: word, styleRuns: [] }).width)
+  )
+  const size = next.text
+    ? fitShapeWithText(next.shapeWithTextType, {
+        width: givenWidth,
+        height: givenHeight,
+        longestWord,
+        measure: (maxWidth) => measureText({ ...label, width: maxWidth }, maxWidth)
+      })
+    : { width: givenWidth, height: givenHeight }
+  return { ...size, shapeUserWidth: givenWidth, shapeUserHeight: givenHeight }
 }
 
 export function textAutoResizeChanges(
   node: SceneNode | undefined,
   changes: Partial<SceneNode>
 ): Partial<
-  Pick<SceneNode, 'width' | 'height' | 'derivedLayout' | 'derivedTextGlyphs' | 'shapeUserHeight'>
+  Pick<
+    SceneNode,
+    | 'width'
+    | 'height'
+    | 'derivedLayout'
+    | 'derivedTextGlyphs'
+    | 'shapeUserHeight'
+    | 'shapeUserWidth'
+  >
 > {
   if (node?.type === 'SHAPE_WITH_TEXT') return shapeWithTextFitChanges(node, changes)
   if (node?.type !== 'TEXT' || !hasTextAutoResizeChange(changes)) return {}

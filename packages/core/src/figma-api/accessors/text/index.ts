@@ -14,6 +14,7 @@ import {
   type ProxyThis
 } from '#core/figma-api/accessor-utils'
 import { styleNameToWeight, type FigmaFontName } from '#core/figma-api/fonts'
+import { takePendingLabelFills } from '#core/figma-api/shape-with-text'
 import {
   getParagraphSpacing,
   letterSpacingValue,
@@ -99,8 +100,12 @@ export function installTextNodeProxyAccessors(
         return raw(this, internals).text
       },
       set(this: ProxyThis, value: string) {
-        const textParagraphs = paragraphStylesForCharacters(raw(this, internals), value)
-        updateNode(this, internals, { text: value, textParagraphs })
+        const node = raw(this, internals)
+        const textParagraphs = paragraphStylesForCharacters(node, value)
+        // A shape's label coloured while it was empty colours its new characters.
+        const fills = takePendingLabelFills(node, value)
+        const styleRuns = fills ? [{ start: 0, length: value.length, style: { fills } }] : undefined
+        updateNode(this, internals, { text: value, textParagraphs, styleRuns })
       }
     },
     fontName: characterStyle<FigmaFontName>(internals, 'fontName', mixed, (_node, value) => {

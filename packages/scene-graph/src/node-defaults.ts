@@ -179,6 +179,7 @@ export function createDefaultNode(
     starInnerRadius: 0.38,
     shapeWithTextType: 'SQUARE',
     shapeUserHeight: 0,
+    shapeUserWidth: 0,
     componentId: null,
     instanceOverrides: createInstanceOverrideState(),
     componentPropertyDefinitions: [],
