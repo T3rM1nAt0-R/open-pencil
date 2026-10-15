@@ -10,6 +10,7 @@ import {
 } from '@open-pencil/scene-graph'
 import { createDefaultSourceMetadata } from '@open-pencil/scene-graph/node-defaults'
 import { POINT_COUNT_RANGE } from '@open-pencil/scene-graph/polygon'
+import { isShapeWithTextType } from '@open-pencil/scene-graph/shape-with-text'
 import { parseVariantName } from '@open-pencil/scene-graph/variant-name'
 /* eslint-disable max-lines -- kiwi↔scene conversion helpers are tightly coupled */
 
@@ -77,7 +78,8 @@ import type {
   SymbolLink,
   VariantPropSpec,
   VariableModeMap,
-  Vector
+  Vector,
+  StyleRun
 } from '@open-pencil/scene-graph'
 import type { GUID } from '@open-pencil/scene-graph/primitives'
 
@@ -404,6 +406,46 @@ function convertParagraphProps(
   }
 }
 
+/** Gives every character of a label `fills` unless a run already paints it. */
+function withLabelFills(runs: StyleRun[], length: number, fills: Fill[]): StyleRun[] {
+  if (fills.length === 0 || length === 0) return runs
+  const painted = runs.map((run) =>
+    run.style.fills ? run : { ...run, style: { ...run.style, fills } }
+  )
+  const sorted = [...painted].sort((a, b) => a.start - b.start)
+  const gaps: StyleRun[] = []
+  let at = 0
+  for (const run of sorted) {
+    if (run.start > at) gaps.push({ start: at, length: run.start - at, style: { fills } })
+    at = Math.max(at, run.start + run.length)
+  }
+  if (at < length) gaps.push({ start: at, length: length - at, style: { fills } })
+  return [...painted, ...gaps].sort((a, b) => a.start - b.start)
+}
+
+/**
+ * A FigJam shape with text: its kind, and its label. FigJam keeps the label in the text layer it
+ * generates inside the shape rather than on the shape, so it is read from there when the shape
+ * has none of its own; the label's fills colour its characters, since the shape's fills paint the
+ * shape.
+ */
+function convertShapeWithTextProps(
+  nc: NodeChange,
+  blobs: Uint8Array[]
+): Partial<Pick<SceneNode, 'shapeWithTextType'> & TextProps> {
+  if (nc.type !== 'SHAPE_WITH_TEXT') return {}
+  const kind = isShapeWithTextType(nc.shapeWithTextType) ? nc.shapeWithTextType : 'SQUARE'
+  if (nc.textData) return { shapeWithTextType: kind }
+  const label = nc.nodeGenerationData?.overrides?.find((override) => override.textData)
+  if (!label) return { shapeWithTextType: kind }
+  const text = convertTextProps(label, blobs)
+  return {
+    ...text,
+    shapeWithTextType: kind,
+    styleRuns: withLabelFills(text.styleRuns, text.text.length, convertFills(label.fillPaints))
+  }
+}
+
 function convertTextProps(nc: NodeChange, blobs: Uint8Array[]): TextProps {
   return {
     text: nc.textData?.characters ?? '',
@@ -706,6 +748,7 @@ export function nodeChangeToProps(
     ...convertCornerProps(nc),
     ...convertPolygonProps(nc),
     ...convertTextProps(nc, blobs),
+    ...convertShapeWithTextProps(nc, blobs),
     horizontalConstraint: mapConstraint(nc.horizontalConstraint as string),
     verticalConstraint: mapConstraint(nc.verticalConstraint as string),
     ...convertLayoutProps(nc),
@@ -1110,6 +1153,8 @@ function preserveFigmaPayloadBlobs(value: unknown, blobs: Uint8Array[]): unknown
 }
 
 export const FIGMA_RAW_NODE_FIELD_KEYS = [
+  'nodeGenerationData',
+  'derivedImmutableFrameData',
   'styleIdForFill',
   'styleIdForStrokeFill',
   'styleIdForText',

@@ -8,11 +8,14 @@ interface FigmaSourceCarrier {
 const RAW_SIZE_KEYS = new Set(['width', 'height'])
 const RAW_TRANSFORM_KEYS = new Set(['x', 'y', 'rotation', 'flipX', 'flipY'])
 
+// FigJam's generated layers carry a shape with text's label, so a text edit replaces them too.
 const TEXT_DERIVED_RAW_FIELDS = [
   'textData',
   'derivedTextData',
   'textUserLayoutVersion',
-  'textExplicitLayoutVersion'
+  'textExplicitLayoutVersion',
+  'nodeGenerationData',
+  'derivedImmutableFrameData'
 ] as const
 const STROKE_GEOMETRY_RAW_FIELDS = ['strokeGeometry', 'vectorData'] as const
 

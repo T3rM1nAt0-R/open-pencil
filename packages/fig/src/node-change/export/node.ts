@@ -889,7 +889,8 @@ function applyNodeVisualProps(
     }))
   }
 
-  if (node.type === 'TEXT') serializeText(context, node, nc)
+  if (node.type === 'TEXT' || node.type === 'SHAPE_WITH_TEXT') serializeText(context, node, nc)
+  if (node.type === 'SHAPE_WITH_TEXT') nc.shapeWithTextType = node.shapeWithTextType
 
   if (node.type !== 'VECTOR') nc.frameMaskDisabled = !node.clipsContent
   applySharedStyleProps(context, node, nc)
