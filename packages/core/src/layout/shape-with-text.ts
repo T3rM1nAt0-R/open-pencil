@@ -31,7 +31,12 @@ export function shapeWithTextFit(graph: SceneGraph, shape: SceneNode): Partial<S
     const words = compact(label.text.split(/\s+/))
     const longestWord = Math.max(
       0,
-      ...words.map((word) => measureText({ ...wrapping, text: word, styleRuns: [] }).width)
+      // A word is measured on one line, unwrapped, so its width is never capped by the label's.
+      ...words.map(
+        (word) =>
+          measureText({ ...label, text: word, styleRuns: [], textAutoResize: 'WIDTH_AND_HEIGHT' })
+            .width
+      )
     )
     size = fitShapeWithText(shape.shapeWithTextType, {
       ...given,
