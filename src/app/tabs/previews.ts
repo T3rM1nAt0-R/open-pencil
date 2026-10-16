@@ -1,6 +1,6 @@
 import { promiseTimeout } from '@vueuse/core'
 
-import { documentThumbnailPageId, findFigThumbnailPageId } from '@open-pencil/core/io/formats/fig'
+import { documentThumbnailPageId } from '@open-pencil/core/io/formats/fig'
 import { renderThumbnail } from '@open-pencil/core/io/formats/raster'
 
 import { usablePreview } from '@/app/document/io/preview-bytes'
@@ -40,8 +40,16 @@ async function renderDocumentPreview(store: EditorStore): Promise<Uint8Array | n
   return usablePreview(bytes)
 }
 
-export async function cacheOpenedFigCover(path: string, store: EditorStore): Promise<void> {
-  if (usablePreview(await loadCachedRecentFileThumbnail(path))) return
+/**
+ * Caches the preview of a file opened from disk. On opening, a preview already cached is kept;
+ * a refresh after an edit to the page the preview shows draws it again.
+ */
+export async function cacheOpenedFigCover(
+  path: string,
+  store: EditorStore,
+  refresh = false
+): Promise<void> {
+  if (!refresh && usablePreview(await loadCachedRecentFileThumbnail(path))) return
   const bytes = await renderDocumentPreview(store)
   if (bytes) await cacheRecentFileThumbnail(path, bytes)
 }
@@ -57,16 +65,17 @@ export async function cacheStorageDocumentPreview(
   if (bytes) await saveStoragePreview(documentId, bytes)
 }
 
+/** Draws the preview again whenever the page it shows, the cover or else the first page, changes. */
 export function watchOpenedFigCover(path: string, store: EditorStore): void {
   coverThumbnailListeners.get(store)?.()
-  const coverPageId = findFigThumbnailPageId(store.graph.getPages())
-  if (!coverPageId) return
+  const previewPageId = documentThumbnailPageId(store.graph.getPages())
+  if (!previewPageId) return
   coverThumbnailListeners.set(
     store,
     store.onEditorEvent('page:changed', (pageId) => {
-      if (pageId !== coverPageId) return
-      void cacheOpenedFigCover(path, store).catch((error) => {
-        console.warn('[Recent files] Failed to cache the Cover thumbnail', error)
+      if (pageId !== previewPageId) return
+      void cacheOpenedFigCover(path, store, true).catch((error) => {
+        console.warn('[Recent files] Failed to refresh the preview', error)
       })
     })
   )
