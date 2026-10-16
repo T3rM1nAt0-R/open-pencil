@@ -22,13 +22,37 @@ function redCharacters(text: ReturnType<typeof coloured>) {
     .map((segment) => segment.characters)
 }
 
-describe('editing coloured text', () => {
+// What Figma's plugin API documents for insertCharacters, deleteCharacters and characters.
+describe('editing coloured text through the plugin API', () => {
   test('inserting before a coloured run moves the run with its characters', () => {
     const text = coloured('one two three', 4, 7)
     text.insertCharacters(0, 'zero ')
 
     expect(text.characters).toBe('zero one two three')
     expect(redCharacters(text)).toEqual(['two'])
+  })
+
+  test('inserted characters copy the preceding character, so typing on after a run extends it', () => {
+    const text = coloured('one two three', 4, 7)
+    text.insertCharacters(7, 's')
+
+    expect(redCharacters(text)).toEqual(['twos'])
+  })
+
+  test('with AFTER, inserted characters copy the following character', () => {
+    const text = coloured('one two three', 4, 7)
+    text.insertCharacters(4, 'big ', 'AFTER')
+    text.insertCharacters(11, '!', 'AFTER')
+
+    expect(text.characters).toBe('one big two! three')
+    expect(redCharacters(text)).toEqual(['big two'])
+  })
+
+  test('at the start of the text, inserted characters copy the closest character', () => {
+    const text = coloured('two three', 0, 3)
+    text.insertCharacters(0, 'one ')
+
+    expect(redCharacters(text)).toEqual(['one two'])
   })
 
   test('deleting before a coloured run moves the run with its characters', () => {
@@ -38,25 +62,18 @@ describe('editing coloured text', () => {
     expect(redCharacters(text)).toEqual(['three'])
   })
 
-  test('replacing a whole coloured word gives the new word its colour', () => {
-    const text = coloured('one two three', 4, 7)
-    text.characters = 'one six three'
+  test('setting characters resets range styles, leaving the style of the first character', () => {
+    const middle = coloured('one two three', 4, 7)
+    middle.characters = 'one six three'
+    expect(redCharacters(middle)).toEqual([])
 
-    expect(redCharacters(text)).toEqual(['six'])
+    const first = coloured('one two three', 0, 3)
+    first.characters = 'six seven'
+    expect(redCharacters(first)).toEqual(['six seven'])
   })
 
-  test('replacing letters inside a coloured word keeps the word coloured', () => {
-    const text = coloured('one seven three', 4, 9)
-    text.characters = 'one sexen three'
-
-    expect(redCharacters(text)).toEqual(['sexen'])
-  })
-
-  test('setting new characters keeps the colour of the text around the change', () => {
-    const text = coloured('dot ● one\ndot ● two', 4, 5)
-    text.characters = 'dot ● one\nnew line\ndot ● two'
-
-    expect(redCharacters(text)).toEqual(['●'])
-    expect(text.characters.indexOf('●')).toBe(4)
+  test('an unknown useStyle is refused', () => {
+    const text = coloured('one', 0, 1)
+    expect(() => text.insertCharacters(0, 'x', 'MIDDLE' as never)).toThrow('useStyle')
   })
 })

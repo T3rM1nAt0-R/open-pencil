@@ -22,7 +22,7 @@ import type {
   TextParagraphStyle
 } from '@open-pencil/scene-graph'
 
-import { adjustRunsForDelete, adjustRunsForInsert } from '#core/text/style-runs'
+import { adjustRunsForDelete, getStyleAt, insertRunsWithStyle } from '#core/text/style-runs'
 
 import { assertTextRange } from './style'
 
@@ -56,12 +56,43 @@ export function letterSpacingValue(node: SceneNode, value: FigmaLetterSpacing | 
   return typeof value === 'number' ? value : pixels(value, node.fontSize)
 }
 
+/** Which neighbour inserted characters copy their style from, as Figma's `insertCharacters` takes it. */
+export type InsertStyleSource = 'BEFORE' | 'AFTER'
+
+const INSERT_STYLE_SOURCES: ReadonlySet<string> = new Set(['BEFORE', 'AFTER'])
+
+/**
+ * The style inserted characters take, as Figma gives it: the preceding character's for `BEFORE`
+ * and the following one's for `AFTER`, or the closest character's at either end of the text.
+ */
+function insertedStyle(node: SceneNode, start: number, useStyle: InsertStyleSource) {
+  if (node.text.length === 0) return {}
+  const preferred = useStyle === 'BEFORE' ? start - 1 : start
+  const index = Math.min(Math.max(preferred, 0), node.text.length - 1)
+  return getStyleAt(node.styleRuns, index)
+}
+
+/**
+ * A text's style runs once its characters are replaced. Figma resets the styles applied to
+ * character ranges, so the whole text keeps the style of its first character.
+ */
+export function styleRunsForCharacters(node: SceneNode, characters: string): StyleRun[] {
+  const first = node.text.length > 0 ? getStyleAt(node.styleRuns, 0) : {}
+  if (characters.length === 0 || Object.keys(first).length === 0) return []
+  return [{ start: 0, length: characters.length, style: { ...first } }]
+}
+
 export function insertCharacters(
   graph: SceneGraph,
   node: SceneNode,
   start: number,
-  characters: string
+  characters: string,
+  useStyle: InsertStyleSource = 'BEFORE'
 ): void {
+  // Scripts are not type-checked, so the value is checked as Figma checks it.
+  if (!INSERT_STYLE_SOURCES.has(useStyle)) {
+    throw new Error(`in insertCharacters: useStyle must be "BEFORE" or "AFTER"`)
+  }
   const text = node.text.slice(0, start) + characters + node.text.slice(start)
   const textParagraphs = paragraphStylesAfterEdit(
     node.textParagraphs,
@@ -70,44 +101,15 @@ export function insertCharacters(
     start,
     characters
   )
-  const styleRuns = adjustRunsForInsert(node.styleRuns, start, characters.length)
+  const styleRuns = insertRunsWithStyle(
+    node.styleRuns,
+    node.text.length,
+    start,
+    characters.length,
+    insertedStyle(node, start, useStyle)
+  )
   graph.updateNode(node.id, { text, textParagraphs, styleRuns })
   recordInstanceOverride(graph, node.id, ['text', 'textParagraphs', 'styleRuns'])
-}
-
-/**
- * The style runs of a text that becomes `next`: what the old and new text share at the start and
- * the end keeps its styles, and the part between them is removed and inserted as an edit would.
- */
-export function styleRunsAfterReplace(
-  runs: StyleRun[],
-  previous: string,
-  next: string
-): StyleRun[] {
-  let head = 0
-  const limit = Math.min(previous.length, next.length)
-  while (head < limit && previous[head] === next[head]) head++
-  let tail = 0
-  while (
-    tail < limit - head &&
-    previous[previous.length - 1 - tail] === next[next.length - 1 - tail]
-  )
-    tail++
-  const removed = previous.length - head - tail
-  const added = next.length - head - tail
-  const end = head + removed
-  const holder = runs.find(
-    (run) => removed > 0 && run.start <= head && end <= run.start + run.length
-  )
-  if (!holder) return adjustRunsForInsert(adjustRunsForDelete(runs, head, removed), head, added)
-  // The change sits inside one run, so the new characters take that run's style.
-  const delta = added - removed
-  return runs
-    .map((run) => {
-      if (run === holder) return { ...run, length: run.length + delta }
-      return run.start >= end ? { ...run, start: run.start + delta } : run
-    })
-    .filter((run) => run.length > 0)
 }
 
 export function deleteCharacters(

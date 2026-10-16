@@ -116,6 +116,23 @@ export function adjustRunsForInsert(
   })
 }
 
+/**
+ * The runs after `length` characters are inserted at `pos`, the new characters all in `style`
+ * and every other character keeping its own.
+ */
+export function insertRunsWithStyle(
+  runs: StyleRun[],
+  textLength: number,
+  pos: number,
+  length: number,
+  style: CharacterStyleOverride
+): StyleRun[] {
+  const chars = expandRuns(runs, textLength)
+  const inserted = Array.from({ length }, () => (isEmptyStyle(style) ? null : { ...style }))
+  chars.splice(pos, 0, ...inserted)
+  return compactRuns(chars)
+}
+
 export function adjustRunsForDelete(
   runs: StyleRun[],
   start: number,
