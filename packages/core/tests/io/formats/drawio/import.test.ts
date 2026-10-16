@@ -94,6 +94,14 @@ describe('pages', () => {
     expect(page.childIds.length).toBeGreaterThan(0)
   })
 
+  test('a compressed page with a stray percent sign keeps its other escapes', () => {
+    const encoded = encodeURIComponent(MODEL).replace('goes', '50%25 done').replace('50%25', '50%')
+    const packed = fromUint8Array(deflateSync(new TextEncoder().encode(encoded), { level: 9 }))
+    const source = `<mxfile><diagram id="z" name="Packed">${packed}</diagram></mxfile>`
+    const graph = load(source)
+    expect(child(graph, firstPage(graph), 'Arrow: 50% done')).toBeDefined()
+  })
+
   test('a compressed page that unpacks past the size limit is skipped', () => {
     const bomb = new Uint8Array(32 * 1024 * 1024 + 1).fill(32)
     const packed = fromUint8Array(deflateSync(bomb, { level: 9 }))

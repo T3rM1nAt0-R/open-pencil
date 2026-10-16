@@ -104,12 +104,27 @@ function inflateDiagram(text: string): string | null {
   }
 }
 
-/** The text with its percent escapes decoded; text with a stray `%` is already plain. */
+/** A `%` that does not start an escape, as in "50% done". */
+const STRAY_PERCENT = /%(?![0-9A-Fa-f]{2})/g
+/** A run of escapes, decoded together so a character spread over several bytes stays whole. */
+const ESCAPE_RUN = /(?:%[0-9A-Fa-f]{2})+/g
+
+/**
+ * The text with its percent escapes decoded. A stray `%` is kept as it is, and an escape run that
+ * is not valid UTF-8 stays encoded, so neither stops the rest of the text from decoding.
+ */
 function percentDecoded(text: string): string {
+  const escaped = text.replace(STRAY_PERCENT, '%25')
   try {
-    return decodeURIComponent(text)
+    return decodeURIComponent(escaped)
   } catch {
-    return text
+    return escaped.replace(ESCAPE_RUN, (run) => {
+      try {
+        return decodeURIComponent(run)
+      } catch {
+        return run
+      }
+    })
   }
 }
 
