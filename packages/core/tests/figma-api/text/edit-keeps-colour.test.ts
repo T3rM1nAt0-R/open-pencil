@@ -70,6 +70,22 @@ describe('editing coloured text through the plugin API', () => {
     expect(redCharacters(text)).toEqual(['three'])
   })
 
+  test('deleting across the start of a coloured run keeps the characters left in it', () => {
+    const text = coloured('one two three', 8, 13)
+    text.deleteCharacters(6, 10)
+
+    expect(text.characters).toBe('one twree')
+    expect(redCharacters(text)).toEqual(['ree'])
+  })
+
+  test('deleting inside a coloured run shortens the run and keeps the rest coloured', () => {
+    const text = coloured('one seven three', 4, 9)
+    text.deleteCharacters(5, 7)
+
+    expect(text.characters).toBe('one sen three')
+    expect(redCharacters(text)).toEqual(['sen'])
+  })
+
   test('setting characters resets range styles, leaving the style of the first character', () => {
     const middle = coloured('one two three', 4, 7)
     middle.characters = 'one six three'
