@@ -103,7 +103,6 @@ export function insertCharacters(
   )
   const styleRuns = insertRunsWithStyle(
     node.styleRuns,
-    node.text.length,
     start,
     characters.length,
     insertedStyle(node, start, useStyle)

@@ -57,10 +57,15 @@ describe('editing coloured text through the plugin API', () => {
 
   test('a long insert keeps the styles around it', () => {
     const text = coloured('one two three', 4, 7)
-    text.insertCharacters(4, 'x'.repeat(200_000), 'AFTER')
+    const long = 'x'.repeat(200_000)
+    text.insertCharacters(4, long, 'AFTER')
 
-    expect(text.characters.length).toBe(13 + 200_000)
-    expect(redCharacters(text)).toEqual([`${'x'.repeat(200_000)}two`])
+    expect(text.characters.length).toBe(13 + long.length)
+    // Read back a few ranges: listing every segment of 200,000 characters is slow in itself.
+    const red = (start: number, end: number) => (text.getRangeFills(start, end) as typeof RED)[0]?.color.r
+    expect([red(4, 5), red(4 + long.length, 7 + long.length)]).toEqual([1, 1])
+    // Before the run, the text keeps its own black.
+    expect(red(0, 4)).toBe(0)
   })
 
   test('deleting before a coloured run moves the run with its characters', () => {
