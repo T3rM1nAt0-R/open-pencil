@@ -487,7 +487,6 @@ const BUILDERS: Record<ShapeWithTextType, Builder> = {
   }
 }
 
-/** The outline and inner lines of a shape of `type` filling a `width` × `height` box. */
 /**
  * The outline with each straight corner rounded to `radius` (FigJam rounds them all to its corner
  * radius), shortened where an edge is too short for it. Outlines with curves keep their shape.
@@ -524,6 +523,10 @@ function roundCorners(commands: PolygonOutlineCommand[], radius: number): Polygo
   return rounded
 }
 
+/**
+ * The outline and inner lines of a shape of `type` filling a `width` × `height` box, its straight
+ * corners rounded to `cornerRadius`.
+ */
 export function shapeWithTextGeometry(
   type: ShapeWithTextType,
   width: number,
