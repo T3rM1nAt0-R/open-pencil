@@ -15,7 +15,7 @@ import { BLACK } from '#core/constants'
 import type { DrawioCell, DrawioPage } from './document'
 import { parseLabel, type RunFormat } from './label'
 import { routeEdge, type Box, type Point } from './route'
-import { shapeGeometry } from './shapes'
+import { shapeGeometry, swimlaneHeader } from './shapes'
 import { styleColor, styleNumber, type DrawioStyle } from './style'
 
 /** The plugin data namespace every OpenPencil plugin-data call uses. */
@@ -132,6 +132,13 @@ function labelBox(style: DrawioStyle, width: number, height: number): Box {
   const right = styleNumber(style, 'spacingRight', 0) + spacing
   const top = styleNumber(style, 'spacingTop', 0) + spacing
   const bottom = styleNumber(style, 'spacingBottom', 0) + spacing
+  // A swimlane's title sits in its title bar.
+  if (style.swimlane !== undefined || style.shape === 'swimlane') {
+    const header = swimlaneHeader(style, width, height)
+    if (style.horizontal === '0')
+      return { x: 0, y: top, width: header, height: height - top - bottom }
+    return { x: left, y: 0, width: width - left - right, height: header }
+  }
   if (style.verticalLabelPosition === 'bottom') {
     const size = styleNumber(style, 'fontSize', DEFAULT_FONT_SIZE)
     return { x: left, y: height + top, width: width - left - right, height: size * LINE_HEIGHT * 2 }
@@ -193,6 +200,9 @@ function createVertex(cell: DrawioCell, box: Box, graph: SceneGraph, parentId: s
   } else if (geometry.kind === 'path' && geometry.path) {
     const network = parseSVGPath(geometry.path)
     vectorNode(graph, frame.id, 'Shape', network, inner, geometry.outlineOnly ? [] : fill, strokes)
+    if (geometry.outline) {
+      vectorNode(graph, frame.id, 'Outline', parseSVGPath(geometry.outline), inner, [], strokes)
+    }
   }
   textNode(cell, labelBox(style, box.width, box.height), graph, frame.id)
   return frame.id

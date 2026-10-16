@@ -4,7 +4,7 @@ import type { SceneGraph } from '@open-pencil/scene-graph'
 
 import { layoutAuthoredNodes } from '#core/layout'
 
-import { readDrawioDocument } from './formats/drawio'
+import { drawioSource, readDrawioDocument } from './formats/drawio'
 import { exportFigFile, parseFigFile } from './formats/fig'
 import type { PPTXExportOptions } from './formats/pptx'
 import { headlessRenderNodes, renderNodesToImage, type RasterExportFormat } from './formats/raster'
@@ -244,16 +244,19 @@ export const drawioFormat: IOFormatAdapter<'drawio'> = {
   label: 'draw.io Diagram',
   role: 'interchange-document',
   category: 'document',
-  extensions: ['drawio', 'dio'],
+  // PNG and SVG exports open as diagrams when draw.io embedded one: its editable exports do.
+  extensions: ['drawio', 'dio', 'png', 'svg'],
   mimeTypes: ['application/vnd.jgraph.mxfile', 'application/x-drawio'],
   support: {
     readDocument: true
   },
   matchesFile(fileName) {
-    return ['drawio', 'dio'].includes(lowerExt(fileName))
+    return ['drawio', 'dio', 'png', 'svg'].includes(lowerExt(fileName))
   },
   async readDocument(input) {
-    const graph = readDrawioDocument(new TextDecoder().decode(input.data))
+    const source = drawioSource(input.data)
+    if (source === null) throw new Error('This image holds no draw.io diagram')
+    const graph = readDrawioDocument(source)
     if (!graph) throw new Error('Not a draw.io diagram')
     return { graph, sourceFormat: 'drawio' }
   }

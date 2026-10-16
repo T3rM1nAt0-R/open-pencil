@@ -4,7 +4,7 @@ import { deflateSync } from 'fflate'
 import { fromUint8Array } from 'js-base64'
 
 import { BUILTIN_IO_FORMATS, IORegistry } from '#core/io'
-import { parseDrawioDocument } from '#core/io/formats/drawio/document'
+import { parseDrawioFile } from '#core/io/formats/drawio/document'
 import { readDrawioDocument } from '#core/io/formats/drawio'
 import { parseLabel } from '#core/io/formats/drawio/label'
 
@@ -102,20 +102,21 @@ describe('pages', () => {
     expect(child(graph, firstPage(graph), 'Arrow: 50% done')).toBeDefined()
   })
 
-  test('a compressed page that unpacks past the size limit is skipped', () => {
+  test('a compressed page that unpacks past the size limit fails the import', () => {
     const bomb = new Uint8Array(32 * 1024 * 1024 + 1).fill(32)
     const packed = fromUint8Array(deflateSync(bomb, { level: 9 }))
     const source = `<mxfile><diagram id="p1" name="First">${MODEL}</diagram><diagram id="x" name="Huge">${packed}</diagram></mxfile>`
-    expect(load(source).getPages().map((page) => page.name)).toEqual(['First'])
-  })
+    expect(() => readDrawioDocument(source)).toThrow('Could not read these draw.io pages: Huge')
+    // Unpacking 32 MiB to find the limit takes a few seconds on a busy machine.
+  }, 30_000)
 
   test('a bare mxGraphModel is one page', () => {
-    expect(parseDrawioDocument(MODEL)?.map((page) => page.name)).toEqual(['Page 1'])
+    expect(parseDrawioFile(MODEL)?.pages.map((page) => page.name)).toEqual(['Page 1'])
   })
 
   test('something that is not a draw.io diagram is refused', () => {
-    expect(parseDrawioDocument('<svg xmlns="http://www.w3.org/2000/svg"/>')).toBeNull()
-    expect(parseDrawioDocument('not xml <')).toBeNull()
+    expect(parseDrawioFile('<svg xmlns="http://www.w3.org/2000/svg"/>')).toBeNull()
+    expect(parseDrawioFile('not xml <')).toBeNull()
   })
 })
 

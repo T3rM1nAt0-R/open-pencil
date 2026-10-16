@@ -42,7 +42,7 @@ export interface DrawioPage {
 /** The ids draw.io gives its two root cells: the root itself and the default layer. */
 const ROOT_IDS = new Set(['0', '1'])
 
-function parseXML(source: string): Element | null {
+export function parseXML(source: string): Element | null {
   try {
     const parsed = new DOMParser({
       onError: (level, message) => {
@@ -71,7 +71,7 @@ const MAX_INFLATED_DIAGRAM_BYTES = 32 * 1024 * 1024
 const INFLATE_STEP_BYTES = 4096
 
 /** Raw deflate with an output cap; throws once the unpacked size would exceed it. */
-function boundedInflate(data: Uint8Array): Uint8Array {
+export function boundedInflate(data: Uint8Array): Uint8Array {
   const chunks: Uint8Array[] = []
   let size = 0
   const inflater = new Inflate((chunk) => {
@@ -113,7 +113,7 @@ const ESCAPE_RUN = /(?:%[0-9A-Fa-f]{2})+/g
  * The text with its percent escapes decoded. A stray `%` is kept as it is, and an escape run that
  * is not valid UTF-8 stays encoded, so neither stops the rest of the text from decoding.
  */
-function percentDecoded(text: string): string {
+export function percentDecoded(text: string): string {
   const escaped = text.replace(STRAY_PERCENT, '%25')
   try {
     return decodeURIComponent(escaped)
@@ -196,31 +196,41 @@ function readModel(model: Element): DrawioCell[] {
   return cells
 }
 
-function readDiagram(diagram: Element, index: number): DrawioPage | null {
+/** A draw.io file's pages, and the names of those that could not be read. */
+export interface DrawioFile {
+  pages: DrawioPage[]
+  unreadable: string[]
+}
+
+function readDiagram(diagram: Element, index: number): DrawioPage | { unreadable: string } {
+  const name = diagram.getAttribute('name') || `Page ${index + 1}`
   let model = childElements(diagram, 'mxGraphModel').at(0) ?? null
   if (!model) {
     const xml = inflateDiagram(diagram.textContent ?? '')
     const root = xml ? parseXML(xml) : null
     model = root?.localName === 'mxGraphModel' ? root : null
   }
-  if (!model) return null
-  return {
-    id: diagram.getAttribute('id') ?? `page-${index + 1}`,
-    name: diagram.getAttribute('name') || `Page ${index + 1}`,
-    cells: readModel(model)
-  }
+  if (!model) return { unreadable: name }
+  return { id: diagram.getAttribute('id') ?? `page-${index + 1}`, name, cells: readModel(model) }
 }
 
-/** The pages of a draw.io file, whether its diagrams are plain or compressed. */
-export function parseDrawioDocument(source: string): DrawioPage[] | null {
+/**
+ * The pages of a draw.io file, whether its diagrams are plain or compressed, with the names of
+ * pages it could not read (damaged, or larger than the size limit once unpacked). Null when the
+ * source is not a draw.io file.
+ */
+export function parseDrawioFile(source: string): DrawioFile | null {
   const root = parseXML(source)
   if (!root) return null
   if (root.localName === 'mxGraphModel') {
-    return [{ id: 'page-1', name: 'Page 1', cells: readModel(root) }]
+    return { pages: [{ id: 'page-1', name: 'Page 1', cells: readModel(root) }], unreadable: [] }
   }
   if (root.localName !== 'mxfile') return null
-  const pages = childElements(root, 'diagram')
-    .map(readDiagram)
-    .filter((page): page is DrawioPage => page !== null)
-  return pages.length > 0 ? pages : null
+  const file: DrawioFile = { pages: [], unreadable: [] }
+  for (const [index, diagram] of childElements(root, 'diagram').entries()) {
+    const read = readDiagram(diagram, index)
+    if ('unreadable' in read) file.unreadable.push(read.unreadable)
+    else file.pages.push(read)
+  }
+  return file
 }
