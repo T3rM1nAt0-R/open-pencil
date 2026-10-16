@@ -1,0 +1,1 @@
+- Raster export from the CLI works on Windows: the CanvasKit WASM path no longer comes out as `C:\C:\...`.
