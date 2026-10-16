@@ -9,9 +9,11 @@ export interface CanvasKitOptions {
   locateFile?: (file: string) => string
 }
 
-/** Local path of a `file:` URL; keeps Windows paths free of the leading slash that doubled the drive letter. */
+/** Local path of a `file:` URL; keeps Windows drive and network-share paths free of the doubled prefix. */
 export function fileURLToPath(url: string | URL): string {
-  const path = decodeURIComponent(new URL(url).pathname)
+  const { hostname, pathname } = new URL(url)
+  const path = decodeURIComponent(pathname)
+  if (hostname) return `//${hostname}${path}`
   return /^\/[A-Za-z]:/.test(path) ? path.slice(1) : path
 }
 

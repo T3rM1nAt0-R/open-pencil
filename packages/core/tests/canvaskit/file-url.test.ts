@@ -13,3 +13,7 @@ test('a POSIX file URL keeps its leading slash and decodes spaces', () => {
     '/home/me/my app/canvaskit.wasm'
   )
 })
+
+test('a network share file URL keeps its host', () => {
+  expect(fileURLToPath('file://server/share/canvaskit.wasm')).toBe('//server/share/canvaskit.wasm')
+})
