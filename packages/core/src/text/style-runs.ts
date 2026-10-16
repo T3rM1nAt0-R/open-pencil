@@ -129,8 +129,8 @@ export function insertRunsWithStyle(
 ): StyleRun[] {
   const chars = expandRuns(runs, textLength)
   const inserted = Array.from({ length }, () => (isEmptyStyle(style) ? null : { ...style }))
-  chars.splice(pos, 0, ...inserted)
-  return compactRuns(chars)
+  // Joined rather than spread into splice, which a long insert would overflow.
+  return compactRuns(chars.slice(0, pos).concat(inserted, chars.slice(pos)))
 }
 
 export function adjustRunsForDelete(

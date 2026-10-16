@@ -55,6 +55,14 @@ describe('editing coloured text through the plugin API', () => {
     expect(redCharacters(text)).toEqual(['one two'])
   })
 
+  test('a long insert keeps the styles around it', () => {
+    const text = coloured('one two three', 4, 7)
+    text.insertCharacters(4, 'x'.repeat(200_000), 'AFTER')
+
+    expect(text.characters.length).toBe(13 + 200_000)
+    expect(redCharacters(text)).toEqual([`${'x'.repeat(200_000)}two`])
+  })
+
   test('deleting before a coloured run moves the run with its characters', () => {
     const text = coloured('one two three', 8, 13)
     text.deleteCharacters(0, 4)
