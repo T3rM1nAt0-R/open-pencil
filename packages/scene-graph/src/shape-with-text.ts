@@ -524,8 +524,9 @@ function roundCorners(commands: PolygonOutlineCommand[], radius: number): Polygo
 }
 
 /**
- * The outline and inner lines of a shape of `type` filling a `width` × `height` box, its straight
- * corners rounded to `cornerRadius`.
+ * The outline and inner lines of a shape of `type` filling a `width` × `height` box. Outlines
+ * made only of straight segments have their corners rounded to `cornerRadius`; outlines with
+ * curves, such as a rounded rectangle, keep their own shape.
  */
 export function shapeWithTextGeometry(
   type: ShapeWithTextType,
