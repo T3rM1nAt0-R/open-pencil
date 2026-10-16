@@ -39,7 +39,10 @@ function chunkDiagram(type: string, data: Uint8Array): string | null {
   return percentDecoded(utf8.decode(compressed ? boundedInflate(text.subarray(2)) : text))
 }
 
-/** The draw.io diagram a PNG export carries, or null when it carries none. */
+/**
+ * The draw.io diagram a PNG export carries, or null when it carries none. A compressed chunk that
+ * is damaged or too large to unpack is an error that says so.
+ */
 function diagramInPNG(bytes: Uint8Array): string | null {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
   let offset = PNG_SIGNATURE.length
@@ -49,7 +52,12 @@ function diagramInPNG(bytes: Uint8Array): string | null {
     const start = offset + 8
     if (start + length > bytes.length || type === 'IEND') return null
     if (type === 'tEXt' || type === 'zTXt' || type === 'iTXt') {
-      const diagram = chunkDiagram(type, bytes.subarray(start, start + length))
+      let diagram: string | null
+      try {
+        diagram = chunkDiagram(type, bytes.subarray(start, start + length))
+      } catch (error) {
+        throw new Error('Could not read the draw.io diagram in this image', { cause: error })
+      }
       if (diagram) return diagram
     }
     // The chunk's data, then its 4-byte CRC.

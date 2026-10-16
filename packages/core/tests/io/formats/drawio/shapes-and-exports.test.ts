@@ -147,6 +147,17 @@ describe('draw.io diagrams embedded in PNG and SVG exports', () => {
     expect(drawioSource(new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"/>'))).toBeNull()
   })
 
+  test('a damaged compressed PNG chunk is an error that says so', () => {
+    const file = png(chunk('zTXt', bytes('mxfile', new Uint8Array([0, 0]), 'not zlib data')))
+    expect(() => drawioSource(file)).toThrow('Could not read the draw.io diagram in this image')
+  })
+
+  test('ordinary images are not offered as draw.io documents', () => {
+    expect(io.findReader('photo.png')).toBeNull()
+    expect(io.findReader('logo.svg')).toBeNull()
+    expect(io.findReader('flow.drawio.svg')?.id).toBe('drawio')
+  })
+
   test('a PNG export opens through the registry as its diagram', async () => {
     const file = png(chunk('tEXt', bytes('mxfile', new Uint8Array([0]), encodeURIComponent(MXFILE))))
     expect(io.findReader('flow.drawio.png')?.id).toBe('drawio')
@@ -154,8 +165,8 @@ describe('draw.io diagrams embedded in PNG and SVG exports', () => {
     expect(graph.getPages().map((page) => page.name)).toEqual(['Embedded'])
   })
 
-  test('an image without a diagram says so', async () => {
-    await expect(io.readDocument({ name: 'photo.png', data: png() })).rejects.toThrow(
+  test('a draw.io export without a diagram says so', async () => {
+    await expect(io.readDocument({ name: 'photo.drawio.png', data: png() })).rejects.toThrow(
       'This image holds no draw.io diagram'
     )
   })
