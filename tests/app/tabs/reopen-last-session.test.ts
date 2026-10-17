@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'bun:test'
 
 import * as layoutModule from '@open-pencil/core/layout'
 
+import { toast } from '@/app/shell/ui'
 import { createTab, getActiveStore, getTabsSnapshot } from '@/app/tabs'
 import { lastSession } from '@/app/tabs/open/last-session'
 import { reopenLastSession } from '@/app/tabs/open/startup'
@@ -35,6 +36,8 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks()
   lastSession.value = null
+  // The notice is app-wide state; leaving it would show up in unrelated tests.
+  for (const entry of toast.toasts.value) toast.remove(entry.id)
   Reflect.deleteProperty(globalThis, 'window')
   Reflect.deleteProperty(globalThis, 'document')
 })
