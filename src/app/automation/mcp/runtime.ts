@@ -1,3 +1,4 @@
+import { useIntervalFn } from '@vueuse/core'
 import { reactive } from 'vue'
 
 import { connectAutomation } from '@/app/automation/bridge/server'
@@ -39,7 +40,14 @@ export interface MCPRuntimeDependencies {
   /** Diagnostics for the most recent spawn/health attempt. */
   getStartupFailure: () => MCPFailure | null
   getHealthFailure: () => MCPFailure | null
+  /** How often to check that a server the app started is still answering; tests shorten it. */
+  watchIntervalMs?: number
 }
+
+/** Seconds between checks that the server the app started is still there. */
+const DEFAULT_WATCH_INTERVAL_MS = 15_000
+/** Replacements tried in a row before the app stops and reports the server as unavailable. */
+const MAX_REPLACEMENTS = 3
 
 /**
  * Turn a failed startup into the reason the user can act on. The spawn layer
@@ -83,6 +91,10 @@ export function createMCPRuntimeService(dependencies: MCPRuntimeDependencies) {
   let disconnectAutomation: (() => void) | null = null
   let activeStore: (() => EditorStore) | null = null
   let lifecycle: Promise<void> = Promise.resolve()
+  let replacements = 0
+  // Set the moment the user stops the server, before the queue gets to it, so a health check
+  // already in flight cannot start a replacement for a server they just stopped.
+  let stopRequested = false
 
   function enqueue<T>(operation: () => Promise<T>): Promise<T> {
     const next = lifecycle.then(operation, operation)
@@ -122,7 +134,42 @@ export function createMCPRuntimeService(dependencies: MCPRuntimeDependencies) {
     }
   }
 
+  /**
+   * A server the app started can exit on its own, for example when it gave up waiting for the app
+   * to attach. Without a check the app keeps retrying a dead address until it is restarted.
+   */
+  const watcher = useIntervalFn(
+    () => {
+      void enqueue(watchOperation)
+    },
+    dependencies.watchIntervalMs ?? DEFAULT_WATCH_INTERVAL_MS,
+    { immediate: false }
+  )
+  const stopWatching = watcher.pause
+  const startWatching = watcher.resume
+
+  async function watchOperation(): Promise<void> {
+    if (state.status !== 'running' || !server?.managed) return
+    const health = await dependencies.readHealth(server.authToken).catch(() => null)
+    if (health) {
+      replacements = 0
+      return
+    }
+    if (stopRequested) return
+    if (replacements >= MAX_REPLACEMENTS) {
+      // Reporting "running" for a server that no longer answers would hide the failure.
+      await stopOperation(false)
+      state.status = 'error'
+      state.failure = mcpFailure('exited', `Stopped answering after ${MAX_REPLACEMENTS} restarts`)
+      return
+    }
+    replacements++
+    await stopOperation(false)
+    if (activeStore) await startOperation()
+  }
+
   async function disconnectCurrentServer(): Promise<Error | null> {
+    stopWatching()
     disconnectAutomation?.()
     disconnectAutomation = null
     const currentServer = server
@@ -150,6 +197,7 @@ export function createMCPRuntimeService(dependencies: MCPRuntimeDependencies) {
           disconnectAutomation = dependencies.connect(activeStore, server?.authToken ?? null)
         }
         applyHealth(health)
+        if (server?.managed) startWatching()
         return { ok: true }
       }
       failure = describeStartupFailure(dependencies, server)
@@ -188,11 +236,19 @@ export function createMCPRuntimeService(dependencies: MCPRuntimeDependencies) {
     refresh: () => enqueue(refreshOperation),
     start(getStore: () => EditorStore): Promise<MCPRuntimeResult> {
       activeStore = getStore
+      replacements = 0
+      stopRequested = false
       return enqueue(startOperation)
     },
-    stop: () => enqueue(() => stopOperation(true)),
+    stop: () => {
+      replacements = 0
+      stopRequested = true
+      stopWatching()
+      return enqueue(() => stopOperation(true))
+    },
     restart: () =>
       enqueue(async () => {
+        replacements = 0
         const stopResult = await stopOperation(false)
         if (!stopResult.ok) return stopResult
         if (!activeStore) {
