@@ -150,7 +150,6 @@ API намеренно близок к Figma Plugin API, но работает �
 Следующие API пока не предоставляются в совместимом виде:
 
 - `node.exportAsync()`
-- `node.setBoundVariable(field, variable)`
 - `figma.combineAsVariants(components, parent)`
 - API стилей Figma, например `figma.createPaintStyle()` и `figma.createTextStyle()`
 - полная совместимость логических операций над векторами

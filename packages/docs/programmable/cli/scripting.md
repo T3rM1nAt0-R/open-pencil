@@ -198,6 +198,7 @@ The API is intentionally close to Figma's Plugin API, but it maps to OpenPencil'
 - `figma.deleteVariable(id)`
 - `figma.createVariableCollection(name)`
 - `figma.deleteVariableCollection(id)`
+- `node.boundVariables` and `node.setBoundVariable(field, variable)`
 - `figma.bindVariable(nodeId, field, variableId)`
 - `figma.unbindVariable(nodeId, field)`
 
@@ -233,7 +234,6 @@ Common node properties are readable/writable through the proxy, including:
 These Figma APIs are not exposed as compatible helpers yet:
 
 - `node.exportAsync()`
-- `node.setBoundVariable(field, variable)`
 - `figma.combineAsVariants(components, parent)`
 - Figma style APIs such as `figma.createPaintStyle()` / `figma.createTextStyle()`
 - Full vector boolean operation parity

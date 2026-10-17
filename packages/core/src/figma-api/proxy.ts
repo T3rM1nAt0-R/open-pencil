@@ -33,7 +33,7 @@ import { installStickyNodeProxyAccessors, pluginChildren } from './accessors/sti
 import { installStrokeNodeProxyAccessors } from './accessors/strokes'
 import { installTextNodeProxyAccessors } from './accessors/text'
 import { installTextRangeMethods, type TextRangeMethods } from './accessors/text/ranges'
-import { installVariableModeNodeProxyAccessors } from './accessors/variables'
+import { installVariableModeNodeProxyAccessors, type VariableAlias } from './accessors/variables'
 import {
   installVectorNodeProxyAccessors,
   type FigmaVectorNetwork,
@@ -162,6 +162,8 @@ export class FigmaNodeProxy {
   declare vectorNetwork: FigmaVectorNetwork
   declare setVectorNetworkAsync: (vectorNetwork: FigmaVectorNetwork) => Promise<void>
   declare handleMirroring: SceneNode['handleMirroring'] | typeof MIXED
+  declare readonly boundVariables: Readonly<Record<string, VariableAlias | VariableAlias[]>>
+  declare setBoundVariable: (field: string, variable: { id: string } | null) => void
   declare readonly explicitVariableModes: Readonly<Record<string, string>>
   declare readonly resolvedVariableModes: Readonly<Record<string, string>>
   declare readonly overrides: FigmaInstanceOverride[] | undefined

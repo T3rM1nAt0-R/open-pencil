@@ -1,0 +1,1 @@
+- Added `node.boundVariables` and `node.setBoundVariable(field, variable)` to the Figma plugin API.
