@@ -55,6 +55,7 @@ import { nodeProxyToJSON } from './serialization'
 import { installSlotAccessors, prepareSlotMove, prepareSlotRemoval } from './slots'
 import type { FigmaLetterSpacing, FigmaLineHeight } from './text'
 import * as TextProxy from './text'
+import type { FigmaVariableAlias } from './text/style'
 import { containerTransform, setContainerTransform } from './transform'
 import * as Traversal from './traversal'
 import type { FigmaTransform } from './types'
@@ -162,6 +163,10 @@ export class FigmaNodeProxy {
   declare vectorNetwork: FigmaVectorNetwork
   declare setVectorNetworkAsync: (vectorNetwork: FigmaVectorNetwork) => Promise<void>
   declare handleMirroring: SceneNode['handleMirroring'] | typeof MIXED
+  declare readonly boundVariables: Readonly<
+    Record<string, FigmaVariableAlias | FigmaVariableAlias[]>
+  >
+  declare setBoundVariable: (field: string, variable: { id: string } | null) => void
   declare readonly explicitVariableModes: Readonly<Record<string, string>>
   declare readonly resolvedVariableModes: Readonly<Record<string, string>>
   declare readonly overrides: FigmaInstanceOverride[] | undefined
