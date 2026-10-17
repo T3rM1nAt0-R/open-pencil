@@ -2,7 +2,7 @@ import { describe, expect, mock, test } from 'bun:test'
 
 import type { Path } from 'canvaskit-wasm'
 
-import type { SceneNode } from '@open-pencil/scene-graph'
+import { createDefaultNode, type SceneNode } from '@open-pencil/scene-graph'
 
 import { renderEffects } from '#core/canvas/shadows'
 
@@ -52,8 +52,7 @@ describe('Edge cases and bug fixes', () => {
   test('drop shadow is not drawn under a fill at 0% opacity', () => {
     const r = createMockRenderer()
     const canvas = createMockCanvas()
-    const node: Partial<SceneNode> = {
-      type: 'RECTANGLE',
+    const node = createDefaultNode(() => 'transparent-fill', 'RECTANGLE', {
       width: 200,
       height: 200,
       fills: [{ visible: true, type: 'SOLID', color: { r: 1, g: 0, b: 0, a: 1 }, opacity: 0 }],
@@ -70,9 +69,9 @@ describe('Edge cases and bug fixes', () => {
       strokes: [],
       strokeGeometry: [],
       childIds: []
-    }
+    })
 
-    renderEffects(r, asCanvas(canvas), node as SceneNode, new Float32Array(4), false, 'behind')
+    renderEffects(r, asCanvas(canvas), node, new Float32Array(4), false, 'behind')
 
     expect(canvas.drawRect).not.toHaveBeenCalled()
     expect(canvas.drawPath).not.toHaveBeenCalled()
