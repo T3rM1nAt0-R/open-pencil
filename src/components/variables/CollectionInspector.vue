@@ -223,7 +223,6 @@ function attributeDone(event: KeyboardEvent) {
                   v-if="isLibraryCollection(collection)"
                   :class="menu.item"
                   data-test-id="variables-make-collection-local"
-                  :title="variables.makeCollectionLocalHint"
                   @select="emit('makeLocal')"
                 >
                   <icon-lucide-unlink :class="menu.icon" />

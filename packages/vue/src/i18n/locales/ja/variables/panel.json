@@ -101,7 +101,6 @@
   "libraryCollection": "ライブラリ",
   "libraryCollectionHint": "ライブラリからコピーされています。編集はこのファイルに保存され、Figma にも表示されます。",
   "makeCollectionLocal": "ローカルにする",
-  "makeCollectionLocalHint": "ライブラリとの関連付けを外します。コレクションはこのファイルのものになります。",
   "addedToLibraryCollection": "ここで追加されました。ライブラリのコレクションに追加された変数は Figma に表示されません。",
   "importTokensDescription": "各コレクションとモードの読み込み先を選びます。同じ名前の変数は更新され、削除されるものはありません。",
   "importNewCollection": "新しいコレクション",
