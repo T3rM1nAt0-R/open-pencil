@@ -224,6 +224,16 @@ function drawShadowCutout(
   }
 }
 
+/** Figma casts no shadow from a node whose only fills are at 0% opacity and that has no stroke. */
+function hasOnlyInvisibleFills(node: SceneNode): boolean {
+  const fills = node.fills.filter((fill) => fill.visible)
+  return (
+    fills.length > 0 &&
+    fills.every((fill) => fill.opacity === 0) &&
+    !node.strokes.some((stroke) => stroke.visible)
+  )
+}
+
 function drawShapeDropShadow(
   r: SkiaRenderer,
   canvas: Canvas,
@@ -302,6 +312,7 @@ function renderDropShadow(
 
   const shapeNode = shadowShapeChild ?? node
   if (shapeNode.type !== 'TEXT') {
+    if (!shadowShapeChild && hasOnlyInvisibleFills(node)) return
     drawShapeDropShadow(r, canvas, node, effect, hasRadius, shadowShapeChild)
     resetEffectLayerPaint(r)
     return
