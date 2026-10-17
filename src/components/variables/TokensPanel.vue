@@ -299,6 +299,7 @@ const collectionInspector = computed(() => {
   return {
     onRename: (name: string) => current && ctx.renameCollection(current.id, name),
     onRemove: () => current && ctx.removeCollection(current.id),
+    onMakeLocal: () => current && editor.makeCollectionLocal(current.id),
     onAddMode: ctx.addMode,
     onRenameMode: ctx.renameMode,
     onDuplicateMode: ctx.duplicateMode,
