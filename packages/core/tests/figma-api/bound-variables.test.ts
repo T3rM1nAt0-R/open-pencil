@@ -69,3 +69,13 @@ test('text nodes report run bindings as arrays', () => {
   text.setRangeBoundVariable(6, 11, 'fontSize', size)
   expect(text.boundVariables.fontSize).toEqual([{ type: 'VARIABLE_ALIAS', id: size.id }])
 })
+
+test('unbinding a text field also clears its character runs', () => {
+  const { figma, size } = setup()
+  const text = figma.createText()
+  text.characters = 'Hello world'
+  text.setRangeBoundVariable(0, 5, 'fontSize', size)
+  text.setBoundVariable('fontSize', null)
+  expect(text.boundVariables.fontSize).toBeUndefined()
+  expect(text.getRangeBoundVariable(0, 5, 'fontSize')).toBeNull()
+})

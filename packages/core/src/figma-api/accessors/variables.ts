@@ -1,7 +1,18 @@
-import { TEXT_BINDABLE_FIELDS, type SceneGraph, type SceneNode } from '@open-pencil/scene-graph'
+import {
+  TEXT_BINDABLE_FIELDS,
+  type SceneGraph,
+  type SceneNode,
+  type TextBindableField
+} from '@open-pencil/scene-graph'
 
 import { assertNodeEditable } from '#core/editor/capabilities'
-import { raw, type NodeProxyInternals, type ProxyThis } from '#core/figma-api/accessor-utils'
+import {
+  raw,
+  updateNode,
+  type NodeProxyInternals,
+  type ProxyThis
+} from '#core/figma-api/accessor-utils'
+import { rangeBindingChanges } from '#core/figma-api/text/bindings'
 import { variableAlias, type FigmaVariableAlias } from '#core/figma-api/text/style'
 import { reconcileVariableLayouts } from '#core/layout/variables'
 
@@ -85,8 +96,21 @@ export function installVariableModeNodeProxyAccessors(
             `in setBoundVariable: "${field}" is a paint field. Bind a fill or stroke colour with figma.bindVariable(nodeId, "fills/0/color", variableId).`
           )
         }
-        if (variable === null) sceneGraph.unbindVariable(node.id, toGraphField(field))
-        else if (typeof variable.id === 'string') {
+        if (variable === null) {
+          sceneGraph.unbindVariable(node.id, toGraphField(field))
+          // A text field may also be bound on character runs; unbinding clears those too.
+          if (node.type === 'TEXT' && TEXT_FIELDS.has(field) && node.text.length > 0) {
+            const { styleRuns } = rangeBindingChanges(
+              sceneGraph,
+              node,
+              0,
+              node.text.length,
+              field as TextBindableField,
+              null
+            )
+            updateNode(this, internals, { styleRuns })
+          }
+        } else if (typeof variable.id === 'string') {
           sceneGraph.bindVariable(node.id, toGraphField(field), variable.id)
         } else {
           throw new TypeError('in setBoundVariable: expected a variable or null')
