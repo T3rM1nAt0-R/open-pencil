@@ -274,4 +274,57 @@ describe('MCP runtime service', () => {
     expect(spawns).toBe(1)
     expect(service.state.status).toBe('stopped')
   })
+
+  test('does not start a replacement when the server is stopped during a health check', async () => {
+    let spawns = 0
+    let checks = 0
+    let release: () => void = () => undefined
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const { service } = setup({
+      watchIntervalMs: 5,
+      readHealth: async () => {
+        // The check after the start passes; the first watch check hangs until the test lets go.
+        if (checks++ === 0) return { status: 'ok', tools: [descriptor()] }
+        await held
+        return null
+      },
+      spawn: async () => {
+        spawns++
+        return { authToken: 'token', managed: true, disconnect: () => undefined }
+      }
+    })
+    await service.start(getStore)
+    await until(() => checks >= 2)
+    const stopped = service.stop()
+    release()
+    await stopped
+    await Bun.sleep(30)
+
+    expect(spawns).toBe(1)
+    expect(service.state.status).toBe('stopped')
+  })
+
+  test('a manual restart gives a server that keeps dying a fresh set of replacements', async () => {
+    let spawns = 0
+    let healthChecks = 0
+    const { service } = setup({
+      watchIntervalMs: 5,
+      readHealth: async () =>
+        healthChecks++ % 2 === 0 ? { status: 'ok', tools: [descriptor()] } : null,
+      spawn: async () => {
+        spawns++
+        return { authToken: 'token', managed: true, disconnect: () => undefined }
+      }
+    })
+    await service.start(getStore)
+    await until(() => service.state.status === 'error')
+    expect(spawns).toBe(4)
+
+    await service.restart()
+    await until(() => service.state.status === 'error')
+    // Without the reset the second round would give up after one more spawn.
+    expect(spawns).toBe(8)
+  })
 })
