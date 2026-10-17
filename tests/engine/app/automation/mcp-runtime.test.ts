@@ -24,7 +24,11 @@ function setup(overrides: Partial<MCPRuntimeDependencies> = {}) {
       calls.push('connect')
       return () => calls.push('disconnect-bridge')
     },
-    readHealth: async () => ({ status: 'ok', version: '0.14.0', tools: [descriptor()] }),
+    readHealth: async () => ({
+      status: 'ok',
+      version: '0.14.0',
+      tools: [descriptor()]
+    }),
     setToolDescriptors: (tools) => catalogs.push(tools),
     getStartupFailure: () => null,
     getHealthFailure: () => null,
@@ -41,6 +45,15 @@ function setup(overrides: Partial<MCPRuntimeDependencies> = {}) {
 }
 
 const getStore = () => ({}) as never
+
+/** Waits for a condition the watcher reaches on its own timer, instead of guessing a delay. */
+async function until(condition: () => boolean, timeoutMs = 2000): Promise<void> {
+  const deadline = Date.now() + timeoutMs
+  while (!condition()) {
+    if (Date.now() > deadline) throw new Error('Timed out waiting for the condition')
+    await Bun.sleep(2)
+  }
+}
 
 describe('MCP runtime service', () => {
   test('starts only after a healthy server response', async () => {
@@ -83,7 +96,10 @@ describe('MCP runtime service', () => {
 
     expect(result.ok).toBe(false)
     expect(service.state.status).toBe('error')
-    expect(service.state.failure).toEqual({ code: 'unreachable', detail: expect.any(String) })
+    expect(service.state.failure).toEqual({
+      code: 'unreachable',
+      detail: expect.any(String)
+    })
     expect(calls).toEqual(['disconnect-server'])
   })
 
@@ -91,7 +107,10 @@ describe('MCP runtime service', () => {
     const { service } = setup({
       spawn: async () => null,
       readHealth: async () => null,
-      getStartupFailure: () => ({ code: 'not-installed', detail: '@open-pencil/mcp@0.15.0' })
+      getStartupFailure: () => ({
+        code: 'not-installed',
+        detail: '@open-pencil/mcp@0.15.0'
+      })
     })
 
     await service.start(getStore)
@@ -110,7 +129,10 @@ describe('MCP runtime service', () => {
 
     await service.start(getStore)
 
-    expect(service.state.failure).toEqual({ code: 'rejected', detail: 'HTTP 401' })
+    expect(service.state.failure).toEqual({
+      code: 'rejected',
+      detail: 'HTTP 401'
+    })
   })
 
   test('reports an unexpected health payload', async () => {
@@ -121,7 +143,10 @@ describe('MCP runtime service', () => {
 
     await service.start(getStore)
 
-    expect(service.state.failure).toEqual({ code: 'malformed', detail: 'HTTP 200' })
+    expect(service.state.failure).toEqual({
+      code: 'malformed',
+      detail: 'HTTP 200'
+    })
   })
 
   test('clears local runtime state even when server shutdown fails', async () => {
@@ -185,19 +210,49 @@ describe('MCP runtime service', () => {
       spawn: async () => {
         spawns++
         alive = true
-        return { authToken: 'token', managed: true, disconnect: () => undefined }
+        return {
+          authToken: 'token',
+          managed: true,
+          disconnect: () => undefined
+        }
       }
     })
     await service.start(getStore)
     alive = false
-    await Bun.sleep(40)
+    await until(() => spawns > 1)
 
-    expect(spawns).toBeGreaterThan(1)
     expect(service.state.status).toBe('running')
     await service.stop()
   })
 
-  test('gives up after a few replacements and leaves a stopped server alone', async () => {
+  test('reports the server as unavailable once replacements keep dying', async () => {
+    let spawns = 0
+    let healthChecks = 0
+    const { service } = setup({
+      watchIntervalMs: 5,
+      // The check after a start passes and the next watch finds the new server dead again.
+      readHealth: async () =>
+        healthChecks++ % 2 === 0 ? { status: 'ok', tools: [descriptor()] } : null,
+      spawn: async () => {
+        spawns++
+        return {
+          authToken: 'token',
+          managed: true,
+          disconnect: () => undefined
+        }
+      }
+    })
+    await service.start(getStore)
+    await until(() => service.state.status === 'error')
+
+    expect(spawns).toBe(4)
+    expect(service.state.failure?.code).toBe('exited')
+    const checks = healthChecks
+    await Bun.sleep(30)
+    expect(healthChecks).toBe(checks)
+  })
+
+  test('does not watch a server after it was stopped', async () => {
     let spawns = 0
     let alive = true
     const { service } = setup({
@@ -205,13 +260,17 @@ describe('MCP runtime service', () => {
       readHealth: async () => (alive ? { status: 'ok', tools: [descriptor()] } : null),
       spawn: async () => {
         spawns++
-        return { authToken: 'token', managed: true, disconnect: () => undefined }
+        return {
+          authToken: 'token',
+          managed: true,
+          disconnect: () => undefined
+        }
       }
     })
     await service.start(getStore)
     await service.stop()
     alive = false
-    await Bun.sleep(40)
+    await Bun.sleep(30)
     expect(spawns).toBe(1)
     expect(service.state.status).toBe('stopped')
   })
