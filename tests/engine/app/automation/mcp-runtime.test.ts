@@ -175,4 +175,44 @@ describe('MCP runtime service', () => {
     expect(service.state.status).toBe('running')
     expect(calls).toEqual(['connect', 'disconnect-bridge', 'disconnect-server', 'connect'])
   })
+
+  test('starts a new server when the one it started stops answering', async () => {
+    let alive = true
+    let spawns = 0
+    const { service } = setup({
+      watchIntervalMs: 5,
+      readHealth: async () => (alive ? { status: 'ok', tools: [descriptor()] } : null),
+      spawn: async () => {
+        spawns++
+        alive = true
+        return { authToken: 'token', managed: true, disconnect: () => undefined }
+      }
+    })
+    await service.start(getStore)
+    alive = false
+    await Bun.sleep(40)
+
+    expect(spawns).toBeGreaterThan(1)
+    expect(service.state.status).toBe('running')
+    await service.stop()
+  })
+
+  test('gives up after a few replacements and leaves a stopped server alone', async () => {
+    let spawns = 0
+    let alive = true
+    const { service } = setup({
+      watchIntervalMs: 5,
+      readHealth: async () => (alive ? { status: 'ok', tools: [descriptor()] } : null),
+      spawn: async () => {
+        spawns++
+        return { authToken: 'token', managed: true, disconnect: () => undefined }
+      }
+    })
+    await service.start(getStore)
+    await service.stop()
+    alive = false
+    await Bun.sleep(40)
+    expect(spawns).toBe(1)
+    expect(service.state.status).toBe('stopped')
+  })
 })
