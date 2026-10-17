@@ -107,6 +107,9 @@ export const variablesMessageDefaults = {
   importDesignTokens: 'Import design tokens',
   libraryCollection: 'Library',
   libraryCollectionHint: 'Copied from a library. Edits are saved in this file and show in Figma.',
+  makeCollectionLocal: 'Make local',
+  makeCollectionLocalHint:
+    'Removes the link to the library. The collection then belongs to this file.',
   addedToLibraryCollection:
     "Added here. Figma doesn't show variables added to a library's collection.",
   importTokensDescription:
