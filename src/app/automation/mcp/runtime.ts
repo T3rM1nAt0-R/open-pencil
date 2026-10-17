@@ -153,7 +153,10 @@ export function createMCPRuntimeService(dependencies: MCPRuntimeDependencies) {
       return
     }
     if (replacements >= MAX_REPLACEMENTS) {
-      stopWatching()
+      // Reporting "running" for a server that no longer answers would hide the failure.
+      await stopOperation(false)
+      state.status = 'error'
+      state.failure = mcpFailure('exited', `Stopped answering after ${MAX_REPLACEMENTS} restarts`)
       return
     }
     replacements++
