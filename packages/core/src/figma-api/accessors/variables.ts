@@ -81,6 +81,24 @@ export function boundVariableAliases(
   return result
 }
 
+/**
+ * Independent corners follow a shared `cornerRadius` binding. Changing one corner's binding first
+ * hands that binding to each corner on its own, so the other three keep following it.
+ */
+function splitSharedCornerBinding(
+  sceneGraph: SceneGraph,
+  node: Pick<SceneNode, 'id' | 'boundVariables' | 'independentCorners'>,
+  field: string
+): void {
+  const shared = node.boundVariables.cornerRadius
+  if (!shared || !node.independentCorners) return
+  if (!CORNER_FIELDS.some((corner) => corner === field)) return
+  for (const corner of CORNER_FIELDS) {
+    if (!(corner in node.boundVariables)) sceneGraph.bindVariable(node.id, corner, shared)
+  }
+  sceneGraph.unbindVariable(node.id, 'cornerRadius')
+}
+
 function graph(target: ProxyThis, internals: NodeProxyInternals): SceneGraph {
   return target[internals.graph] as SceneGraph
 }
@@ -112,6 +130,7 @@ export function installVariableModeNodeProxyAccessors(
         if (variable !== null && typeof variable.id !== 'string') {
           throw new TypeError('in setBoundVariable: expected a variable or null')
         }
+        splitSharedCornerBinding(sceneGraph, node, field)
         if (variable === null) sceneGraph.unbindVariable(node.id, toGraphField(field))
         else sceneGraph.bindVariable(node.id, toGraphField(field), variable.id)
         // A text field bound on the node replaces what its character runs held for that field.

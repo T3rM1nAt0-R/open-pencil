@@ -91,6 +91,20 @@ test('a corner radius binding is reported under each independent corner', () => 
   expect(bound.cornerRadius).toBeUndefined()
 })
 
+test('unbinding one independent corner keeps the other three bound', () => {
+  const { frame, size } = setup()
+  frame.topLeftRadius = 4
+  frame.setBoundVariable('cornerRadius', size)
+  frame.setBoundVariable('topLeftRadius', null)
+  const bound = frame.boundVariables
+  const alias = { type: 'VARIABLE_ALIAS' as const, id: size.id }
+  expect(bound.topLeftRadius).toBeUndefined()
+  expect(bound.topRightRadius).toEqual(alias)
+  expect(bound.bottomLeftRadius).toEqual(alias)
+  expect(bound.bottomRightRadius).toEqual(alias)
+  expect(bound.cornerRadius).toBeUndefined()
+})
+
 test('binding a text field on the node replaces a different run binding', () => {
   const { figma, size } = setup()
   const collection = figma.createVariableCollection('Other')
