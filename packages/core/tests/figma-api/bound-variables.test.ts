@@ -105,6 +105,19 @@ test('unbinding one independent corner keeps the other three bound', () => {
   expect(bound.cornerRadius).toBeUndefined()
 })
 
+test('a rejected binding on one independent corner leaves the shared binding whole', () => {
+  const graph = new SceneGraph()
+  const figma = new FigmaAPI(graph)
+  const collection = figma.createVariableCollection('Sizes')
+  const size = figma.createVariable('size', 'FLOAT', collection.id, 12)
+  const color = figma.createVariable('brand', 'COLOR', collection.id, { r: 1, g: 0, b: 0, a: 1 })
+  const frame = figma.createFrame()
+  frame.topLeftRadius = 4
+  frame.setBoundVariable('cornerRadius', size)
+  expect(() => frame.setBoundVariable('topLeftRadius', color)).toThrow()
+  expect(graph.getNode(frame.id)?.boundVariables).toEqual({ cornerRadius: size.id })
+})
+
 test('binding a text field on the node replaces a different run binding', () => {
   const { figma, size } = setup()
   const collection = figma.createVariableCollection('Other')

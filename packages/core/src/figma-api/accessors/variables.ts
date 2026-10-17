@@ -91,7 +91,7 @@ function splitSharedCornerBinding(
   field: string
 ): void {
   const shared = node.boundVariables.cornerRadius
-  if (!shared || !node.independentCorners) return
+  if (!shared || !node.independentCorners || !sceneGraph.variables.has(shared)) return
   if (!CORNER_FIELDS.some((corner) => corner === field)) return
   for (const corner of CORNER_FIELDS) {
     if (!(corner in node.boundVariables)) sceneGraph.bindVariable(node.id, corner, shared)
@@ -130,9 +130,14 @@ export function installVariableModeNodeProxyAccessors(
         if (variable !== null && typeof variable.id !== 'string') {
           throw new TypeError('in setBoundVariable: expected a variable or null')
         }
-        splitSharedCornerBinding(sceneGraph, node, field)
-        if (variable === null) sceneGraph.unbindVariable(node.id, toGraphField(field))
-        else sceneGraph.bindVariable(node.id, toGraphField(field), variable.id)
+        if (variable === null) {
+          splitSharedCornerBinding(sceneGraph, node, field)
+          sceneGraph.unbindVariable(node.id, toGraphField(field))
+        } else {
+          // Binding validates the variable and the field, so a bad call changes nothing.
+          sceneGraph.bindVariable(node.id, toGraphField(field), variable.id)
+          splitSharedCornerBinding(sceneGraph, node, field)
+        }
         // A text field bound on the node replaces what its character runs held for that field.
         if (node.type === 'TEXT' && TEXT_FIELDS.has(field) && node.text.length > 0) {
           const { styleRuns } = rangeBindingChanges(
