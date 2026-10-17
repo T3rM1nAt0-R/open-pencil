@@ -66,4 +66,16 @@ describe('make a library collection local', () => {
     editor.undo.undo()
     expect(editor.graph.variableCollections.get('tokens')?.key).toBe('library-key')
   })
+
+  test('an undo step does not touch a document that replaced the one it was made in', () => {
+    const editor = libraryEditor()
+    editor.makeCollectionLocal('tokens')
+    const other = libraryEditor()
+    other.makeCollectionLocal('tokens')
+    const replacement = other.graph
+    editor.replaceGraph(replacement)
+    editor.undo.undo()
+    expect(replacement.variableCollections.get('tokens')?.key).toBeUndefined()
+    expect(replacement.variables.get('gap')?.key).toBeUndefined()
+  })
 })

@@ -17,7 +17,10 @@ export function createLibraryCollectionActions(ctx: EditorContext) {
       if (variable) keys.set(id, { key: variable.key, version: variable.version })
     }
     const previous = { key: collection.key, version: collection.version }
+    // An undo step that outlives its document must not touch the one that replaced it.
+    const graph = ctx.graph
     const apply = (local: boolean) => {
+      if (ctx.graph !== graph) return
       const target = ctx.graph.variableCollections.get(collectionId)
       if (!target) return
       target.key = local ? undefined : previous.key
