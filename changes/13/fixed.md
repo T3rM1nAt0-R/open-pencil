@@ -1,0 +1,1 @@
+- A shape whose fill is at 0% opacity no longer casts a drop shadow.
