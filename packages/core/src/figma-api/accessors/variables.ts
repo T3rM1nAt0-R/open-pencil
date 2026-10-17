@@ -70,10 +70,10 @@ export function installVariableModeNodeProxyAccessors(
           )
         }
         if (variable === null) sceneGraph.unbindVariable(node.id, field)
-        else if (variable && typeof variable.id === 'string') {
+        else if (typeof variable.id === 'string') {
           sceneGraph.bindVariable(node.id, field, variable.id)
         } else {
-          throw new Error('in setBoundVariable: expected a variable or null')
+          throw new TypeError('in setBoundVariable: expected a variable or null')
         }
         reconcileVariableLayouts(sceneGraph, { subtrees: [node.id] })
       }
