@@ -2,19 +2,10 @@ import type { SceneGraph } from '@open-pencil/scene-graph'
 
 import { assertNodeEditable } from '#core/editor/capabilities'
 import { raw, type NodeProxyInternals, type ProxyThis } from '#core/figma-api/accessor-utils'
+import { variableAlias, type FigmaVariableAlias } from '#core/figma-api/text/style'
 import { reconcileVariableLayouts } from '#core/layout/variables'
 
-/** What Figma's plugin API returns for a binding. */
-export interface VariableAlias {
-  type: 'VARIABLE_ALIAS'
-  id: string
-}
-
 const PAINT_FIELD = /^(fills|strokes)\/(\d+)\/color$/
-
-function alias(id: string): VariableAlias {
-  return { type: 'VARIABLE_ALIAS', id }
-}
 
 /**
  * The bindings as Figma's `node.boundVariables` shapes them: one alias per scalar field and an
@@ -24,18 +15,18 @@ function alias(id: string): VariableAlias {
 export function boundVariableAliases(
   bindings: Readonly<Record<string, string>>,
   exists: (id: string) => boolean
-): Record<string, VariableAlias | VariableAlias[]> {
-  const result: Record<string, VariableAlias | VariableAlias[]> = {}
+): Record<string, FigmaVariableAlias | FigmaVariableAlias[]> {
+  const result: Record<string, FigmaVariableAlias | FigmaVariableAlias[]> = {}
   for (const [field, id] of Object.entries(bindings)) {
     if (!exists(id)) continue
     const paint = PAINT_FIELD.exec(field)
     if (!paint) {
-      result[field] = alias(id)
+      result[field] = variableAlias(id)
       continue
     }
     const [, kind, index] = paint
     const list = Array.isArray(result[kind]) ? result[kind] : []
-    list[Number(index)] = alias(id)
+    list[Number(index)] = variableAlias(id)
     result[kind] = list
   }
   return result
@@ -51,7 +42,7 @@ export function installVariableModeNodeProxyAccessors(
 ): void {
   Object.defineProperties(prototype, {
     boundVariables: {
-      get(this: ProxyThis): Readonly<Record<string, VariableAlias | VariableAlias[]>> {
+      get(this: ProxyThis): Readonly<Record<string, FigmaVariableAlias | FigmaVariableAlias[]>> {
         const sceneGraph = graph(this, internals)
         const aliases = boundVariableAliases(raw(this, internals).boundVariables, (id) =>
           sceneGraph.variables.has(id)
