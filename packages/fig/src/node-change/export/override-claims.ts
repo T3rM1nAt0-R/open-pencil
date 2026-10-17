@@ -260,7 +260,9 @@ export function serializeRuntimePropertyOverrides(
       })
     if (node.type === 'INSTANCE' && node.id !== instance.id) {
       const resolved = resolveTarget(node, node.id)
-      const assignments = resolved ? nestedSlotAssignments(context, node, localIdCounter) : []
+      const assignments = resolved
+        ? nestedSlotAssignments(context, instance, node, localIdCounter)
+        : []
       if (resolved && assignments.length > 0)
         result.push({ guidPath: { guids: resolved.path }, componentPropAssignments: assignments })
     }

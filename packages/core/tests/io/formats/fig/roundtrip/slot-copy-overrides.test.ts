@@ -48,7 +48,9 @@ beforeAll(async () => {
 })
 
 describe('a copy of a component that holds an instance with slot content', () => {
-  function authored(edit: (editor: ReturnType<typeof createEditor>, copy: SceneNode) => void) {
+  function authored(
+    edit: (editor: ReturnType<typeof createEditor>, copy: SceneNode, slot: string) => void
+  ) {
     const editor = createEditor()
     const { graph } = editor
     const page = editor.state.currentPageId
@@ -72,7 +74,7 @@ describe('a copy of a component that holds an instance with slot content', () =>
     editor.createShape('RECTANGLE', 0, 0, 20, 20, nestedSlot.id, 'B')
     const copy = expectDefined(graph.createInstance(outer.id, page))
     copy.name = 'Copy'
-    edit(editor, copy)
+    edit(editor, copy, slot)
     return graph
   }
 
@@ -102,6 +104,27 @@ describe('a copy of a component that holds an instance with slot content', () =>
   test('writes no slot content for a copy that left the slot as it was', async () => {
     const { records } = await reopen(authored(() => undefined))
     // Outer's nested instance assigns the slot once; the untouched copy adds nothing.
+    expect(records.filter((record) => (record as SlotRecord).isSlotContent)).toHaveLength(1)
+  })
+
+  test('writes no slot content for a copy whose nested instance was swapped but kept its slot', async () => {
+    const { records } = await reopen(
+      authored((editor, copy, slot) => {
+        const page = editor.state.currentPageId
+        const other = editor.graph.createNode('COMPONENT', page, {
+          name: 'Other',
+          componentPropertyDefinitions: [{ id: slot, name: 'Body', type: 'SLOT', defaultValue: '' }]
+        })
+        editor.graph.createNode('FRAME', other.id, {
+          name: 'Body',
+          width: 200,
+          height: 100,
+          componentPropertyReferences: [{ propertyId: slot, field: 'SLOT_CONTENT' }]
+        })
+        const nested = expectDefined(editor.graph.getChildren(copy.id).at(0))
+        editor.graph.swapInstanceComponent(nested.id, other.id)
+      })
+    )
     expect(records.filter((record) => (record as SlotRecord).isSlotContent)).toHaveLength(1)
   })
 })

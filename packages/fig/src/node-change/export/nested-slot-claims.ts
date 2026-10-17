@@ -1,6 +1,11 @@
 import { isEqual } from 'es-toolkit'
 
-import { slotPropertyId, type SceneGraph, type SceneNode } from '@open-pencil/scene-graph'
+import {
+  getInstanceOverride,
+  slotPropertyId,
+  type SceneGraph,
+  type SceneNode
+} from '@open-pencil/scene-graph'
 
 import { getOrCreatePropertyGuid, type SceneNodeToKiwiContext } from './context'
 import { slotContentAssignment } from './slots'
@@ -46,11 +51,20 @@ function slotFrames(graph: SceneGraph, instance: SceneNode): Map<string, SceneNo
 /** Whether a nested instance's slot holds something other than what the instance it copies shows. */
 function slotDiffersFromSource(
   graph: SceneGraph,
+  owner: SceneNode,
   nested: SceneNode,
   frame: SceneNode,
   propertyId: string
 ): boolean {
-  const source = nested.componentId ? graph.getNode(nested.componentId) : undefined
+  // A swap replaces the nested instance's component and keeps the one it copied in the owner.
+  const linked = getInstanceOverride(
+    owner.instanceOverrides,
+    owner.id,
+    nested.id,
+    'sourceComponentId'
+  )
+  const sourceId = typeof linked === 'string' ? linked : nested.componentId
+  const source = sourceId ? graph.getNode(sourceId) : undefined
   const counterpart =
     source?.type === 'INSTANCE' ? slotFrames(graph, source).get(propertyId) : undefined
   return !counterpart || !sameLayer(graph, frame, counterpart)
@@ -63,6 +77,7 @@ function slotDiffersFromSource(
  */
 export function nestedSlotAssignments(
   context: SceneNodeToKiwiContext,
+  owner: SceneNode,
   nested: SceneNode,
   localIdCounter: { value: number }
 ) {
@@ -72,7 +87,7 @@ export function nestedSlotAssignments(
     const frame = frames.get(propertyId)
     if (context.componentPropertyDefinitionsById.get(propertyId)?.type !== 'SLOT' || !frame)
       continue
-    if (!slotDiffersFromSource(context.graph, nested, frame, propertyId)) continue
+    if (!slotDiffersFromSource(context.graph, owner, nested, frame, propertyId)) continue
     const assignment = slotContentAssignment(
       context,
       nested,
