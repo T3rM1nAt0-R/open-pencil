@@ -9,7 +9,14 @@ import { initCodec } from '@open-pencil/core/kiwi'
 import { materializeDocument, parseFigBuffer } from '@open-pencil/fig'
 import { SceneGraph } from '@open-pencil/scene-graph'
 
-async function rescaledInstance(regionFills: boolean) {
+interface Variant {
+  regionFills: boolean
+  painted: boolean
+  geometryOnly: boolean
+  strokeOutline: boolean
+}
+
+async function rescaledInstance({ regionFills, painted, geometryOnly, strokeOutline }: Variant) {
   const graph = new SceneGraph()
   createEditor({ graph })
   const api = new FigmaAPI(graph)
@@ -32,6 +39,17 @@ async function rescaledInstance(regionFills: boolean) {
       { windingRule: 'NONZERO', loops: [[0, 1, 2, 3]], ...(regionFills ? { fills: [] } : {}) }
     ]
   } as never)
+  if (painted) vector.fills = [{ type: 'SOLID', color: { r: 1, g: 0, b: 0, a: 1 }, opacity: 1, visible: true }]
+  // A vector the file saved as outlines only has no path of its own to redraw from.
+  if (geometryOnly) graph.updateNode(vector.id, { vectorNetwork: null })
+  if (strokeOutline) {
+    // Outlines of a stroke the file saved, drawn at the component's size.
+    const saved = expectDefined(graph.getNode(vector.id))
+    graph.updateNode(vector.id, {
+      strokes: [{ type: 'SOLID', color: { r: 0, g: 0, b: 0, a: 1 }, opacity: 1, visible: true, weight: 2, align: 'CENTER' }],
+      strokeGeometry: saved.fillGeometry.map((path) => ({ ...path }))
+    })
+  }
   const instance = component.createInstance()
   instance.rescale(16 / 24)
 
@@ -46,9 +64,17 @@ async function rescaledInstance(regionFills: boolean) {
   return expectDefined(renderNodesToSVG(reopened.graph, page.id, [reopenedInstance.id]))
 }
 
-for (const regionFills of [false, true]) {
-  test(`a rescaled instance keeps its vector at the instance size after reopening (region fills: ${regionFills})`, async () => {
-    const svg = await rescaledInstance(regionFills)
+const variants: Variant[] = [
+  { regionFills: false, painted: false, geometryOnly: false, strokeOutline: false },
+  { regionFills: true, painted: false, geometryOnly: false, strokeOutline: false },
+  { regionFills: true, painted: true, geometryOnly: false, strokeOutline: false },
+  { regionFills: true, painted: true, geometryOnly: true, strokeOutline: false },
+  { regionFills: true, painted: true, geometryOnly: false, strokeOutline: true }
+]
+
+for (const variant of variants) {
+  test(`a rescaled instance keeps its vector at the instance size after reopening (${JSON.stringify(variant)})`, async () => {
+    const svg = await rescaledInstance(variant)
     expect(svg).toContain('L13.33 0L13.33 13.33')
     expect(svg).not.toContain('L20 0')
   })
