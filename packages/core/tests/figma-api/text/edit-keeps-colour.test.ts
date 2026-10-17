@@ -105,4 +105,27 @@ describe('editing coloured text through the plugin API', () => {
     const text = coloured('one', 0, 1)
     expect(() => text.insertCharacters(0, 'x', 'MIDDLE' as never)).toThrow('useStyle')
   })
+
+  test('insert and delete positions outside the text are refused and change nothing', () => {
+    const text = coloured('one two three', 4, 7)
+
+    expect(() => text.insertCharacters(14, 'x')).toThrow('"start"')
+    expect(() => text.insertCharacters(-1, 'x')).toThrow('"start"')
+    expect(() => text.insertCharacters(1.5, 'x')).toThrow('"start"')
+    expect(() => text.deleteCharacters(-1, 3)).toThrow('"start"')
+    expect(() => text.deleteCharacters(0, 14)).toThrow('"end"')
+    expect(() => text.deleteCharacters(5, 3)).toThrow('not be less')
+
+    expect(text.characters).toBe('one two three')
+    expect(redCharacters(text)).toEqual(['two'])
+  })
+
+  test('the end of the text is a valid place to insert and to end a deletion', () => {
+    const text = coloured('one two three', 4, 7)
+    text.insertCharacters(13, '!')
+    text.deleteCharacters(12, 14)
+
+    expect(text.characters).toBe('one two thre')
+    expect(redCharacters(text)).toEqual(['two'])
+  })
 })

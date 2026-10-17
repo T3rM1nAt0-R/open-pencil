@@ -93,6 +93,7 @@ export function insertCharacters(
   if (!INSERT_STYLE_SOURCES.has(useStyle)) {
     throw new Error(`in insertCharacters: useStyle must be "BEFORE" or "AFTER"`)
   }
+  assertEditPosition('insertCharacters', node, 'start', start)
   const text = node.text.slice(0, start) + characters + node.text.slice(start)
   const textParagraphs = paragraphStylesAfterEdit(
     node.textParagraphs,
@@ -111,12 +112,27 @@ export function insertCharacters(
   recordInstanceOverride(graph, node.id, ['text', 'textParagraphs', 'styleRuns'])
 }
 
+/** A position an edit can use: an integer from 0 through the text length, the end included. */
+function assertEditPosition(method: string, node: SceneNode, name: string, value: number) {
+  if (!Number.isInteger(value) || value < 0 || value > node.text.length) {
+    throw new Error(
+      `in ${method}: Property "${name}" failed validation: Expected an integer from 0 to ` +
+        `${node.text.length}, received ${String(value)}`
+    )
+  }
+}
+
 export function deleteCharacters(
   graph: SceneGraph,
   node: SceneNode,
   start: number,
   end: number
 ): void {
+  assertEditPosition('deleteCharacters', node, 'start', start)
+  assertEditPosition('deleteCharacters', node, 'end', end)
+  if (end < start) {
+    throw new Error(`in deleteCharacters: 'end' must not be less than 'start'`)
+  }
   const text = node.text.slice(0, start) + node.text.slice(end)
   const textParagraphs = paragraphStylesAfterEdit(node.textParagraphs, node.text, start, end, '')
   const styleRuns = adjustRunsForDelete(node.styleRuns, start, end - start)
