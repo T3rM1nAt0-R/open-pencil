@@ -13,7 +13,7 @@ import {
 } from '@open-pencil/core'
 import { createEditor } from '@open-pencil/core/editor'
 import { parseFigBuffer } from '@open-pencil/fig'
-import { createComponentPropertyId, slotPropertyId } from '@open-pencil/scene-graph'
+import { createComponentPropertyId, rescaleNodeTree, slotPropertyId } from '@open-pencil/scene-graph'
 
 interface SlotRecord {
   isSlotContent?: boolean
@@ -126,5 +126,23 @@ describe('a copy of a component that holds an instance with slot content', () =>
       })
     )
     expect(records.filter((record) => (record as SlotRecord).isSlotContent)).toHaveLength(1)
+  })
+
+  test('writes no slot content for a copy that was only rescaled', async () => {
+    const { records } = await reopen(
+      authored((editor, copy) => rescaleNodeTree(editor.graph, copy.id, 1.5))
+    )
+    expect(records.filter((record) => (record as SlotRecord).isSlotContent)).toHaveLength(1)
+  })
+
+  test('keeps a slot edit made in a rescaled copy', async () => {
+    const graph = authored((editor, copy) => {
+      rescaleNodeTree(editor.graph, copy.id, 1.5)
+      editor.graph.updateNode(find(editor.graph, copy.id, 'A').id, { visible: false })
+    })
+    const { reopened } = await reopen(graph)
+    const copy = find(reopened, firstPage(reopened), 'Copy')
+    expect(find(reopened, copy.id, 'A').visible).toBe(false)
+    expect(find(reopened, copy.id, 'B').visible).toBe(true)
   })
 })

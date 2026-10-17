@@ -1,7 +1,8 @@
-import { isEqual } from 'es-toolkit'
+import { isEqual, isPlainObject } from 'es-toolkit'
 
 import {
   getInstanceOverride,
+  scaleNodeChanges,
   slotPropertyId,
   type SceneGraph,
   type SceneNode
@@ -21,16 +22,46 @@ const IDENTITY_FIELDS = new Set([
   'instanceOverrides'
 ])
 
-function sameLayer(graph: SceneGraph, a: SceneNode, b: SceneNode): boolean {
-  const keys = new Set([...Object.keys(a), ...Object.keys(b)] as Array<keyof SceneNode>)
-  for (const key of keys) {
-    if (!IDENTITY_FIELDS.has(key) && !isEqual(a[key], b[key])) return false
+/**
+ * Whether two field values match, where numbers that differ only by the rounding of a rescale
+ * are the same and a field a rescale left undefined is the same as one that is missing.
+ */
+function sameValue(a: unknown, b: unknown): boolean {
+  if (typeof a === 'number' && typeof b === 'number')
+    return Math.abs(a - b) <= 1e-9 * Math.max(1, Math.abs(a), Math.abs(b))
+  if (Array.isArray(a) && Array.isArray(b))
+    return a.length === b.length && a.every((item, index) => sameValue(item, b[index]))
+  if (isPlainObject(a) && isPlainObject(b)) {
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)])
+    return [...keys].every((key) => sameValue(a[key], b[key]))
   }
-  const aChildren = graph.getChildren(a.id)
-  const bChildren = graph.getChildren(b.id)
+  return isEqual(a, b)
+}
+
+/**
+ * A layer as it looks at the source's scale. A copy rescaled with its instance holds every
+ * layer scaled, which is not an edit of the slot.
+ */
+function atSourceScale(node: SceneNode, ratio: number): SceneNode {
+  if (ratio === 1) return node
+  return {
+    ...node,
+    ...scaleNodeChanges(node, 1 / ratio, true),
+    componentScale: node.componentScale / ratio
+  }
+}
+
+function sameLayer(graph: SceneGraph, layer: SceneNode, source: SceneNode, ratio: number): boolean {
+  const a = atSourceScale(layer, ratio)
+  const keys = new Set([...Object.keys(a), ...Object.keys(source)] as Array<keyof SceneNode>)
+  for (const key of keys) {
+    if (!IDENTITY_FIELDS.has(key) && !sameValue(a[key], source[key])) return false
+  }
+  const aChildren = graph.getChildren(layer.id)
+  const bChildren = graph.getChildren(source.id)
   return (
     aChildren.length === bChildren.length &&
-    aChildren.every((child, index) => sameLayer(graph, child, bChildren[index]))
+    aChildren.every((child, index) => sameLayer(graph, child, bChildren[index], ratio))
   )
 }
 
@@ -67,7 +98,10 @@ function slotDiffersFromSource(
   const source = sourceId ? graph.getNode(sourceId) : undefined
   const counterpart =
     source?.type === 'INSTANCE' ? slotFrames(graph, source).get(propertyId) : undefined
-  return !counterpart || !sameLayer(graph, frame, counterpart)
+  return (
+    !counterpart ||
+    !sameLayer(graph, frame, counterpart, frame.componentScale / counterpart.componentScale)
+  )
 }
 
 /**
