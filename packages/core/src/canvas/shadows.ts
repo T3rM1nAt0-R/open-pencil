@@ -224,7 +224,10 @@ function drawShadowCutout(
   }
 }
 
-/** Figma casts no shadow from a node whose only fills are at 0% opacity and that has no stroke. */
+/**
+ * Figma casts no shadow from a node whose only fills are at 0% opacity and that has no stroke,
+ * unless the shadow is set to show behind the node.
+ */
 function hasOnlyInvisibleFills(node: SceneNode): boolean {
   const fills = node.fills.filter((fill) => fill.visible)
   return (
@@ -312,7 +315,8 @@ function renderDropShadow(
 
   const shapeNode = shadowShapeChild ?? node
   if (shapeNode.type !== 'TEXT') {
-    if (!shadowShapeChild && hasOnlyInvisibleFills(node)) return
+    if (!shadowShapeChild && effect.showShadowBehindNode === false && hasOnlyInvisibleFills(node))
+      return
     drawShapeDropShadow(r, canvas, node, effect, hasRadius, shadowShapeChild)
     resetEffectLayerPaint(r)
     return
