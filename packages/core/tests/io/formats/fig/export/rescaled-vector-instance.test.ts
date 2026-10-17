@@ -9,6 +9,8 @@ import { initCodec } from '@open-pencil/core/kiwi'
 import { materializeDocument, parseFigBuffer } from '@open-pencil/fig'
 import { SceneGraph } from '@open-pencil/scene-graph'
 
+const RED = { r: 1, g: 0, b: 0, a: 1 }
+
 interface Variant {
   regionFills: boolean
   painted: boolean
@@ -39,7 +41,7 @@ async function rescaledInstance({ regionFills, painted, geometryOnly, strokeOutl
       { windingRule: 'NONZERO', loops: [[0, 1, 2, 3]], ...(regionFills ? { fills: [] } : {}) }
     ]
   } as never)
-  if (painted) vector.fills = [{ type: 'SOLID', color: { r: 1, g: 0, b: 0, a: 1 }, opacity: 1, visible: true }]
+  if (painted) vector.fills = [{ type: 'SOLID', color: RED, opacity: 1, visible: true }]
   // A vector the file saved as outlines only has no path of its own to redraw from.
   if (geometryOnly) graph.updateNode(vector.id, { vectorNetwork: null })
   if (strokeOutline) {
