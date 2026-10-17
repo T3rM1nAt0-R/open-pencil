@@ -77,6 +77,12 @@ export function applyInstanceLayoutScale(root: InstanceOccurrence, source: NodeC
       const value = props[field]
       if (typeof value === 'number') props[field] = value * factor
     }
+    // Outlines saved with the component are at its size; the saved derived ones, applied after
+    // this, are at the scaled size. Without them the vector draws from its scaled network.
+    if (props.type === 'VECTOR') {
+      delete props.fillGeometry
+      delete props.strokeGeometry
+    }
     if (props.size) props.size = { x: props.size.x * factor, y: props.size.y * factor }
     if (props.transform)
       props.transform = {
