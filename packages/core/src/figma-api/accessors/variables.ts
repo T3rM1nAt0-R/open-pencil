@@ -12,7 +12,7 @@ const TEXT_FIELDS: ReadonlySet<string> = new Set(TEXT_BINDABLE_FIELDS)
 function toGraphField(field: string): string {
   return field === 'characters' ? 'text' : field
 }
-function toApiField(field: string): string {
+function toPluginField(field: string): string {
   return field === 'text' ? 'characters' : field
 }
 
@@ -37,7 +37,7 @@ export function boundVariableAliases(
     for (const [field, id] of Object.entries(run.style.boundVariables ?? {})) addText(field, id)
   }
   for (const [rawField, id] of Object.entries(node.boundVariables)) {
-    const field = toApiField(rawField)
+    const field = toPluginField(rawField)
     if (TEXT_FIELDS.has(field)) {
       addText(field, id)
       continue
