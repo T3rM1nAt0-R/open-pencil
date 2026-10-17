@@ -49,3 +49,23 @@ test('setBoundVariable rejects paint fields and invalid variables', () => {
   expect(() => frame.setBoundVariable('fills', { id: 'x' })).toThrow('bindVariable')
   expect(() => frame.setBoundVariable('width', {} as { id: string })).toThrow('expected a variable or null')
 })
+
+test('characters binds a string variable and reads back under the same name', () => {
+  const { figma } = setup()
+  const collection = figma.createVariableCollection('Copy')
+  const copy = figma.createVariable('title', 'STRING', collection.id, 'Hello')
+  const text = figma.createText()
+  text.setBoundVariable('characters', copy)
+  expect(text.boundVariables.characters).toEqual({ type: 'VARIABLE_ALIAS', id: copy.id })
+  text.setBoundVariable('characters', null)
+  expect(text.boundVariables.characters).toBeUndefined()
+})
+
+test('text nodes report run bindings as arrays', () => {
+  const { figma, size } = setup()
+  const text = figma.createText()
+  text.characters = 'Hello world'
+  text.setRangeBoundVariable(0, 5, 'fontSize', size)
+  text.setRangeBoundVariable(6, 11, 'fontSize', size)
+  expect(text.boundVariables.fontSize).toEqual([{ type: 'VARIABLE_ALIAS', id: size.id }])
+})

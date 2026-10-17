@@ -1,4 +1,4 @@
-import type { SceneGraph } from '@open-pencil/scene-graph'
+import { TEXT_BINDABLE_FIELDS, type SceneGraph, type SceneNode } from '@open-pencil/scene-graph'
 
 import { assertNodeEditable } from '#core/editor/capabilities'
 import { raw, type NodeProxyInternals, type ProxyThis } from '#core/figma-api/accessor-utils'
@@ -6,18 +6,42 @@ import { variableAlias, type FigmaVariableAlias } from '#core/figma-api/text/sty
 import { reconcileVariableLayouts } from '#core/layout/variables'
 
 const PAINT_FIELD = /^(fills|strokes)\/(\d+)\/color$/
+const TEXT_FIELDS: ReadonlySet<string> = new Set(TEXT_BINDABLE_FIELDS)
+
+/** The plugin API calls a text node's string binding `characters`; the scene graph calls it `text`. */
+function toGraphField(field: string): string {
+  return field === 'characters' ? 'text' : field
+}
+function toApiField(field: string): string {
+  return field === 'text' ? 'characters' : field
+}
 
 /**
  * The bindings as Figma's `node.boundVariables` shapes them: one alias per scalar field and an
  * array of aliases, by paint index, for fills and strokes. Bindings to a variable that no longer
- * exists are left out, as the node no longer follows anything.
+ * exists are left out, as the node no longer follows anything. A text node's bindable text fields
+ * are arrays too, gathering the node's own binding and those of its character runs.
  */
 export function boundVariableAliases(
-  bindings: Readonly<Record<string, string>>,
+  node: Pick<SceneNode, 'boundVariables' | 'styleRuns'>,
   exists: (id: string) => boolean
 ): Record<string, FigmaVariableAlias | FigmaVariableAlias[]> {
   const result: Record<string, FigmaVariableAlias | FigmaVariableAlias[]> = {}
-  for (const [field, id] of Object.entries(bindings)) {
+  const textIds = new Map<string, Set<string>>()
+  const addText = (field: string, id: string) => {
+    if (!exists(id)) return
+    const ids = textIds.get(field) ?? new Set<string>()
+    textIds.set(field, ids.add(id))
+  }
+  for (const run of node.styleRuns) {
+    for (const [field, id] of Object.entries(run.style.boundVariables ?? {})) addText(field, id)
+  }
+  for (const [rawField, id] of Object.entries(node.boundVariables)) {
+    const field = toApiField(rawField)
+    if (TEXT_FIELDS.has(field)) {
+      addText(field, id)
+      continue
+    }
     if (!exists(id)) continue
     const paint = PAINT_FIELD.exec(field)
     if (!paint) {
@@ -29,6 +53,7 @@ export function boundVariableAliases(
     list[Number(index)] = variableAlias(id)
     result[kind] = list
   }
+  for (const [field, ids] of textIds) result[field] = [...ids].map(variableAlias)
   return result
 }
 
@@ -44,7 +69,7 @@ export function installVariableModeNodeProxyAccessors(
     boundVariables: {
       get(this: ProxyThis): Readonly<Record<string, FigmaVariableAlias | FigmaVariableAlias[]>> {
         const sceneGraph = graph(this, internals)
-        const aliases = boundVariableAliases(raw(this, internals).boundVariables, (id) =>
+        const aliases = boundVariableAliases(raw(this, internals), (id) =>
           sceneGraph.variables.has(id)
         )
         return Object.freeze(aliases)
@@ -60,9 +85,9 @@ export function installVariableModeNodeProxyAccessors(
             `in setBoundVariable: "${field}" is a paint field. Bind a fill or stroke colour with figma.bindVariable(nodeId, "fills/0/color", variableId).`
           )
         }
-        if (variable === null) sceneGraph.unbindVariable(node.id, field)
+        if (variable === null) sceneGraph.unbindVariable(node.id, toGraphField(field))
         else if (typeof variable.id === 'string') {
-          sceneGraph.bindVariable(node.id, field, variable.id)
+          sceneGraph.bindVariable(node.id, toGraphField(field), variable.id)
         } else {
           throw new TypeError('in setBoundVariable: expected a variable or null')
         }
