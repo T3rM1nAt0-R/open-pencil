@@ -1,0 +1,1 @@
+- Fixed the desktop app being left without an MCP server when the one it started exited on its own; the app now notices and starts a new one.
