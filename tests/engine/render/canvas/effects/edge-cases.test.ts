@@ -63,7 +63,8 @@ describe('Edge cases and bug fixes', () => {
           color: { r: 0, g: 0, b: 0, a: 1 },
           offset: { x: 0, y: 0 },
           radius: 8,
-          spread: 0
+          spread: 0,
+          showShadowBehindNode: false
         }
       ],
       strokes: [],
