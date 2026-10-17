@@ -79,3 +79,25 @@ test('unbinding a text field also clears its character runs', () => {
   expect(text.boundVariables.fontSize).toBeUndefined()
   expect(text.getRangeBoundVariable(0, 5, 'fontSize')).toBeNull()
 })
+
+test('a corner radius binding is reported under each independent corner', () => {
+  const { frame, size } = setup()
+  frame.topLeftRadius = 4
+  frame.setBoundVariable('cornerRadius', size)
+  const bound = frame.boundVariables
+  const alias = { type: 'VARIABLE_ALIAS' as const, id: size.id }
+  expect(bound.topLeftRadius).toEqual(alias)
+  expect(bound.bottomRightRadius).toEqual(alias)
+  expect(bound.cornerRadius).toBeUndefined()
+})
+
+test('binding a text field on the node replaces a different run binding', () => {
+  const { figma, size } = setup()
+  const collection = figma.createVariableCollection('Other')
+  const other = figma.createVariable('big', 'FLOAT', collection.id, 40)
+  const text = figma.createText()
+  text.characters = 'Hello world'
+  text.setRangeBoundVariable(0, 5, 'fontSize', size)
+  text.setBoundVariable('fontSize', other)
+  expect(text.boundVariables.fontSize).toEqual([{ type: 'VARIABLE_ALIAS', id: other.id }])
+})

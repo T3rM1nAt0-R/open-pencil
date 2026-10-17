@@ -17,6 +17,12 @@ import { variableAlias, type FigmaVariableAlias } from '#core/figma-api/text/sty
 import { reconcileVariableLayouts } from '#core/layout/variables'
 
 const PAINT_FIELD = /^(fills|strokes)\/(\d+)\/color$/
+const CORNER_FIELDS = [
+  'topLeftRadius',
+  'topRightRadius',
+  'bottomLeftRadius',
+  'bottomRightRadius'
+] as const
 const TEXT_FIELDS: ReadonlySet<string> = new Set(TEXT_BINDABLE_FIELDS)
 
 /** The plugin API calls a text node's string binding `characters`; the scene graph calls it `text`. */
@@ -34,7 +40,7 @@ function toPluginField(field: string): string {
  * are arrays too, gathering the node's own binding and those of its character runs.
  */
 export function boundVariableAliases(
-  node: Pick<SceneNode, 'boundVariables' | 'styleRuns'>,
+  node: Pick<SceneNode, 'boundVariables' | 'styleRuns' | 'independentCorners'>,
   exists: (id: string) => boolean
 ): Record<string, FigmaVariableAlias | FigmaVariableAlias[]> {
   const result: Record<string, FigmaVariableAlias | FigmaVariableAlias[]> = {}
@@ -54,6 +60,13 @@ export function boundVariableAliases(
       continue
     }
     if (!exists(id)) continue
+    if (field === 'cornerRadius' && node.independentCorners) {
+      // Independent corners each follow the variable unless one is bound on its own.
+      for (const corner of CORNER_FIELDS) {
+        if (!(corner in node.boundVariables)) result[corner] = variableAlias(id)
+      }
+      continue
+    }
     const paint = PAINT_FIELD.exec(field)
     if (!paint) {
       result[field] = variableAlias(id)
@@ -96,24 +109,22 @@ export function installVariableModeNodeProxyAccessors(
             `in setBoundVariable: "${field}" is a paint field. Bind a fill or stroke colour with figma.bindVariable(nodeId, "fills/0/color", variableId).`
           )
         }
-        if (variable === null) {
-          sceneGraph.unbindVariable(node.id, toGraphField(field))
-          // A text field may also be bound on character runs; unbinding clears those too.
-          if (node.type === 'TEXT' && TEXT_FIELDS.has(field) && node.text.length > 0) {
-            const { styleRuns } = rangeBindingChanges(
-              sceneGraph,
-              node,
-              0,
-              node.text.length,
-              field as TextBindableField,
-              null
-            )
-            updateNode(this, internals, { styleRuns })
-          }
-        } else if (typeof variable.id === 'string') {
-          sceneGraph.bindVariable(node.id, toGraphField(field), variable.id)
-        } else {
+        if (variable !== null && typeof variable.id !== 'string') {
           throw new TypeError('in setBoundVariable: expected a variable or null')
+        }
+        if (variable === null) sceneGraph.unbindVariable(node.id, toGraphField(field))
+        else sceneGraph.bindVariable(node.id, toGraphField(field), variable.id)
+        // A text field bound on the node replaces what its character runs held for that field.
+        if (node.type === 'TEXT' && TEXT_FIELDS.has(field) && node.text.length > 0) {
+          const { styleRuns } = rangeBindingChanges(
+            sceneGraph,
+            node,
+            0,
+            node.text.length,
+            field as TextBindableField,
+            variable
+          )
+          updateNode(this, internals, { styleRuns })
         }
         reconcileVariableLayouts(sceneGraph, { subtrees: [node.id] })
       }
