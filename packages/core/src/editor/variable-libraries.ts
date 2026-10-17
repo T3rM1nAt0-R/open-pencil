@@ -5,8 +5,10 @@ import type { EditorContext } from './types'
 export function createLibraryCollectionActions(ctx: EditorContext) {
   /**
    * Makes a library's copy the file's own: the collection and its variables lose the library
-   * keys, so Figma lists them with the file's and shows the variables and modes added here.
-   * Bindings and aliases point at variable IDs, so they keep resolving as before.
+   * keys, so a saved .fig lists them with the file's and shows the variables and modes added
+   * here. Bindings and aliases point at variable IDs, so they keep resolving as before. A Figma
+   * clipboard copy still names them by keys derived from their IDs, as for any variable made
+   * here, so a paste into another file does not link back to the library.
    */
   function makeCollectionLocal(collectionId: string) {
     const collection = ctx.graph.variableCollections.get(collectionId)

@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 
+import { expectDefined } from '#core-tests/helpers/assert'
+
+import { buildFigmaClipboardHTML, parseFigmaClipboard } from '@open-pencil/core'
+import { initCodec } from '@open-pencil/core/kiwi'
+
 import { createEditor } from '#core/editor'
 
 function libraryEditor() {
@@ -57,6 +62,9 @@ describe('make a library collection local', () => {
     expect(editor.graph.variables.get('gap')?.key).toBe('gap-key')
     editor.undo.redo()
     expect(editor.graph.variableCollections.get('tokens')?.key).toBeUndefined()
+    expect(editor.graph.variableCollections.get('tokens')?.version).toBeUndefined()
+    expect(editor.graph.variables.get('gap')?.key).toBeUndefined()
+    expect(editor.graph.variables.get('gap')?.version).toBeUndefined()
   })
 
   test('a second call changes nothing, so one undo restores the keys', () => {
@@ -77,5 +85,25 @@ describe('make a library collection local', () => {
     editor.undo.undo()
     expect(replacement.variableCollections.get('tokens')?.key).toBeUndefined()
     expect(replacement.variables.get('gap')?.key).toBeUndefined()
+  })
+
+  test('a Figma copy after making it local names the variables by derived keys, not the library ones', async () => {
+    await initCodec()
+    const editor = libraryEditor()
+    editor.makeCollectionLocal('tokens')
+    const rect = editor.graph.createNode('RECTANGLE', editor.graph.getPages()[0].id, {
+      name: 'Swatch',
+      boundVariables: { itemSpacing: 'gap' }
+    })
+    const html = expectDefined(await buildFigmaClipboardHTML([rect], editor.graph))
+    const { nodes } = expectDefined(await parseFigmaClipboard(html))
+    const variable = expectDefined(nodes.find((record) => record.type === 'VARIABLE'))
+    const set = expectDefined(nodes.find((record) => record.type === 'VARIABLE_SET'))
+    expect(variable.key).toMatch(/^[0-9a-f]{40}$/)
+    expect(set.key).toMatch(/^[0-9a-f]{40}$/)
+    expect(variable.key).not.toBe('gap-key')
+    expect(set.key).not.toBe('library-key')
+    // The keys belong to the copy only: the document stays local.
+    expect(editor.graph.variables.get('gap')?.key).toBeUndefined()
   })
 })
