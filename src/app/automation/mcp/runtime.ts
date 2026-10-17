@@ -92,6 +92,9 @@ export function createMCPRuntimeService(dependencies: MCPRuntimeDependencies) {
   let activeStore: (() => EditorStore) | null = null
   let lifecycle: Promise<void> = Promise.resolve()
   let replacements = 0
+  // Set the moment the user stops the server, before the queue gets to it, so a health check
+  // already in flight cannot start a replacement for a server they just stopped.
+  let stopRequested = false
 
   function enqueue<T>(operation: () => Promise<T>): Promise<T> {
     const next = lifecycle.then(operation, operation)
@@ -152,6 +155,7 @@ export function createMCPRuntimeService(dependencies: MCPRuntimeDependencies) {
       replacements = 0
       return
     }
+    if (stopRequested) return
     if (replacements >= MAX_REPLACEMENTS) {
       // Reporting "running" for a server that no longer answers would hide the failure.
       await stopOperation(false)
@@ -233,14 +237,18 @@ export function createMCPRuntimeService(dependencies: MCPRuntimeDependencies) {
     start(getStore: () => EditorStore): Promise<MCPRuntimeResult> {
       activeStore = getStore
       replacements = 0
+      stopRequested = false
       return enqueue(startOperation)
     },
     stop: () => {
       replacements = 0
+      stopRequested = true
+      stopWatching()
       return enqueue(() => stopOperation(true))
     },
     restart: () =>
       enqueue(async () => {
+        replacements = 0
         const stopResult = await stopOperation(false)
         if (!stopResult.ok) return stopResult
         if (!activeStore) {
