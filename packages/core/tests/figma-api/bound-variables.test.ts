@@ -3,6 +3,13 @@ import { expect, test } from 'bun:test'
 import { FigmaAPI } from '@open-pencil/core/figma-api'
 import { SceneGraph } from '@open-pencil/scene-graph'
 
+const solid = {
+  type: 'SOLID' as const,
+  color: { r: 0, g: 0, b: 0, a: 1 },
+  opacity: 1,
+  visible: true
+}
+
 function setup() {
   const figma = new FigmaAPI(new SceneGraph())
   const collection = figma.createVariableCollection('Sizes')
@@ -32,7 +39,7 @@ test('setBoundVariable with null removes the binding', () => {
 
 test('paint colour bindings are grouped under fills as an array', () => {
   const { figma, frame, color } = setup()
-  frame.fills = [{ type: 'SOLID', color: { r: 0, g: 0, b: 0, a: 1 }, opacity: 1, visible: true }]
+  frame.fills = [solid]
   figma.bindVariable(frame.id, 'fills/0/color', color.id)
   expect(frame.boundVariables.fills).toEqual([{ type: 'VARIABLE_ALIAS', id: color.id }])
 })
