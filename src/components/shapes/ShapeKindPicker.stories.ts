@@ -50,7 +50,7 @@ export const PickKind: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Shape' }))
     await expect(await page.findByText('Basic')).toBeVisible()
     await expect(page.getByText('Flowchart')).toBeVisible()
-    await userEvent.click(page.getByRole('option', { name: 'Cylinder', exact: true }))
+    await userEvent.click(page.getByRole('option', { name: 'Cylinder' }))
     await waitFor(() => expect(canvas.getByText('ENG_DATABASE')).toBeVisible())
   }
 }
@@ -62,6 +62,6 @@ export const Search: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Shape' }))
     await userEvent.keyboard('hexa')
     await waitFor(() => expect(page.queryByRole('option', { name: 'Square' })).toBeNull())
-    await expect(page.getByRole('option', { name: 'Hexagon', exact: true })).toBeVisible()
+    await expect(page.getByRole('option', { name: 'Hexagon' })).toBeVisible()
   }
 }
