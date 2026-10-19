@@ -2,7 +2,7 @@
   "name": "@open-pencil/cloud",
   "version": "0.15.1",
   "private": true,
-  "license": "MIT",
+  "license": "Apache-2.0 AND MIT",
   "type": "module",
   "imports": {
     "#cloud/*": {
@@ -90,6 +90,7 @@
     "lib0": "^0.2.117",
     "nodemailer": "^9.0.5",
     "smol-toml": "^1.8.0",
+    "ufo": "^1.6.4",
     "valibot": "^1.5.0",
     "vue": "^3.5.43",
     "ws": "^8.21.3",

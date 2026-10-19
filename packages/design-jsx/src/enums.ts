@@ -1,9 +1,14 @@
+import * as v from 'valibot'
+
 import type {
   BlendMode,
+  ConnectorLineType,
+  ConnectorMagnet,
   ConstraintType,
   MaskType,
   SceneNode,
   Stroke,
+  StickyTextSize,
   StrokeCap,
   StrokeJoin,
   TextAutoResize,
@@ -36,15 +41,29 @@ export function jsxEnum<T extends string>(
   aliases: Readonly<Record<string, T>> = {}
 ): JSXEnum<T> {
   const entries = Object.entries(spellings) as [T, string][]
-  const byName = new Map<string, T>([
-    ...entries.map(([value, name]): [string, T] => [name, value]),
-    ...Object.entries(aliases)
-  ])
+  const byName = new Map<string, T>(
+    [...entries.map(([value, name]): [string, T] => [name, value]), ...Object.entries(aliases)].map(
+      ([name, value]): [string, T] => [name.toLowerCase(), value]
+    )
+  )
   return {
     parse: (value) => (typeof value === 'string' ? byName.get(value.toLowerCase()) : undefined),
     print: (value) => spellings[value],
-    names: [...byName.keys()]
+    names: [...entries.map(([, name]) => name), ...Object.keys(aliases)]
   }
+}
+
+/** A prop that takes one of the enum's spellings, read as the value it names. */
+export function enumProp<T extends string>(values: JSXEnum<T>) {
+  return v.pipe(
+    v.string(),
+    v.rawTransform(({ dataset, addIssue, NEVER }) => {
+      const value = values.parse(dataset.value)
+      if (value !== undefined) return value
+      addIssue({ message: `expected ${values.names.join(', ')}` })
+      return NEVER
+    })
+  )
 }
 
 /** An enum spelled by each value's lowercase name, as most of design JSX's enums are. */
@@ -61,7 +80,10 @@ export const STROKE_CAP = lowercaseEnum<StrokeCap>([
   'ROUND',
   'SQUARE',
   'ARROW_LINES',
-  'ARROW_EQUILATERAL'
+  'ARROW_EQUILATERAL',
+  'TRIANGLE_FILLED',
+  'DIAMOND_FILLED',
+  'CIRCLE_FILLED'
 ])
 export const STROKE_JOIN = lowercaseEnum<StrokeJoin>(['MITER', 'BEVEL', 'ROUND'])
 export const STROKE_ALIGN = lowercaseEnum<Stroke['align']>(['INSIDE', 'CENTER', 'OUTSIDE'])
@@ -112,7 +134,23 @@ export const TEXT_DECORATION = lowercaseEnum<TextDecoration>(['NONE', 'UNDERLINE
 export const TEXT_DECORATION_STYLE = lowercaseEnum<TextDecorationStyle>(['SOLID', 'DOTTED', 'WAVY'])
 export const TEXT_CASE = lowercaseEnum<TextCase>(['ORIGINAL', 'UPPER', 'LOWER', 'TITLE'])
 
-/** The props whose values are one of an enum's spellings, for checking what JSX passes. */
+export const STICKY_TEXT_SIZE = jsxEnum<StickyTextSize>({
+  small: 'small',
+  medium: 'medium',
+  large: 'large',
+  extraLarge: 'extraLarge',
+  huge: 'huge'
+})
+export const CONNECTOR_LINE = lowercaseEnum<ConnectorLineType>(['ELBOWED', 'STRAIGHT', 'CURVED'])
+/** The sides a `<Connector>` end attaches by; the other magnets come only from files. */
+export const CONNECTOR_SIDE = lowercaseEnum<
+  Extract<ConnectorMagnet, 'AUTO' | 'TOP' | 'RIGHT' | 'BOTTOM' | 'LEFT' | 'CENTER'>
+>(['AUTO', 'TOP', 'RIGHT', 'BOTTOM', 'LEFT', 'CENTER'])
+
+/**
+ * The layer props whose values are one of an enum's spellings, for checking what JSX passes. An
+ * element with a props schema, such as `<Connector>`, checks its enums by `enumProp` instead.
+ */
 export const ENUM_PROPS: Readonly<Partial<Record<string, JSXEnum<string>>>> = {
   strokeCap: STROKE_CAP,
   strokeJoin: STROKE_JOIN,

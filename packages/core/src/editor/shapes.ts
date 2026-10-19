@@ -5,7 +5,7 @@ import { restoreSubtree, snapshotSubtree } from './history/subtree'
 import { adoptCoveredLayers } from './shapes/adopt'
 import { newLayerDefaults } from './shapes/defaults'
 import { createFramePresetActions } from './shapes/frame-presets'
-import { createPenActions } from './shapes/pen'
+import { createPenActions, type UpdateNodeWithUndo } from './shapes/pen'
 import { createPencilActions } from './shapes/pencil'
 import { defaultNodeName, nextNumberedName } from './structure/rename'
 import type { EditorContext } from './types'
@@ -22,7 +22,7 @@ const NUMBERED_WHEN_DRAWN: ReadonlySet<NodeType> = new Set([
   'STAR'
 ])
 
-export function createShapeActions(ctx: EditorContext) {
+export function createShapeActions(ctx: EditorContext, updateNodeWithUndo: UpdateNodeWithUndo) {
   function drawnLayerName(type: NodeType, parentId: string): string {
     const base = defaultNodeName(type)
     return NUMBERED_WHEN_DRAWN.has(type) ? nextNumberedName(ctx.graph, parentId, base) : base
@@ -76,7 +76,7 @@ export function createShapeActions(ctx: EditorContext) {
     return id
   }
 
-  const penActions = createPenActions(ctx, createShape)
+  const penActions = createPenActions(ctx, createShape, updateNodeWithUndo)
   const pencilActions = createPencilActions(ctx, createShape)
   const framePresetActions = createFramePresetActions(ctx, createShape)
 
