@@ -174,7 +174,7 @@ describe('blur effects fall off as in Figma', () => {
   })
 })
 
-describe('drop shadow under a transparent fill', () => {
+describe('shadows of a transparent fill', () => {
   const shadowRow = (opacity: number, showShadowBehindNode = false) =>
     edgeRow(
       (graph, frameId) =>
@@ -195,6 +195,18 @@ describe('drop shadow under a transparent fill', () => {
 
   test('a fill at 0% opacity casts none when the shadow shows behind the node', () => {
     expect(Math.max(...shadowRow(0, true))).toBe(0)
+  })
+
+  test('a fill at 0% opacity takes no inner shadow', () => {
+    const row = edgeRow(
+      (graph, frameId) =>
+        square(graph, frameId, {
+          fills: [solid(1, 1, 1, 0)],
+          effects: [effect('INNER_SHADOW', 16)]
+        }),
+      3
+    )
+    expect(Math.max(...row)).toBe(0)
   })
 
   test('a frame with a fill at 0% opacity casts only its child shadow', () => {

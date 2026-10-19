@@ -112,7 +112,7 @@ describe('Renderer handles all effect types (Behavioral)', () => {
       type: 'RECTANGLE',
       width: 100,
       height: 100,
-      fills: [],
+      fills: [OPAQUE_FILL],
       childIds: [],
       effects: [
         {

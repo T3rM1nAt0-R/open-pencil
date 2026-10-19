@@ -233,6 +233,11 @@ export function paintCastsShadow(paint: Fill): boolean {
   return paint.gradientStops?.some((stop) => stop.color.a > 0) ?? true
 }
 
+function castsShadow(node: SceneNode, shadowShapeChild?: SceneNode | null): boolean {
+  if (shadowShapeChild) return true
+  return node.fills.some(paintCastsShadow) || node.strokes.some(paintCastsShadow)
+}
+
 function drawShapeDropShadow(
   r: SkiaRenderer,
   canvas: Canvas,
@@ -311,9 +316,7 @@ function renderDropShadow(
 
   const shapeNode = shadowShapeChild ?? node
   if (shapeNode.type !== 'TEXT') {
-    const castsShadow =
-      shadowShapeChild || node.fills.some(paintCastsShadow) || node.strokes.some(paintCastsShadow)
-    if (!castsShadow) return
+    if (!castsShadow(node, shadowShapeChild)) return
     drawShapeDropShadow(r, canvas, node, effect, hasRadius, shadowShapeChild)
     resetEffectLayerPaint(r)
     return
@@ -557,6 +560,7 @@ export function renderEffects(
 
     if (pass === 'front' && effect.type === 'INNER_SHADOW') {
       const shapeNode = shadowShapeChild ?? node
+      if (shapeNode.type !== 'TEXT' && !castsShadow(node, shadowShapeChild)) continue
       if (shapeNode.type === 'TEXT') {
         drawTextInnerShadow(r, canvas, node, effect, shadowShapeChild)
       } else {

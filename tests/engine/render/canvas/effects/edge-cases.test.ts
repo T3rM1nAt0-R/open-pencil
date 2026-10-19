@@ -325,7 +325,7 @@ describe('Edge cases and bug fixes', () => {
       type: 'RECTANGLE',
       width: 100,
       height: 100,
-      fills: [],
+      fills: [OPAQUE_FILL],
       effects: [
         {
           type: 'INNER_SHADOW',
@@ -366,7 +366,7 @@ describe('Edge cases and bug fixes', () => {
       width: 100,
       height: 100,
       cornerRadius: 10,
-      fills: [],
+      fills: [OPAQUE_FILL],
       effects: [
         {
           type: 'INNER_SHADOW',

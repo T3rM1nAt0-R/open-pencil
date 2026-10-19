@@ -83,7 +83,7 @@ describe('path shape shadows', () => {
       type: 'POLYGON',
       width: 100,
       height: 100,
-      fills: [],
+      fills: [OPAQUE_FILL],
       effects: [
         {
           type: 'INNER_SHADOW',
