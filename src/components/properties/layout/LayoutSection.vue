@@ -19,7 +19,7 @@ const { panels } = useI18n()
 <template>
   <LayoutControlsRoot v-slot="ctx">
     <template v-if="ctx.node">
-      <!-- A shape with text lays out its label itself; its own layout is not offered. -->
+      <!-- A generated frame, such as a shape with text, lays out its own sublayers; its auto layout is not offered. -->
       <PanelSection
         :label="
           ctx.node.layoutMode === 'NONE' || isGeneratedFrame(ctx.node)

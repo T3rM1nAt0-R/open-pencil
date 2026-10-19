@@ -904,11 +904,6 @@ function applyNodeVisualProps(
   if (!node.autoRename) nc.autoRename = false
 }
 
-/**
- * Import maps TEXT_PATH → TEXT. Re-emit Kiwi type 41 only while path fidelity
- * remains (materialized path data + baked glyphs). After an edit that cannot
- * reflow glyphs, invalidation clears the path data so export falls back to TEXT.
- */
 /** The width a shape with text was given, which FigJam's record has no field for. */
 function applyShapeUserWidthPluginData(node: SceneNode): void {
   const width =
@@ -916,6 +911,11 @@ function applyShapeUserWidthPluginData(node: SceneNode): void {
   node.pluginData = withPluginData(node.pluginData, OPEN_PENCIL_PLUGIN_DATA.shapeUserWidth, width)
 }
 
+/**
+ * Import maps TEXT_PATH → TEXT. Re-emit Kiwi type 41 only while path fidelity
+ * remains (materialized path data + baked glyphs). After an edit that cannot
+ * reflow glyphs, invalidation clears the path data so export falls back to TEXT.
+ */
 function exportKiwiNodeType(node: SceneNode, context: SceneNodeToKiwiContext): string {
   const isPathText =
     node.textPathData !== null && node.type === 'TEXT' && (node.derivedTextGlyphs?.length ?? 0) > 0
