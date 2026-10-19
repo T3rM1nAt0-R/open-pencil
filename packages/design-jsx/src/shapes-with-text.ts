@@ -97,8 +97,6 @@ export function shapeWithTextProps(node: SceneNode): JSXProp[] {
   collectStrokeProps(node, props)
   if (node.cornerRadius !== SHAPE_WITH_TEXT_CORNER_RADIUS)
     props.push(['rounded', node.cornerRadius])
-  if (node.opacity < 1) props.push(['opacity', Math.round(node.opacity * 100) / 100])
-  if (!node.visible) props.push(['visible', false])
   return props
 }
 

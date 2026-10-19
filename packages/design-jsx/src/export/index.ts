@@ -20,7 +20,7 @@ import { shapeWithTextLabelText, shapeWithTextProps } from '../shapes-with-text'
 import { stickyBody, stickyProps } from '../stickies'
 import { rekaExport, type RekaExport } from './behaviours'
 import { iconProps } from './icons'
-import { collectProps, positionProps } from './props'
+import { collectProps, positionProps, presenceProps } from './props'
 import { textChildren } from './text'
 import { plainValue, propAttribute, Reference, type JSXProp } from './value'
 
@@ -86,12 +86,18 @@ const OWN_ELEMENTS: Record<
     props: [
       ...textNamedName(node),
       ...positionProps(node, graph),
-      ...stickyProps(graph, node).map(([key, value]): JSXProp => [key, plainValue(value)])
+      ...stickyProps(graph, node).map(([key, value]): JSXProp => [key, plainValue(value)]),
+      ...presenceProps(node)
     ],
     text: stickyBody(graph, node)
   }),
   SHAPE_WITH_TEXT: (graph, node) => ({
-    props: [...textNamedName(node), ...positionProps(node, graph), ...shapeWithTextProps(node)],
+    props: [
+      ...textNamedName(node),
+      ...positionProps(node, graph),
+      ...shapeWithTextProps(node),
+      ...presenceProps(node)
+    ],
     text: shapeWithTextLabelText(graph, node)
   }),
   CONNECTOR: (graph, node, scope) => ({

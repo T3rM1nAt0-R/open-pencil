@@ -109,8 +109,6 @@ export function stickyProps(graph: SceneGraph, node: SceneNode): Array<[string, 
   }
   const scale = layers ? stickyScale(layers.author) : 1
   if (scale !== 1) props.push(['scale', scale])
-  if (node.opacity < 1) props.push(['opacity', Math.round(node.opacity * 100) / 100])
-  if (!node.visible) props.push(['visible', false])
   return props
 }
 
