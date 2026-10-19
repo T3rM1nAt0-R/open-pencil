@@ -1,1 +1,1 @@
-- FigJam shapes with text open from `.fig` files and paste from FigJam with their kind, colour, corners, and label, grow to fit their label as FigJam does, and save back as FigJam shapes (#1114).
+- FigJam shapes with text open from `.fig` files and paste from FigJam with their kind, colour, corners, and label, grow to fit their label as FigJam does, save back as FigJam shapes, and are written and read as `<Shape>` in design JSX (#1114).

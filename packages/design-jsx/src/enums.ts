@@ -17,6 +17,10 @@ import type {
   TextDecorationStyle,
   TextDirection
 } from '@open-pencil/scene-graph'
+import {
+  SHAPE_WITH_TEXT_TYPES,
+  type ShapeWithTextType
+} from '@open-pencil/scene-graph/shape-with-text'
 
 /**
  * A Figma enum as design JSX spells it. Reading and writing come from one table, so whatever the
@@ -141,6 +145,8 @@ export const STICKY_TEXT_SIZE = jsxEnum<StickyTextSize>({
   extraLarge: 'extraLarge',
   huge: 'huge'
 })
+/** The kinds a `<Shape>` draws, as FigJam names them: `rounded_rectangle`, `eng_database`. */
+export const SHAPE_KIND = lowercaseEnum<ShapeWithTextType>(SHAPE_WITH_TEXT_TYPES)
 export const CONNECTOR_LINE = lowercaseEnum<ConnectorLineType>(['ELBOWED', 'STRAIGHT', 'CURVED'])
 /** The sides a `<Connector>` end attaches by; the other magnets come only from files. */
 export const CONNECTOR_SIDE = lowercaseEnum<
