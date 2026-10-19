@@ -164,8 +164,10 @@ export function fitShapeWithText(
   }
   if (width <= 0 || height <= 0 || fits(width, height)) return { width, height }
   if (GROWS_IN_PROPORTION.has(type)) {
-    const scale = smallestFitting(1, (s) => fits(width * s, height * s) || width * s >= LARGEST)
-    return { width: Math.ceil(width * scale), height: Math.ceil(height * scale) }
+    // Searched in pixels of width, not as a scale, so it grows as little as the label needs.
+    const ratio = height / width
+    const fittedWidth = smallestFitting(width, (w) => fits(w, w * ratio) || w >= LARGEST)
+    return { width: fittedWidth, height: Math.ceil(fittedWidth * ratio) }
   }
   const fittedWidth = smallestFitting(width, (w) => wordFits(w, height) || w >= LARGEST)
   const fittedHeight = smallestFitting(height, (h) => fits(fittedWidth, h) || h >= LARGEST)

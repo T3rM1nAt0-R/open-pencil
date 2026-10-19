@@ -116,5 +116,25 @@ describe('shape-with-text geometry', () => {
       expect(fitted.width / fitted.height).toBeCloseTo(1.5, 1)
     }
   })
-})
 
+  test('a round kind grows only as much as its label needs', () => {
+    // Seven 20 px lines: a 208 px diamond's label box is 96 tall, so it needs 228 px.
+    const sevenLines = () => ({ width: 40, height: 140 })
+    for (const type of ['DIAMOND', 'ELLIPSE'] as const) {
+      const fitted = fitShapeWithText(type, {
+        width: 208,
+        height: 208,
+        longestWord: 40,
+        measure: sevenLines
+      })
+      expect(fitted.width).toBe(fitted.height)
+      expect(
+        shapeWithTextLabelBox(type, fitted.width, fitted.height).height
+      ).toBeGreaterThanOrEqual(140)
+      // Within a pixel of the smallest size that fits.
+      expect(shapeWithTextLabelBox(type, fitted.width - 2, fitted.height - 2).height).toBeLessThan(
+        140
+      )
+    }
+  })
+})
