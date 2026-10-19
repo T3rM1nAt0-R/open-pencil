@@ -1,7 +1,7 @@
 import type { Canvas, Path } from 'canvaskit-wasm'
 
 import { readEffectiveFigmaRawField } from '@open-pencil/fig'
-import type { SceneNode } from '@open-pencil/scene-graph'
+import type { Fill, SceneNode } from '@open-pencil/scene-graph'
 import type { Color, Vector } from '@open-pencil/scene-graph/primitives'
 
 import { BLACK } from '#core/constants'
@@ -225,16 +225,12 @@ function drawShadowCutout(
 }
 
 /**
- * Figma casts no shadow from a node whose only fills are at 0% opacity and that has no stroke,
- * unless the shadow is set to show behind the node.
+ * Figma casts a full-strength shadow from any paint above 0% opacity and none from a paint at
+ * 0% or a gradient whose stops are all transparent, so such a paint counts as no paint at all.
  */
-function hasOnlyInvisibleFills(node: SceneNode): boolean {
-  const fills = node.fills.filter((fill) => fill.visible)
-  return (
-    fills.length > 0 &&
-    fills.every((fill) => fill.opacity === 0) &&
-    !node.strokes.some((stroke) => stroke.visible)
-  )
+export function paintCastsShadow(paint: Fill): boolean {
+  if (!paint.visible || paint.opacity === 0) return false
+  return paint.gradientStops?.some((stop) => stop.color.a > 0) ?? true
 }
 
 function drawShapeDropShadow(
@@ -248,10 +244,10 @@ function drawShapeDropShadow(
   const sp = effect.spread
   const shapeNode = shadowShapeChild ?? node
   const shapeHasRadius = shadowShapeChild ? nodeHasRadius(shadowShapeChild) : hasRadius
-  const hasVisibleFill = node.fills.some((fill) => fill.visible)
+  const hasCastingFill = node.fills.some(paintCastsShadow)
   let geometryShadow: Path[] | null = null
   if (!shadowShapeChild) {
-    if (hasVisibleFill) {
+    if (hasCastingFill) {
       geometryShadow = r.getFillGeometry(node)
     } else if (node.childIds.length === 0 && node.strokeGeometry.length > 0) {
       geometryShadow = r.getStrokeGeometry(node)
@@ -269,7 +265,7 @@ function drawShapeDropShadow(
     else canvas.translate(effect.offset.x, effect.offset.y)
 
     const shouldHideShadowBehindUnfilledNode =
-      effect.showShadowBehindNode === false && !hasVisibleFill && !shadowShapeChild
+      effect.showShadowBehindNode === false && !hasCastingFill && !shadowShapeChild
     if (shouldHideShadowBehindUnfilledNode) {
       resetEffectLayerPaint(r)
       canvas.saveLayer(r.effectLayerPaint, effectLayerBounds(r, shapeNode, effect))
@@ -315,8 +311,9 @@ function renderDropShadow(
 
   const shapeNode = shadowShapeChild ?? node
   if (shapeNode.type !== 'TEXT') {
-    if (!shadowShapeChild && effect.showShadowBehindNode === false && hasOnlyInvisibleFills(node))
-      return
+    const castsShadow =
+      shadowShapeChild || node.fills.some(paintCastsShadow) || node.strokes.some(paintCastsShadow)
+    if (!castsShadow) return
     drawShapeDropShadow(r, canvas, node, effect, hasRadius, shadowShapeChild)
     resetEffectLayerPaint(r)
     return

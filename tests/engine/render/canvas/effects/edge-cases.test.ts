@@ -7,7 +7,7 @@ import { createDefaultNode, type SceneNode } from '@open-pencil/scene-graph'
 import { renderEffects } from '#core/canvas/shadows'
 
 import { asCanvas } from '../helpers'
-import { createMockCanvas, createMockRenderer, mockCalls } from './helpers'
+import { createMockCanvas, createMockRenderer, mockCalls, OPAQUE_FILL } from './helpers'
 
 describe('Edge cases and bug fixes', () => {
   test('drop shadow cast from stroke when node has no fill', () => {
@@ -403,7 +403,7 @@ describe('Edge cases and bug fixes', () => {
       type: 'RECTANGLE',
       width: 100,
       height: 100,
-      fills: [],
+      fills: [OPAQUE_FILL],
       effects: [
         {
           type: 'DROP_SHADOW',
