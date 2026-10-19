@@ -1,5 +1,5 @@
 import type { Fill, NodeType, SceneNode, Stroke } from '@open-pencil/scene-graph'
-import { DEFAULT_STROKE_WEIGHT, SHAPE_WITH_TEXT_SIZE } from '@open-pencil/scene-graph'
+import { DEFAULT_STROKE_WEIGHT, SHAPE_WITH_TEXT_TOOL_SIZE } from '@open-pencil/scene-graph'
 import { copyFills, copyStrokes } from '@open-pencil/scene-graph/copy'
 
 import {
@@ -14,11 +14,27 @@ import {
 
 const BLACK_FILL: Fill = { type: 'SOLID', color: BLACK, opacity: 1, visible: true }
 const BLACK_STROKE: Stroke = { ...BLACK_FILL, weight: DEFAULT_STROKE_WEIGHT, align: 'CENTER' }
+/** FigJam's shape tool paints a new shape white with a 4 px #757575 stroke on its outline. */
+const SHAPE_WITH_TEXT_FILL: Fill = {
+  type: 'SOLID',
+  color: { r: 1, g: 1, b: 1, a: 1 },
+  opacity: 1,
+  visible: true
+}
+const SHAPE_WITH_TEXT_STROKE: Stroke = {
+  type: 'SOLID',
+  color: { r: 0x75 / 255, g: 0x75 / 255, b: 0x75 / 255, a: 1 },
+  opacity: 1,
+  visible: true,
+  weight: 4,
+  align: 'CENTER'
+}
 
 /**
  * What a new layer starts with, as Figma gives it from a drawing tool and from the plugin API:
  * frames and components white (frames clipping their content), shapes light grey, lines and
- * vectors a black 1 px stroke, text black, and sections filled for the interface `theme`.
+ * vectors a black 1 px stroke, text black, sections filled for the interface `theme`, and shapes
+ * with text as FigJam's shape tool places them.
  */
 export function newLayerDefaults(
   type: NodeType,
@@ -48,10 +64,10 @@ export function newLayerDefaults(
       return { fills: copyFills([BLACK_FILL]) }
     case 'SHAPE_WITH_TEXT':
       return {
-        fills: copyFills([DEFAULT_SHAPE_FILL]),
-        strokes: copyStrokes([BLACK_STROKE]),
-        width: SHAPE_WITH_TEXT_SIZE,
-        height: SHAPE_WITH_TEXT_SIZE,
+        fills: copyFills([SHAPE_WITH_TEXT_FILL]),
+        strokes: copyStrokes([SHAPE_WITH_TEXT_STROKE]),
+        width: SHAPE_WITH_TEXT_TOOL_SIZE,
+        height: SHAPE_WITH_TEXT_TOOL_SIZE,
         shapeWithTextType: 'SQUARE'
       }
     default:

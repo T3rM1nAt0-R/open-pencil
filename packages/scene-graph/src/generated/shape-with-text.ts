@@ -7,8 +7,10 @@ import type { GeneratedFrameKind } from './kind'
 
 /** FigJam's plugin API makes a shape with text 208 px square. */
 export const SHAPE_WITH_TEXT_SIZE = 208
-/** FigJam's label text, as its files store it: Inter Medium 24 on a 1.5 line, black at 80%. */
-export const SHAPE_WITH_TEXT_FONT_SIZE = 24
+/** FigJam's shape tool places a shape 176 px square where it is clicked. */
+export const SHAPE_WITH_TEXT_TOOL_SIZE = 176
+/** FigJam's label text as a new shape starts it: Inter Medium 16 ("Small") on a 1.5 line, black at 80%. */
+export const SHAPE_WITH_TEXT_FONT_SIZE = 16
 const LABEL_FONT_FAMILY = 'Inter'
 const LABEL_FONT_WEIGHT = 500
 const LABEL_LINE_HEIGHT = 1.5

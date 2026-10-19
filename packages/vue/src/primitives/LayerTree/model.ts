@@ -10,6 +10,10 @@ function explicitModeIds(node: SceneNode): string[] | undefined {
   return ids.length > 0 ? ids : undefined
 }
 
+function shapeWithTextTypeOf(node: SceneNode): string | undefined {
+  return node.type === 'SHAPE_WITH_TEXT' ? node.shapeWithTextType : undefined
+}
+
 function nodeToLayerNode(node: SceneNode): LayerNode {
   return {
     id: node.id,
@@ -18,6 +22,7 @@ function nodeToLayerNode(node: SceneNode): LayerNode {
     layoutMode: node.layoutMode,
     slot: !!slotPropertyId(node),
     icon: !!readIcon(node),
+    shapeWithTextType: shapeWithTextTypeOf(node),
     visible: node.visible,
     locked: node.locked,
     modeIds: explicitModeIds(node)
@@ -72,6 +77,7 @@ export function patchLayerNode(target: LayerNode, source: SceneNode): boolean {
     target.layoutMode !== source.layoutMode ||
     target.slot !== !!slotPropertyId(source) ||
     target.icon !== !!readIcon(source) ||
+    target.shapeWithTextType !== shapeWithTextTypeOf(source) ||
     target.visible !== source.visible ||
     target.locked !== source.locked ||
     !isEqual(target.modeIds, explicitModeIds(source))
@@ -81,6 +87,7 @@ export function patchLayerNode(target: LayerNode, source: SceneNode): boolean {
   target.layoutMode = source.layoutMode
   target.slot = !!slotPropertyId(source)
   target.icon = !!readIcon(source)
+  target.shapeWithTextType = shapeWithTextTypeOf(source)
   target.visible = source.visible
   target.locked = source.locked
   target.modeIds = explicitModeIds(source)

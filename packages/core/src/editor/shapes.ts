@@ -52,7 +52,10 @@ export function createShapeActions(ctx: EditorContext, updateNodeWithUndo: Updat
     }
     const node =
       type === 'SHAPE_WITH_TEXT'
-        ? createShapeWithText(ctx.graph, pid, overrides)
+        ? createShapeWithText(ctx.graph, pid, {
+            ...overrides,
+            shapeWithTextType: ctx.state.shapeWithTextKind
+          })
         : ctx.graph.createNode(type, pid, overrides)
     const id = node.id
     // Callers finish the layer after this returns (the pen writes its path, fills and strokes),

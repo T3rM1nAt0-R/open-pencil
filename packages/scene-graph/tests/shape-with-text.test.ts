@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test'
 import type { Vector } from '@open-pencil/scene-graph'
 import type { PolygonOutlineCommand } from '@open-pencil/scene-graph/polygon'
 import {
+  SHAPE_WITH_TEXT_GROUPS,
   SHAPE_WITH_TEXT_TYPES,
   fitShapeWithText,
   isShapeWithTextType,
@@ -136,5 +137,12 @@ describe('shape-with-text geometry', () => {
         140
       )
     }
+  })
+})
+
+describe('shape-with-text groups', () => {
+  test("FigJam's Basic and Flowchart groups offer every kind once", () => {
+    const grouped = [...SHAPE_WITH_TEXT_GROUPS.basic, ...SHAPE_WITH_TEXT_GROUPS.flowchart]
+    expect(grouped.toSorted()).toEqual([...SHAPE_WITH_TEXT_TYPES].toSorted())
   })
 })

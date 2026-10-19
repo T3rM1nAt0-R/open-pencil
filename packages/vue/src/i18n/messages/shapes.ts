@@ -1,0 +1,42 @@
+import { i18n } from '#vue/i18n/create'
+
+/** The shape-with-text picker: its search, FigJam's groups, and each kind as FigJam names it. */
+export const shapeMessageDefaults = {
+  search: 'Search shapes',
+  noResults: 'No shapes found',
+  basic: 'Basic',
+  flowchart: 'Flowchart',
+  kind: 'Shape',
+  square: 'Square',
+  ellipse: 'Ellipse',
+  diamond: 'Diamond',
+  triangleUp: 'Triangle',
+  triangleDown: 'Downward-pointing triangle',
+  roundedRectangle: 'Rounded rectangle',
+  pentagon: 'Pentagon',
+  octagon: 'Octagon',
+  plus: 'Plus',
+  arrowLeft: 'Left arrow',
+  arrowRight: 'Right arrow',
+  chevron: 'Chevron',
+  star: 'Star',
+  speechBubble: 'Speech bubble',
+  parallelogramRight: 'Right-leaning parallelogram',
+  parallelogramLeft: 'Left-leaning parallelogram',
+  engDatabase: 'Cylinder',
+  engQueue: 'Horizontal cylinder',
+  engFile: 'File',
+  engFolder: 'Folder',
+  documentSingle: 'Document',
+  documentMultiple: 'Multiple documents',
+  predefinedProcess: 'Predefined process',
+  shield: 'Shield',
+  trapezoid: 'Trapezoid',
+  manualInput: 'Manual input',
+  hexagon: 'Hexagon',
+  internalStorage: 'Internal storage',
+  or: 'Or',
+  summingJunction: 'Summing junction'
+} as const
+
+export const shapeMessages = i18n('shapes', shapeMessageDefaults)

@@ -47,6 +47,47 @@ export function isShapeWithTextType(value: unknown): value is ShapeWithTextType 
   return typeof value === 'string' && KNOWN.has(value)
 }
 
+/**
+ * The kinds as FigJam's Shapes panel offers them, in its order: Basic, then Flowchart. Together
+ * they are every kind.
+ */
+export const SHAPE_WITH_TEXT_GROUPS = {
+  basic: [
+    'SQUARE',
+    'ELLIPSE',
+    'DIAMOND',
+    'TRIANGLE_UP',
+    'TRIANGLE_DOWN',
+    'ROUNDED_RECTANGLE',
+    'PENTAGON',
+    'OCTAGON',
+    'PLUS',
+    'ARROW_LEFT',
+    'ARROW_RIGHT',
+    'CHEVRON',
+    'STAR',
+    'SPEECH_BUBBLE'
+  ],
+  flowchart: [
+    'PARALLELOGRAM_RIGHT',
+    'PARALLELOGRAM_LEFT',
+    'ENG_DATABASE',
+    'ENG_QUEUE',
+    'ENG_FILE',
+    'ENG_FOLDER',
+    'DOCUMENT_SINGLE',
+    'DOCUMENT_MULTIPLE',
+    'PREDEFINED_PROCESS',
+    'SHIELD',
+    'TRAPEZOID',
+    'MANUAL_INPUT',
+    'HEXAGON',
+    'INTERNAL_STORAGE',
+    'OR',
+    'SUMMING_JUNCTION'
+  ]
+} as const satisfies Record<string, readonly ShapeWithTextType[]>
+
 export interface ShapeWithTextGeometry {
   /** The closed outline that is filled and stroked, and that connectors attach to. */
   outline: PolygonOutlineCommand[]
