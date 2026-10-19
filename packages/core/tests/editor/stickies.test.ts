@@ -53,7 +53,7 @@ describe('sticky notes', () => {
   test('text size and author changes are single undo steps over the whole note', () => {
     const { editor, pageId } = setup()
     const sticky = editor.createStickyNote(pageId, { x: 0, y: 0 })
-    editor.setStickyTextSize([sticky.id], 'large')
+    editor.setFigJamTextSize([sticky.id], 'large')
     expect(sublayers(editor, sticky).body).toMatchObject({ fontSize: 40, lineHeight: 60 })
     editor.setStickyAuthorVisible([sticky.id], false)
     expect(sublayers(editor, sticky).author.visible).toBe(false)

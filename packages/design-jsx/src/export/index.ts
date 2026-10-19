@@ -95,7 +95,7 @@ const OWN_ELEMENTS: Record<
     props: [
       ...textNamedName(node),
       ...positionProps(node, graph),
-      ...shapeWithTextProps(node),
+      ...shapeWithTextProps(graph, node),
       ...presenceProps(node)
     ],
     text: shapeWithTextLabelText(graph, node)

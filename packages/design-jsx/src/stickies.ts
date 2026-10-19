@@ -4,17 +4,16 @@ import {
   createSticky,
   isWideSticky,
   STICKY_COLORS,
-  stickyBodySizeFields,
   stickyScale,
   stickySublayers,
-  stickyTextSize,
   type SceneGraph,
   type SceneNode
 } from '@open-pencil/scene-graph'
 import { colorToHex, tryParseColor } from '@open-pencil/scene-graph/color'
 import type { Color } from '@open-pencil/scene-graph/primitives'
 
-import { enumProp, STICKY_TEXT_SIZE } from './enums'
+import { enumProp, FIGJAM_TEXT_SIZE, FIGJAM_TYPEFACE } from './enums'
+import { figJamTextFields, figJamTextProps } from './figjam-text'
 import { plainTextOf, type TreeNode } from './tree'
 import { PlacedOwnLayerProps, readElementProps } from './validation'
 
@@ -52,7 +51,8 @@ export const StickyProps = v.object({
   author: v.optional(v.string()),
   authorVisible: v.optional(v.boolean()),
   wide: v.optional(v.boolean()),
-  textSize: v.optional(enumProp(STICKY_TEXT_SIZE)),
+  textSize: v.optional(enumProp(FIGJAM_TEXT_SIZE)),
+  typeface: v.optional(enumProp(FIGJAM_TYPEFACE)),
   scale: v.optional(v.pipe(v.number(), v.gtValue(0))),
   ...StickyLayerProps.entries
 })
@@ -84,7 +84,7 @@ export function renderStickyNode(
     { ...layer, name: layer.name ?? (text.trim() || 'Sticky'), autoRename: !layer.name }
   )
   const body = stickySublayers(graph, sticky)?.body
-  if (body && props.textSize) graph.updateNode(body.id, stickyBodySizeFields(props.textSize))
+  if (body) graph.updateNode(body.id, figJamTextFields(body, props.textSize, props.typeface))
   return sticky
 }
 
@@ -104,9 +104,7 @@ export function stickyProps(graph: SceneGraph, node: SceneNode): Array<[string, 
   if (layers?.author.text) props.push(['author', layers.author.text])
   if (layers?.author.text && !layers.author.visible) props.push(['authorVisible', false])
   if (isWideSticky(graph, node)) props.push(['wide', true])
-  if (layers && stickyTextSize(layers.body) !== 'small') {
-    props.push(['textSize', stickyTextSize(layers.body)])
-  }
+  if (layers) props.push(...figJamTextProps(layers.body))
   const scale = layers ? stickyScale(layers.author) : 1
   if (scale !== 1) props.push(['scale', scale])
   return props

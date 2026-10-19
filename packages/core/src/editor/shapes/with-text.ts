@@ -1,11 +1,55 @@
-import { shapeWithTextFrameFields } from '@open-pencil/scene-graph'
+import {
+  figJamColorName,
+  figJamFillMode,
+  figJamLineColorFields,
+  figJamLineStyleFields,
+  figJamShapePaint,
+  figJamTextSizeFields,
+  figJamTypeface,
+  figJamTypefaceFields,
+  FIGJAM_TYPEFACES,
+  generatedFrameText,
+  shapeWithTextFrameFields,
+  shapeWithTextLabel,
+  type FigJamColorName,
+  type FigJamFillMode,
+  type FigJamLineStyle,
+  type FigJamTextSize,
+  type FigJamTypeface,
+  type SceneNode
+} from '@open-pencil/scene-graph'
 import type { ShapeWithTextType } from '@open-pencil/scene-graph/shape-with-text'
 
 import { recordSubtreeEdit } from '#core/editor/components/slots/history'
 import type { EditorContext } from '#core/editor/types'
+import { weightToStyle } from '#core/text/fonts'
 
-/** Shape-with-text commands: the kind the tool places, and the kind of shapes already placed. */
+const FILL_OPACITY: Record<FigJamFillMode, number> = { fill: 1, transparent: 0.5, none: 0 }
+
+/**
+ * Shape-with-text commands: the kind the tool places, and the kind, colours, outline and text of
+ * shapes already placed, as FigJam's selection toolbar sets them. Each change records the
+ * shapes' whole subtrees as one step, since the label changes with the shape.
+ */
 export function createShapeWithTextActions(ctx: EditorContext) {
+  function shapesAmong(ids: Iterable<string>): SceneNode[] {
+    return [...ids].flatMap((id) => {
+      const node = ctx.graph.getNode(id)
+      return node?.type === 'SHAPE_WITH_TEXT' ? [node] : []
+    })
+  }
+
+  function editShapes(label: string, ids: Iterable<string>, change: (shape: SceneNode) => void) {
+    const shapes = shapesAmong(ids)
+    if (shapes.length === 0) return
+    recordSubtreeEdit(
+      ctx,
+      label,
+      shapes.map((shape) => shape.id),
+      () => shapes.forEach(change)
+    )
+  }
+
   /** Makes `kind` the one the shape tool places, as picking it in FigJam's Shapes panel does. */
   function setShapeWithTextKind(kind: ShapeWithTextType) {
     ctx.state.shapeWithTextKind = kind
@@ -16,25 +60,107 @@ export function createShapeWithTextActions(ctx: EditorContext) {
    * switcher does; each lays its label out in the new kind's label area.
    */
   function changeShapesWithTextKind(ids: Iterable<string>, kind: ShapeWithTextType) {
-    const shapes = [...ids].flatMap((id) => {
-      const node = ctx.graph.getNode(id)
-      return node?.type === 'SHAPE_WITH_TEXT' && node.shapeWithTextType !== kind ? [node] : []
+    const changing = shapesAmong(ids).filter((shape) => shape.shapeWithTextType !== kind)
+    editShapes(
+      'Change shape',
+      changing.map((shape) => shape.id),
+      (shape) => {
+        ctx.graph.updateNode(shape.id, {
+          shapeWithTextType: kind,
+          ...shapeWithTextFrameFields(kind, shape.width, shape.height)
+        })
+      }
+    )
+  }
+
+  function paint(shape: SceneNode, name: FigJamColorName, mode: FigJamFillMode) {
+    const label = shapeWithTextLabel(ctx.graph, shape)
+    const painted = figJamShapePaint(shape, label, name, mode)
+    ctx.graph.updateNode(shape.id, painted.shape)
+    if (label) ctx.graph.updateNode(label.id, painted.label)
+  }
+
+  /** Paints the shapes in palette colour `name`, each keeping its fill mode. */
+  function setShapesWithTextColor(ids: Iterable<string>, name: FigJamColorName) {
+    editShapes('Change shape color', ids, (shape) =>
+      paint(shape, name, figJamFillMode(shape.fills.at(0)))
+    )
+  }
+
+  /** Fills the shapes solid, see-through, or not at all, keeping their colour. */
+  function setShapesWithTextFillMode(ids: Iterable<string>, mode: FigJamFillMode) {
+    editShapes('Change shape fill', ids, (shape) => {
+      const fill = shape.fills.at(0)
+      const name = figJamColorName(fill?.color)
+      if (name) paint(shape, name, mode)
+      else if (fill) {
+        ctx.graph.updateNode(shape.id, {
+          fills: [{ ...fill, opacity: FILL_OPACITY[mode] }, ...shape.fills.slice(1)]
+        })
+      }
     })
-    if (shapes.length === 0) return
+  }
+
+  /** Draws the shapes' outlines solid, dashed, or not at all. */
+  function setShapesWithTextLineStyle(ids: Iterable<string>, style: FigJamLineStyle) {
+    editShapes('Change shape line', ids, (shape) =>
+      ctx.graph.updateNode(shape.id, figJamLineStyleFields(shape, style))
+    )
+  }
+
+  /** Colours the shapes' outlines in palette colour `name`, which later fills leave alone. */
+  function setShapesWithTextLineColor(ids: Iterable<string>, name: FigJamColorName) {
+    editShapes('Change shape line color', ids, (shape) =>
+      ctx.graph.updateNode(shape.id, figJamLineColorFields(shape, name))
+    )
+  }
+
+  /** Sets the shapes' label text to one of FigJam's sizes; each grows or shrinks to fit it. */
+  function setShapesWithTextTextSize(ids: Iterable<string>, size: FigJamTextSize) {
+    editShapes('Change shape text size', ids, (shape) => {
+      const label = shapeWithTextLabel(ctx.graph, shape)
+      if (label) {
+        ctx.graph.updateNode(
+          label.id,
+          figJamTextSizeFields(size, figJamTypeface(label) ?? 'simple')
+        )
+      }
+    })
+  }
+
+  /**
+   * Sets the text that sticky notes and shapes among `ids` are named by in one of FigJam's
+   * typefaces, once its face is loaded.
+   */
+  async function setGeneratedTextTypeface(ids: Iterable<string>, typeface: FigJamTypeface) {
+    const { fontFamily, fontWeight } = FIGJAM_TYPEFACES[typeface]
+    await ctx.loadFont(fontFamily, weightToStyle(fontWeight, false))
+    const frames = [...ids].flatMap((id) => {
+      const node = ctx.graph.getNode(id)
+      return node && generatedFrameText(ctx.graph, node) ? [node] : []
+    })
+    if (frames.length === 0) return
     recordSubtreeEdit(
       ctx,
-      'Change shape',
-      shapes.map((shape) => shape.id),
+      'Change typeface',
+      frames.map((frame) => frame.id),
       () => {
-        for (const shape of shapes) {
-          ctx.graph.updateNode(shape.id, {
-            shapeWithTextType: kind,
-            ...shapeWithTextFrameFields(kind, shape.width, shape.height)
-          })
+        for (const frame of frames) {
+          const text = generatedFrameText(ctx.graph, frame)
+          if (text) ctx.graph.updateNode(text.id, figJamTypefaceFields(typeface, text))
         }
       }
     )
   }
 
-  return { setShapeWithTextKind, changeShapesWithTextKind }
+  return {
+    setShapeWithTextKind,
+    changeShapesWithTextKind,
+    setShapesWithTextColor,
+    setShapesWithTextFillMode,
+    setShapesWithTextLineStyle,
+    setShapesWithTextLineColor,
+    setShapesWithTextTextSize,
+    setGeneratedTextTypeface
+  }
 }

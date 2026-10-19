@@ -5,10 +5,10 @@ import {
   stickyScale,
   stickyWidth,
   STICKY_SIZE,
-  stickyBodySizeFields,
+  figJamTextSizeFields,
   stickySublayers
 } from '@open-pencil/scene-graph'
-import type { SceneNode, StickyTextSize } from '@open-pencil/scene-graph'
+import type { SceneNode, FigJamTextSize } from '@open-pencil/scene-graph'
 import type { Color, Vector } from '@open-pencil/scene-graph/primitives'
 
 import { recordSubtreeEdit } from '#core/editor/components/slots/history'
@@ -76,10 +76,10 @@ export function createStickyActions(ctx: EditorContext) {
   }
 
   /** Sets the size of the notes' body text to one of FigJam's presets. */
-  function setStickyTextSize(ids: Iterable<string>, size: StickyTextSize) {
+  function setFigJamTextSize(ids: Iterable<string>, size: FigJamTextSize) {
     editStickies('Change sticky text size', ids, (sticky) => {
       const body = stickySublayers(ctx.graph, sticky)?.body
-      if (body) ctx.graph.updateNode(body.id, stickyBodySizeFields(size))
+      if (body) ctx.graph.updateNode(body.id, figJamTextSizeFields(size))
     })
   }
 
@@ -123,7 +123,7 @@ export function createStickyActions(ctx: EditorContext) {
     setStickyWide,
     createStickyNote,
     setStickyColor,
-    setStickyTextSize,
+    setFigJamTextSize,
     setStickyAuthorVisible,
     scaleStickyNote
   }

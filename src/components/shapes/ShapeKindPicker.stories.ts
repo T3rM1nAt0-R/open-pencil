@@ -43,11 +43,16 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
 
+async function openPicker(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement)
+  const page = within(canvasElement.ownerDocument.body)
+  await userEvent.click(canvas.getByRole('button', { name: 'Shape' }))
+  return { canvas, page }
+}
+
 export const PickKind: Story = {
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    const page = within(canvasElement.ownerDocument.body)
-    await userEvent.click(canvas.getByRole('button', { name: 'Shape' }))
+    const { canvas, page } = await openPicker(canvasElement)
     await expect(await page.findByText('Basic')).toBeVisible()
     await expect(page.getByText('Flowchart')).toBeVisible()
     await userEvent.click(page.getByRole('option', { name: 'Cylinder' }))
@@ -57,9 +62,7 @@ export const PickKind: Story = {
 
 export const Search: Story = {
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    const page = within(canvasElement.ownerDocument.body)
-    await userEvent.click(canvas.getByRole('button', { name: 'Shape' }))
+    const { page } = await openPicker(canvasElement)
     await userEvent.keyboard('hexa')
     await waitFor(() => expect(page.queryByRole('option', { name: 'Square' })).toBeNull())
     await expect(page.getByRole('option', { name: 'Hexagon' })).toBeVisible()

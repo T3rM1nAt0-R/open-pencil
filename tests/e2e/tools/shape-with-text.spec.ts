@@ -107,3 +107,31 @@ test('the properties panel switches a shape to another kind, keeping its size', 
   await editor.canvas.waitForRender()
   expect((await lastShape()).kind).toBe('SQUARE')
 })
+
+test("the properties panel paints a shape with FigJam's palette and sizes its text", async () => {
+  await shapes.showTool()
+  await shapes.pickKind('Square')
+  await clickAt(200, 200)
+  await editor.page.keyboard.type('Ship it')
+  await editor.page.keyboard.press('Escape')
+
+  const fill = editor.page.getByRole('radiogroup', { name: 'Fill' })
+  await fill.getByRole('radio', { name: 'Violet', exact: true }).click()
+  await expect(fill.getByRole('radio', { name: 'Violet', exact: true })).toHaveAttribute(
+    'aria-checked',
+    'true'
+  )
+  expect(await lastShape()).toMatchObject({ fill: '#874fff', stroke: '#5427b4' })
+
+  await editor.page.locator('[data-property="shape-line-style"]').click()
+  await editor.page.getByRole('option', { name: 'Dashed', exact: true }).click()
+  await expect(editor.page.locator('[data-property="shape-line-style"]')).toContainText('Dashed')
+
+  await editor.page.locator('[data-property="shape-text-size"]').click()
+  await editor.page.getByRole('option', { name: 'Huge', exact: true }).click()
+  await editor.canvas.waitForRender()
+  await expect(editor.page.locator('[data-property="shape-text-size"]')).toContainText('Huge')
+  const huge = await lastShape()
+  expect(huge.label?.fontSize).toBe(96)
+  expect(huge.height).toBeGreaterThan(176)
+})

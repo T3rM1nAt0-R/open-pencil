@@ -72,5 +72,7 @@ export function layerResizes(node: Pick<SceneNode, 'type'>): boolean {
 }
 
 export type { GeneratedFrameKind } from './kind'
+export * from './figjam-palette'
+export * from './figjam-text'
 export * from './shape-with-text'
 export * from './sticky'

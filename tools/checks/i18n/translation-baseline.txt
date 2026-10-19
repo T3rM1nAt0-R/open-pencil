@@ -447,6 +447,7 @@ it:settings.cloud
 es:cloud.productName
 es:cloud.roleEditor
 es:cloud.homeCloudOnHost
+es:shapes.color
 it:cloud.productName
 it:cloud.server
 it:cloud.roleEditor
@@ -469,6 +470,8 @@ de:cloud.settingsTitle
 de:shapes.ellipse
 de:shapes.plus
 de:shapes.chevron
+de:shapes.fillTransparent
+de:shapes.colorOrange
 fr:cloud.productName
 fr:cloud.homeCloudOnHost
 fr:cloud.settingsTitle
@@ -477,6 +480,10 @@ fr:shapes.triangleUp
 fr:shapes.plus
 fr:shapes.chevron
 fr:shapes.documentSingle
+fr:shapes.fillTransparent
+fr:shapes.typefaceSimple
+fr:shapes.colorOrange
+fr:shapes.colorViolet
 pl:cloud.productName
 pl:cloud.homeCloudOnHost
 pl:shapes.plus

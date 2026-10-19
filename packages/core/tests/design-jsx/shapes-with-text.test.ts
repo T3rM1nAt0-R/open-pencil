@@ -75,4 +75,15 @@ describe('shapes with text in design JSX', () => {
       width: 208
     })
   })
+
+  test('take FigJam text sizes and typefaces for their label, and write them back', async () => {
+    const graph = new SceneGraph()
+    const [result] = await renderJSX(
+      graph,
+      '<Shape textSize="large" typeface="technical">Deploy</Shape>'
+    )
+    const label = shapeWithTextLabel(graph, getNodeOrThrow(graph, result.id))
+    expect(label).toMatchObject({ fontSize: 40, fontFamily: 'Roboto Mono' })
+    expect(sceneNodeToJSX(result.id, graph)).toContain('textSize="large" typeface="technical"')
+  })
 })

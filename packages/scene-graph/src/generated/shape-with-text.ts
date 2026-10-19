@@ -3,17 +3,13 @@ import type { SceneGraph } from '../index'
 import type { ShapeWithTextType } from '../shape-with-text'
 import { shapeWithTextLabelBox } from '../shape-with-text-fit'
 import type { Fill, SceneNode } from '../types'
+import { FIGJAM_TYPEFACES, figJamTextSizeFields } from './figjam-text'
 import type { GeneratedFrameKind } from './kind'
 
 /** FigJam's plugin API makes a shape with text 208 px square. */
 export const SHAPE_WITH_TEXT_SIZE = 208
 /** FigJam's shape tool places a shape 176 px square where it is clicked. */
 export const SHAPE_WITH_TEXT_TOOL_SIZE = 176
-/** FigJam's label text as a new shape starts it: Inter Medium 16 ("Small") on a 1.5 line, black at 80%. */
-export const SHAPE_WITH_TEXT_FONT_SIZE = 16
-const LABEL_FONT_FAMILY = 'Inter'
-const LABEL_FONT_WEIGHT = 500
-const LABEL_LINE_HEIGHT = 1.5
 /** FigJam rounds every corner of a shape by 6 px. */
 export const SHAPE_WITH_TEXT_CORNER_RADIUS = 6
 
@@ -51,14 +47,13 @@ export function shapeWithTextFrameFields(
   }
 }
 
-/** The label's text style as FigJam starts it. */
+/** The label's text style as FigJam starts it: Inter Medium at its Small size, black at 80%. */
 export function shapeWithTextLabelFields(): Partial<SceneNode> {
   return {
     name: 'Text',
-    fontFamily: LABEL_FONT_FAMILY,
-    fontWeight: LABEL_FONT_WEIGHT,
-    fontSize: SHAPE_WITH_TEXT_FONT_SIZE,
-    lineHeight: SHAPE_WITH_TEXT_FONT_SIZE * LABEL_LINE_HEIGHT,
+    fontFamily: FIGJAM_TYPEFACES.simple.fontFamily,
+    fontWeight: FIGJAM_TYPEFACES.simple.fontWeight,
+    ...figJamTextSizeFields('small'),
     textAlignHorizontal: 'CENTER',
     textAlignVertical: 'TOP',
     fills: [{ ...LABEL_FILL, color: { ...LABEL_FILL.color } }],

@@ -8,7 +8,8 @@ import type {
   MaskType,
   SceneNode,
   Stroke,
-  StickyTextSize,
+  FigJamTextSize,
+  FigJamTypeface,
   StrokeCap,
   StrokeJoin,
   TextAutoResize,
@@ -138,12 +139,19 @@ export const TEXT_DECORATION = lowercaseEnum<TextDecoration>(['NONE', 'UNDERLINE
 export const TEXT_DECORATION_STYLE = lowercaseEnum<TextDecorationStyle>(['SOLID', 'DOTTED', 'WAVY'])
 export const TEXT_CASE = lowercaseEnum<TextCase>(['ORIGINAL', 'UPPER', 'LOWER', 'TITLE'])
 
-export const STICKY_TEXT_SIZE = jsxEnum<StickyTextSize>({
+export const FIGJAM_TEXT_SIZE = jsxEnum<FigJamTextSize>({
   small: 'small',
   medium: 'medium',
   large: 'large',
   extraLarge: 'extraLarge',
   huge: 'huge'
+})
+/** FigJam's typefaces, as its text menus name them. */
+export const FIGJAM_TYPEFACE = jsxEnum<FigJamTypeface>({
+  simple: 'simple',
+  bookish: 'bookish',
+  technical: 'technical',
+  scribbled: 'scribbled'
 })
 /** The kinds a `<Shape>` draws, as FigJam names them: `rounded_rectangle`, `eng_database`. */
 export const SHAPE_KIND = lowercaseEnum<ShapeWithTextType>(SHAPE_WITH_TEXT_TYPES)

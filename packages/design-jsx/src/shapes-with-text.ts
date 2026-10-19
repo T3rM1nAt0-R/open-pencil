@@ -9,9 +9,18 @@ import {
   type SceneNode
 } from '@open-pencil/scene-graph'
 
-import { enumProp, SHAPE_KIND, STROKE_ALIGN, STROKE_CAP, STROKE_JOIN } from './enums'
+import {
+  enumProp,
+  FIGJAM_TEXT_SIZE,
+  FIGJAM_TYPEFACE,
+  SHAPE_KIND,
+  STROKE_ALIGN,
+  STROKE_CAP,
+  STROKE_JOIN
+} from './enums'
 import { collectFillProps, collectStrokeProps } from './export/paint'
 import type { JSXProp } from './export/value'
+import { figJamTextFields, figJamTextProps } from './figjam-text'
 import { isFillValue } from './overrides/fills'
 import { isStrokeValue } from './overrides/strokes'
 import { plainTextOf, type TreeNode } from './tree'
@@ -51,6 +60,8 @@ export const ShapeLayerProps = v.object({
 /** The props `<Shape>` takes: its kind, and the layer props a shape has. */
 export const ShapeProps = v.object({
   kind: v.optional(enumProp(SHAPE_KIND)),
+  textSize: v.optional(enumProp(FIGJAM_TEXT_SIZE)),
+  typeface: v.optional(enumProp(FIGJAM_TYPEFACE)),
   ...ShapeLayerProps.entries
 })
 
@@ -66,7 +77,7 @@ export function renderShapeNode(
 ) {
   const props = readElementProps(ShapeProps, tree.props)
   const text = plainTextOf(tree)
-  return createShapeWithText(
+  const shape = createShapeWithText(
     graph,
     parentId,
     {
@@ -77,17 +88,22 @@ export function renderShapeNode(
     },
     { text }
   )
+  const label = shapeWithTextLabel(graph, shape)
+  if (label) graph.updateNode(label.id, figJamTextFields(label, props.textSize, props.typeface))
+  return shape
 }
 
 /**
  * A shape's own props as `<Shape>` writes them, after its name and position: the size it was
  * given rather than the size its label grew it to, so it grows the same way when read back.
  */
-export function shapeWithTextProps(node: SceneNode): JSXProp[] {
+export function shapeWithTextProps(graph: SceneGraph, node: SceneNode): JSXProp[] {
   const props: JSXProp[] = []
   if (node.shapeWithTextType !== 'SQUARE') {
     props.push(['kind', SHAPE_KIND.print(node.shapeWithTextType)])
   }
+  const label = shapeWithTextLabel(graph, node)
+  if (label) props.push(...figJamTextProps(label))
   const width = node.shapeUserWidth > 0 ? node.shapeUserWidth : node.width
   const height = node.shapeUserHeight > 0 ? node.shapeUserHeight : node.height
   if (width !== SHAPE_WITH_TEXT_SIZE) props.push(['w', width])
