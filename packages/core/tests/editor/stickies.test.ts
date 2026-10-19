@@ -5,7 +5,7 @@ import { createEditor } from '@open-pencil/core/editor'
 import { STICKY_COLORS, stickySublayers } from '@open-pencil/scene-graph'
 import type { SceneNode } from '@open-pencil/scene-graph'
 
-import { applyStickyNameEdit } from '#core/editor/stickies'
+import { applyGeneratedTextNameEdit } from '#core/editor/text/name'
 
 import { expectDefined } from '../helpers/assert'
 
@@ -93,12 +93,12 @@ describe('sticky notes', () => {
     const { editor, pageId } = setup()
     const sticky = editor.createStickyNote(pageId, { x: 0, y: 0 })
     const { body, author } = sublayers(editor, sticky)
-    applyStickyNameEdit(editor, body.id, 'Hello')
+    applyGeneratedTextNameEdit(editor, body.id, 'Hello')
     expect(editor.graph.getNode(sticky.id)?.name).toBe('Hello')
-    applyStickyNameEdit(editor, author.id, 'Someone')
+    applyGeneratedTextNameEdit(editor, author.id, 'Someone')
     expect(editor.graph.getNode(sticky.id)?.name).toBe('Hello')
     editor.renameNode(sticky.id, 'Kept')
-    applyStickyNameEdit(editor, body.id, 'Changed')
+    applyGeneratedTextNameEdit(editor, body.id, 'Changed')
     expect(editor.graph.getNode(sticky.id)?.name).toBe('Kept')
     editor.undo.undo()
     expect(editor.graph.getNode(sticky.id)?.autoRename).toBe(true)

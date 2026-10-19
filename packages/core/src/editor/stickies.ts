@@ -1,7 +1,6 @@
 import {
   createSticky,
   DEFAULT_STICKY_COLOR,
-  generatedFrameOwner,
   rescaleNodeTree,
   stickyScale,
   stickyWidth,
@@ -15,32 +14,6 @@ import type { Color, Vector } from '@open-pencil/scene-graph/primitives'
 import { recordSubtreeEdit } from '#core/editor/components/slots/history'
 import type { EditorContext } from '#core/editor/types'
 import { pushCreatedSubtreesUndo } from '#core/editor/undo'
-
-/** The name a note takes from its body while it was never renamed, as FigJam names it. */
-function stickyNameFor(text: string): string {
-  return text.trim() === '' ? 'Sticky' : text
-}
-
-/**
- * Typing in a note's body renames a note that was never renamed, as FigJam does. The caller
- * records the text edit; this records the rename beside it.
- */
-export function applyStickyNameEdit(
-  ctx: Pick<EditorContext, 'graph' | 'undo'>,
-  nodeId: string,
-  text: string
-): void {
-  const node = ctx.graph.getNode(nodeId)
-  const sticky = node && generatedFrameOwner(ctx.graph, node)
-  if (sticky?.type !== 'STICKY' || !sticky.autoRename) return
-  if (stickySublayers(ctx.graph, sticky)?.body.id !== nodeId) return
-  const before = sticky.name
-  const after = stickyNameFor(text)
-  if (before === after) return
-  const rename = (name: string) => () => ctx.graph.updateNode(sticky.id, { name })
-  rename(after)()
-  ctx.undo.push({ label: 'Rename sticky', forward: rename(after), inverse: rename(before) })
-}
 
 /**
  * Sticky note commands. A note's colour sits on the note and its text on its sublayers, so each
