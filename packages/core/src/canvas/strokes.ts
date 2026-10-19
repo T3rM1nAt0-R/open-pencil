@@ -301,11 +301,6 @@ export function drawNodeStroke(
       const path = r.makePolygonPath(node)
       canvas.drawPath(path, r.strokePaint)
       path.delete()
-      const details = makeShapeWithTextDetailsPath(r, node)
-      if (details) {
-        canvas.drawPath(details, r.strokePaint)
-        details.delete()
-      }
       break
     }
     default:
@@ -360,6 +355,16 @@ export function drawStrokeWithAlign(
     canvas.restore()
   } else {
     r.drawNodeStroke(canvas, node, rect, hasRadius)
+  }
+  // Inner lines, such as a database's front rim, lie inside the outline: they keep the stroke's
+  // own weight whatever its alignment, and end where the outline does.
+  const details = makeShapeWithTextDetailsPath(r, node)
+  if (details) {
+    canvas.save()
+    r.clipNodeShape(canvas, node, rect, hasRadius)
+    canvas.drawPath(details, r.strokePaint)
+    canvas.restore()
+    details.delete()
   }
 }
 

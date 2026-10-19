@@ -15,6 +15,9 @@ export interface ShapeWithTextSetup {
   stroke: RGB
   /** The label's own colour, kept on the label layer as FigJam keeps it. */
   labelColor: RGB
+  /** Where the stroke sits on the outline; centred unless set. */
+  strokeAlign?: 'INSIDE' | 'CENTER' | 'OUTSIDE'
+  strokeWeight?: number
 }
 
 /** Places shapes with text as the editor draws them, each with its label laid out inside. */
@@ -42,7 +45,13 @@ export function shapeWithTextDriver(page: () => Page) {
             name: shape.label,
             shapeWithTextType: shape.kind,
             fills: [solid(shape.fill)],
-            strokes: [{ ...solid(shape.stroke), weight: 2, align: 'CENTER' as const }]
+            strokes: [
+              {
+                ...solid(shape.stroke),
+                weight: shape.strokeWeight ?? 2,
+                align: shape.strokeAlign ?? 'CENTER'
+              }
+            ]
           })
           const [label] = store.graph.getChildren(id)
           store.graph.updateNode(label.id, { text: shape.label, fills: [solid(shape.labelColor)] })

@@ -530,7 +530,12 @@ export function clipNodeShape(
   rect: Float32Array,
   hasRadius: boolean
 ): void {
-  if (node.type === 'ELLIPSE') {
+  if (node.type === 'SHAPE_WITH_TEXT') {
+    // Clipped by its kind's outline, so an inside stroke follows it rather than the box.
+    const clipPath = r.makePolygonPath(node)
+    canvas.clipPath(clipPath, r.ck.ClipOp.Intersect, true)
+    clipPath.delete()
+  } else if (node.type === 'ELLIPSE') {
     const clipPath = new r.ck.PathBuilder()
     clipPath.addOval(rect)
     const immutableClipPath = clipPath.detachAndDelete()
