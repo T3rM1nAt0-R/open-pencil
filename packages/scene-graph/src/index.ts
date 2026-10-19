@@ -108,6 +108,7 @@ export { CommittedGraphEventError } from './buffered-events'
 import { BufferedSceneEmitter } from './buffered-events'
 import { cloneNodeProps } from './copy'
 import { bindNodeEvents } from './events'
+import { withGeneratedFrameSize } from './generated'
 import * as HitTest from './hit-test'
 export type { DropTargetOptions } from './hit-test'
 import * as Instances from './instances'
@@ -680,6 +681,8 @@ export class SceneGraph {
     this.updateNodePreview(id, { x, y })
   }
   updateNodePreview(id: string, changes: Partial<SceneNode>): void {
+    const node = this.nodes.get(id)
+    if (node) changes = this.sizedChanges(node, changes)
     const appliedChanges = updateNodePreview(this, id, changes, (node, applied) => {
       for (const observe of this.previewObservers) observe(node, applied)
     })
@@ -695,7 +698,12 @@ export class SceneGraph {
     const node = this.nodes.get(id)
     if (!node) return
     changes = stripUndefinedProps(styleDetachmentChanges(node, stripUndefinedProps(changes)))
-    this.applyNodeChanges(node, changes)
+    this.applyNodeChanges(node, this.sizedChanges(node, changes))
+  }
+
+  /** A size set from outside layout, with what it also sets on a generated frame. */
+  private sizedChanges(node: SceneNode, changes: Partial<SceneNode>): Partial<SceneNode> {
+    return this.isApplyingLayout ? changes : withGeneratedFrameSize(node, changes)
   }
 
   /** Replay captured properties without dropping explicit undefined values or absent keys. */

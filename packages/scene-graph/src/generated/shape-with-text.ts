@@ -75,14 +75,19 @@ export function shapeWithTextLabel(graph: SceneGraph, shape: SceneNode): SceneNo
 
 /**
  * A shape with text edits its label in place, turns and resizes freely, and, as in FigJam, takes
- * its name from its label until it is named.
+ * its name from its label until it is named. A width or height set on it by a resize, a field or
+ * a script is the size it was given, which layout grows it from when its label needs more room.
  */
 export const SHAPE_WITH_TEXT_KIND: GeneratedFrameKind = {
   complete: (graph, frame) => shapeWithTextLabel(graph, frame) !== null,
   text: (graph, frame) => shapeWithTextLabel(graph, frame) ?? undefined,
   rotates: true,
   resizes: true,
-  namedByText: true
+  namedByText: true,
+  sized: ({ width, height }) => ({
+    ...(width !== undefined && { shapeUserWidth: width }),
+    ...(height !== undefined && { shapeUserHeight: height })
+  })
 }
 
 /** Adds the label to a SHAPE_WITH_TEXT the caller created, styled as FigJam generates it. */

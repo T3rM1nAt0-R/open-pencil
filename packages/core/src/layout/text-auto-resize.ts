@@ -1,6 +1,5 @@
 import { TEXT_METRIC_FIELDS, type SceneGraph, type SceneNode } from '@open-pencil/scene-graph'
 
-import { shapeWithTextSizeChanges } from './shape-with-text'
 import { measureTextForLayout } from './text-measurement'
 
 export const TEXT_AUTO_RESIZE_KEYS = new Set<keyof SceneNode>([
@@ -24,18 +23,7 @@ function hasTextAutoWidthChange(changes: Partial<SceneNode>): boolean {
 export function textAutoResizeChanges(
   node: SceneNode | undefined,
   changes: Partial<SceneNode>
-): Partial<
-  Pick<
-    SceneNode,
-    | 'width'
-    | 'height'
-    | 'derivedLayout'
-    | 'derivedTextGlyphs'
-    | 'shapeUserWidth'
-    | 'shapeUserHeight'
-  >
-> {
-  if (node?.type === 'SHAPE_WITH_TEXT') return shapeWithTextSizeChanges(node, changes)
+): Partial<Pick<SceneNode, 'width' | 'height' | 'derivedLayout' | 'derivedTextGlyphs'>> {
   if (node?.type !== 'TEXT' || !hasTextAutoResizeChange(changes)) return {}
   // Path text is laid out along its path (derivedTextGlyphs on textPathBox),
   // not by paragraph auto-resize. Running the measurement here would null the
