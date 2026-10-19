@@ -1,1 +1,1 @@
-- A shape whose visible fills are all at 0% opacity and that has no visible stroke no longer casts a drop shadow when its shadow is not set to show behind the node.
+- A shape whose fills are all at 0% opacity casts no drop shadow, as in Figma, and a frame with a 0% fill shadows its children instead of its own bounds.
