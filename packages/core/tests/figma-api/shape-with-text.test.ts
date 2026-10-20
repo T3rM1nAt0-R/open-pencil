@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 
-import { SceneGraph } from '@open-pencil/scene-graph'
+import { pick } from 'es-toolkit'
+
+import { SceneGraph, shapeWithTextFrameFields } from '@open-pencil/scene-graph'
 
 import { FigmaAPI } from '#core/figma-api'
 
@@ -37,6 +39,14 @@ describe('shapes with text in the plugin API', () => {
     const shape = api().createShapeWithText()
     shape.shapeType = 'ENG_DATABASE'
     expect(shape.shapeType).toBe('ENG_DATABASE')
+    // The label moves into the new kind's label area, as FigJam's shape switcher puts it.
+    const fields = shapeWithTextFrameFields('ENG_DATABASE', 176, 176)
+    expect(pick(fields, ['paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'])).toEqual({
+      paddingTop: shape.paddingTop,
+      paddingRight: shape.paddingRight,
+      paddingBottom: shape.paddingBottom,
+      paddingLeft: shape.paddingLeft
+    })
     expect(() => {
       shape.shapeType = 'CLOUD' as never
     }).toThrow(

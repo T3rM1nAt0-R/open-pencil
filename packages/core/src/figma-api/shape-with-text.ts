@@ -1,4 +1,9 @@
-import { createShapeWithText, type SceneGraph, type SceneNode } from '@open-pencil/scene-graph'
+import {
+  createShapeWithText,
+  shapeWithTextFrameFields,
+  type SceneGraph,
+  type SceneNode
+} from '@open-pencil/scene-graph'
 import {
   isShapeWithTextType,
   SHAPE_WITH_TEXT_TYPES,
@@ -55,7 +60,11 @@ export function installShapeWithTextAccessors(
         const node = raw(this, internals)
         const kind = checkedShapeType(node, value)
         prepareFollowedFieldEdit(graph(this, internals), node, 'shapeType', 'shape-type')
-        updateNode(this, internals, { shapeWithTextType: kind })
+        // The new kind lays the label out in its own area, as FigJam's shape switcher does.
+        updateNode(this, internals, {
+          shapeWithTextType: kind,
+          ...shapeWithTextFrameFields(kind, node.width, node.height)
+        })
       }
     }
   })
