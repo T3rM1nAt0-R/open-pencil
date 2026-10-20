@@ -1,6 +1,7 @@
 import type { Router } from 'vue-router'
 
 import { homeLocation, type HomeLocation } from '@/app/home/location'
+import { activeStorageProviderID, storagePreferencesComplete } from '@/app/integrations/storage'
 
 /** Shows Home at one of its places, in a new tab when a document is open. */
 export function openHomeLocation(router: Router, location: HomeLocation): void {
@@ -11,7 +12,8 @@ export function openHomeLocation(router: Router, location: HomeLocation): void {
     .then(({ showNewTab }) => showNewTab())
 }
 
-/** Home at the place the person browsed last: a Cloud workspace, the bucket, or Recent. */
+/** Home on the storage bucket when one is set up, else where the person browsed last. */
 export function browseFiles(router: Router): void {
-  openHomeLocation(router, homeLocation.value)
+  const bucketReady = storagePreferencesComplete(activeStorageProviderID.value)
+  openHomeLocation(router, bucketReady ? { kind: 'storage' } : homeLocation.value)
 }

@@ -1,0 +1,43 @@
+import { afterEach, describe, expect, test } from 'bun:test'
+
+import type { Router } from 'vue-router'
+
+import { homeLocation } from '@/app/home/location'
+import {
+  activeStorageProviderID,
+  storageProviderRegistry,
+  writeStoragePreference
+} from '@/app/integrations/storage'
+import { browseFiles } from '@/app/shell/menu/navigation'
+
+const router = { push: () => new Promise<void>(() => undefined) } as unknown as Router
+
+afterEach(() => {
+  const providerID = activeStorageProviderID.value
+  for (const field of storageProviderRegistry.get(providerID).preferenceFields) {
+    writeStoragePreference(providerID, field.id, '')
+  }
+  homeLocation.value = { kind: 'recent' }
+})
+
+describe('browsing files from the File menu', () => {
+  test('opens Home where it was left when no storage is set up', () => {
+    homeLocation.value = { kind: 'shared' }
+
+    browseFiles(router)
+
+    expect(homeLocation.value).toEqual({ kind: 'shared' })
+  })
+
+  test('opens Home on the storage bucket once it is set up', () => {
+    const providerID = activeStorageProviderID.value
+    for (const field of storageProviderRegistry.get(providerID).preferenceFields) {
+      if (field.required) writeStoragePreference(providerID, field.id, 'configured')
+    }
+    homeLocation.value = { kind: 'recent' }
+
+    browseFiles(router)
+
+    expect(homeLocation.value).toEqual({ kind: 'storage' })
+  })
+})

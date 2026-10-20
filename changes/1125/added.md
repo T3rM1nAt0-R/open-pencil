@@ -3,3 +3,4 @@
 - Settings → General → On startup chooses what OpenPencil shows when it starts without a specific file or link: reopen the designs that were open last, show the open screen, or start a new design. Reopening is the default; shared rooms are rejoined and a design in cloud storage opens its newest copy. A design that cannot reopen shows a short notice and the open screen instead of a blank design.
 - The Home tab stays in front of your designs. It cannot be closed, opening or creating a design opens it in a tab of its own, and the + button starts a blank design.
 - Settings opens inside the Home tab from a Settings entry in the sidebar, or the locations menu on a phone, so every section can be checked without the Settings window. The Storage and Cloud account buttons on Home go to their section there.
+- File → Browse Files… opens Home on your storage bucket when one is set up, so designs in storage are one click away.
