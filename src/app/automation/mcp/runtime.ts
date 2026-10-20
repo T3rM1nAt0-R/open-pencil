@@ -148,6 +148,11 @@ export function createMCPRuntimeService(dependencies: MCPRuntimeDependencies) {
   const stopWatching = watcher.pause
   const startWatching = watcher.resume
 
+  /** Read through a function, as a stop can arrive while an awaited step runs. */
+  function isStopRequested(): boolean {
+    return stopRequested
+  }
+
   async function watchOperation(): Promise<void> {
     if (state.status !== 'running' || !server?.managed) return
     const health = await dependencies.readHealth(server.authToken).catch(() => null)
@@ -155,7 +160,7 @@ export function createMCPRuntimeService(dependencies: MCPRuntimeDependencies) {
       replacements = 0
       return
     }
-    if (stopRequested) return
+    if (isStopRequested()) return
     if (replacements >= MAX_REPLACEMENTS) {
       // Reporting "running" for a server that no longer answers would hide the failure.
       await stopOperation(false)
@@ -167,7 +172,7 @@ export function createMCPRuntimeService(dependencies: MCPRuntimeDependencies) {
     // A server that could not be taken down is not replaced while it may still be running.
     if (!(await stopOperation(false)).ok) return
     // The user may have stopped the server while this one was being taken down.
-    if (activeStore && !stopRequested) await startOperation()
+    if (activeStore && !isStopRequested()) await startOperation()
   }
 
   async function disconnectCurrentServer(): Promise<Error | null> {
@@ -192,7 +197,10 @@ export function createMCPRuntimeService(dependencies: MCPRuntimeDependencies) {
     let thrown: Error | null = null
     try {
       server = await dependencies.spawn()
+      // A stop queued behind this start tears the new server down next; do not connect it first.
+      if (isStopRequested()) return { ok: true }
       const health = await dependencies.readHealth(server?.authToken)
+      if (isStopRequested()) return { ok: true }
       if (health) {
         state.externallyManaged = server?.managed === false
         if (activeStore && dependencies.canConnect()) {

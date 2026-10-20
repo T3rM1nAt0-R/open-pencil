@@ -381,8 +381,9 @@ async function waitForHealth(
     ])
     if (woke !== 'waited') return null
     // A probe still running at the deadline does not count.
-    const health = await Promise.race([readAutomationHealth(authToken), deadline])
-    if (health === 'deadline') return null
+    const health = await Promise.race([readAutomationHealth(authToken), deadline, exited])
+    // An answer from a server whose process already ended does not count.
+    if (health === 'deadline' || health === 'exited') return null
     if (health) return health
   }
 }
