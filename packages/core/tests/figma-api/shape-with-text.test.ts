@@ -18,11 +18,11 @@ function colour(paints: unknown): number[] | undefined {
 }
 
 describe('shapes with text in the plugin API', () => {
-  test('a new shape with text is a 176 px square with an empty, centred label', () => {
+  test('a new shape with text is a 208 px square with an empty, centred label', () => {
     const shape = api().createShapeWithText()
     expect(shape.type).toBe('SHAPE_WITH_TEXT')
     expect(shape.shapeType).toBe('SQUARE')
-    expect([shape.width, shape.height]).toEqual([176, 176])
+    expect([shape.width, shape.height]).toEqual([208, 208])
     expect(shape.text?.characters).toBe('')
     expect(shape.text?.textAlignHorizontal).toBe('CENTER')
   })

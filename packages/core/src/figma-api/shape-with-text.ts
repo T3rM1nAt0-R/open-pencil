@@ -1,4 +1,9 @@
-import { createShapeWithText, type SceneGraph, type SceneNode } from '@open-pencil/scene-graph'
+import {
+  createShapeWithText,
+  SHAPE_WITH_TEXT_SIZE,
+  type SceneGraph,
+  type SceneNode
+} from '@open-pencil/scene-graph'
 import {
   isShapeWithTextType,
   type ShapeWithTextType
@@ -23,11 +28,18 @@ export function checkedShapeType(node: SceneNode, value: unknown): ShapeWithText
   return value
 }
 
-/** A new, empty shape with text on `pageId`, a square until its kind changes. */
+/**
+ * A new, empty shape with text on `pageId`: a square until its kind changes, at the size
+ * FigJam's plugin API gives it, not the smaller one its tool places.
+ */
 export function newShapeWithText(
   graph: SceneGraph,
   pageId: string,
   theme: InterfaceTheme
 ): SceneNode {
-  return createShapeWithText(graph, pageId, newLayerDefaults('SHAPE_WITH_TEXT', theme))
+  return createShapeWithText(graph, pageId, {
+    ...newLayerDefaults('SHAPE_WITH_TEXT', theme),
+    width: SHAPE_WITH_TEXT_SIZE,
+    height: SHAPE_WITH_TEXT_SIZE
+  })
 }
