@@ -303,6 +303,35 @@ describe('MCP runtime service', () => {
     expect(calls).not.toContain('connect')
   })
 
+  test('a stop requested while a start is still queued keeps the server stopped', async () => {
+    let release: () => void = () => undefined
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let spawning: () => void = () => undefined
+    const spawnCalled = new Promise<void>((resolve) => {
+      spawning = resolve
+    })
+    let spawns = 0
+    const { service } = setup({
+      spawn: async () => {
+        spawns++
+        spawning()
+        await held
+        return { authToken: 'token', managed: true, disconnect: () => undefined }
+      }
+    })
+    const first = service.start(getStore)
+    await spawnCalled
+    const queued = service.start(getStore)
+    const stopped = service.stop()
+    release()
+    await Promise.all([first, queued, stopped])
+
+    expect(spawns).toBe(1)
+    expect(service.state.status).toBe('stopped')
+  })
+
   test('does not watch a server after it was stopped', async () => {
     let spawns = 0
     let alive = true

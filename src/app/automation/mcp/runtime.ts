@@ -95,6 +95,8 @@ export function createMCPRuntimeService(dependencies: MCPRuntimeDependencies) {
   // Set the moment the user stops the server, before the queue gets to it, so a health check
   // already in flight cannot start a replacement for a server they just stopped.
   let stopRequested = false
+  // Counts stops, so a start queued before a stop can tell the stop came after it.
+  let stopCount = 0
 
   function enqueue<T>(operation: () => Promise<T>): Promise<T> {
     const next = lifecycle.then(operation, operation)
@@ -245,7 +247,10 @@ export function createMCPRuntimeService(dependencies: MCPRuntimeDependencies) {
     state,
     refresh: () => enqueue(refreshOperation),
     start(getStore: () => EditorStore): Promise<MCPRuntimeResult> {
+      const stopsBefore = stopCount
       return enqueue(() => {
+        // A stop requested after this start was queued stays in force; the queue runs it next.
+        if (stopCount !== stopsBefore) return Promise.resolve<MCPRuntimeResult>({ ok: true })
         activeStore = getStore
         replacements = 0
         stopRequested = false
@@ -255,6 +260,7 @@ export function createMCPRuntimeService(dependencies: MCPRuntimeDependencies) {
     stop: () => {
       replacements = 0
       stopRequested = true
+      stopCount++
       stopWatching()
       return enqueue(() => stopOperation(true))
     },

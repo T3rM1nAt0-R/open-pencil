@@ -17,6 +17,7 @@ function freePort(): number {
   const probe = Bun.serve({ port: 0, fetch: () => new Response('') })
   const { port } = probe
   void probe.stop(true)
+  if (port === undefined) throw new Error('No free port was assigned')
   return port
 }
 
