@@ -193,8 +193,8 @@ export function figJamFillMode(fill: Fill | undefined): FigJamFillMode {
   return fill.opacity < 1 ? 'transparent' : 'fill'
 }
 
-/** The stroke FigJam pairs with a colour in a fill mode. */
-function pairedStroke(name: FigJamColorName, mode: FigJamFillMode): Color {
+/** The outline FigJam pairs with a colour in a fill mode. */
+export function figJamPairedStroke(name: FigJamColorName, mode: FigJamFillMode): Color {
   const entry = PALETTE[name]
   return parseColor(mode === 'fill' ? entry.stroke : entry.transparentStroke)
 }
@@ -240,10 +240,10 @@ export function figJamShapePaint(
   }
   const stroke = shape.strokes.at(0)
   const strokeFollows =
-    !stroke || !current || sameColor(stroke.color, pairedStroke(current, currentMode))
+    !stroke || !current || sameColor(stroke.color, figJamPairedStroke(current, currentMode))
   if (stroke && strokeFollows) {
     result.shape.strokes = [
-      { ...stroke, color: pairedStroke(name, mode) },
+      { ...stroke, color: figJamPairedStroke(name, mode) },
       ...shape.strokes.slice(1)
     ]
   }

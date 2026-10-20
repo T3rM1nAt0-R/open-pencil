@@ -1,5 +1,10 @@
 import type { Fill, NodeType, SceneNode, Stroke } from '@open-pencil/scene-graph'
-import { DEFAULT_STROKE_WEIGHT, SHAPE_WITH_TEXT_TOOL_SIZE } from '@open-pencil/scene-graph'
+import {
+  DEFAULT_STROKE_WEIGHT,
+  figJamColor,
+  figJamPairedStroke,
+  SHAPE_WITH_TEXT_TOOL_SIZE
+} from '@open-pencil/scene-graph'
 import { copyFills, copyStrokes } from '@open-pencil/scene-graph/copy'
 
 import {
@@ -14,16 +19,16 @@ import {
 
 const BLACK_FILL: Fill = { type: 'SOLID', color: BLACK, opacity: 1, visible: true }
 const BLACK_STROKE: Stroke = { ...BLACK_FILL, weight: DEFAULT_STROKE_WEIGHT, align: 'CENTER' }
-/** FigJam's shape tool paints a new shape white with a 4 px #757575 stroke on its outline. */
+/** FigJam's shape tool paints a new shape in its palette's white, with white's 4 px outline. */
 const SHAPE_WITH_TEXT_FILL: Fill = {
   type: 'SOLID',
-  color: { r: 1, g: 1, b: 1, a: 1 },
+  color: figJamColor('white'),
   opacity: 1,
   visible: true
 }
 const SHAPE_WITH_TEXT_STROKE: Stroke = {
   type: 'SOLID',
-  color: { r: 0x75 / 255, g: 0x75 / 255, b: 0x75 / 255, a: 1 },
+  color: figJamPairedStroke('white', 'fill'),
   opacity: 1,
   visible: true,
   weight: 4,

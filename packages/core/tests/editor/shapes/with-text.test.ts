@@ -4,7 +4,7 @@ import { expectDefined } from '#core-tests/helpers/assert'
 
 import { setTextMeasurer } from '@open-pencil/core'
 import { createEditor } from '@open-pencil/core/editor'
-import { createSticky, shapeWithTextLabel, stickySublayers } from '@open-pencil/scene-graph'
+import { shapeWithTextLabel } from '@open-pencil/scene-graph'
 import { colorToHex } from '@open-pencil/scene-graph/color'
 
 import { applyGeneratedTextNameEdit } from '#core/editor/text/name'
@@ -96,15 +96,5 @@ describe('shapes with text in the editor', () => {
     expect(editor.graph.getNode(id)?.height).toBeGreaterThan(176)
     editor.setShapesWithTextTextSize([id], 'small')
     expect(editor.graph.getNode(id)?.height).toBe(176)
-  })
-
-  test('a typeface sets the text that a shape or a sticky note is named by', async () => {
-    const { editor, pageId } = setup()
-    const id = editor.createShape('SHAPE_WITH_TEXT', 0, 0, 176, 176, pageId)
-    const sticky = createSticky(editor.graph, pageId, {})
-    await editor.setGeneratedTextTypeface([id, sticky.id], 'technical')
-    const shape = expectDefined(editor.graph.getNode(id))
-    expect(shapeWithTextLabel(editor.graph, shape)?.fontFamily).toBe('Roboto Mono')
-    expect(stickySublayers(editor.graph, sticky)?.body.fontFamily).toBe('Roboto Mono')
   })
 })

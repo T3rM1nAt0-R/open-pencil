@@ -61,6 +61,7 @@ import { createStructureActions } from './structure'
 import { createTextActions } from './text'
 import { createPendingTextLayout } from './text/pending-layout'
 import { createTextSelectionStyle } from './text/selection-style'
+import { createGeneratedTextActions } from './text/typeface'
 import type {
   EditorContext,
   EditorEventName,
@@ -300,6 +301,7 @@ export function createEditor(options?: EditorOptions) {
   const icons = createIconActions(ctx)
   const stickies = createStickyActions(ctx)
   const shapesWithText = createShapeWithTextActions(ctx)
+  const generatedText = createGeneratedTextActions(ctx)
   const statuses = createStatusActions(ctx)
   createConnectorRouting(ctx)
   const connectorDrawing = createConnectorDrawActions(ctx)
@@ -478,6 +480,7 @@ export function createEditor(options?: EditorOptions) {
     ...icons,
     ...stickies,
     ...shapesWithText,
+    ...generatedText,
     statusWorkflow: statuses.statusWorkflow,
     getShownStatus: statuses.getShownStatus,
     setStatus: statuses.setStatus,

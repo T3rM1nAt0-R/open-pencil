@@ -6,23 +6,18 @@ import {
   figJamShapePaint,
   figJamTextSizeFields,
   figJamTypeface,
-  figJamTypefaceFields,
-  FIGJAM_TYPEFACES,
-  generatedFrameText,
   shapeWithTextFrameFields,
   shapeWithTextLabel,
   type FigJamColorName,
   type FigJamFillMode,
   type FigJamLineStyle,
   type FigJamTextSize,
-  type FigJamTypeface,
   type SceneNode
 } from '@open-pencil/scene-graph'
 import type { ShapeWithTextType } from '@open-pencil/scene-graph/shape-with-text'
 
 import { recordSubtreeEdit } from '#core/editor/components/slots/history'
 import type { EditorContext } from '#core/editor/types'
-import { weightToStyle } from '#core/text/fonts'
 
 const FILL_OPACITY: Record<FigJamFillMode, number> = { fill: 1, transparent: 0.5, none: 0 }
 
@@ -132,31 +127,6 @@ export function createShapeWithTextActions(ctx: EditorContext) {
     })
   }
 
-  /**
-   * Sets the text that sticky notes and shapes among `ids` are named by in one of FigJam's
-   * typefaces, once its face is loaded.
-   */
-  async function setGeneratedTextTypeface(ids: Iterable<string>, typeface: FigJamTypeface) {
-    const { fontFamily, fontWeight } = FIGJAM_TYPEFACES[typeface]
-    await ctx.loadFont(fontFamily, weightToStyle(fontWeight, false))
-    const frames = [...ids].flatMap((id) => {
-      const node = ctx.graph.getNode(id)
-      return node && generatedFrameText(ctx.graph, node) ? [node] : []
-    })
-    if (frames.length === 0) return
-    recordSubtreeEdit(
-      ctx,
-      'Change typeface',
-      frames.map((frame) => frame.id),
-      () => {
-        for (const frame of frames) {
-          const text = generatedFrameText(ctx.graph, frame)
-          if (text) ctx.graph.updateNode(text.id, figJamTypefaceFields(typeface, text))
-        }
-      }
-    )
-  }
-
   return {
     setShapeWithTextKind,
     changeShapesWithTextKind,
@@ -164,7 +134,6 @@ export function createShapeWithTextActions(ctx: EditorContext) {
     setShapesWithTextFillMode,
     setShapesWithTextLineStyle,
     setShapesWithTextLineColor,
-    setShapesWithTextTextSize,
-    setGeneratedTextTypeface
+    setShapesWithTextTextSize
   }
 }
