@@ -72,6 +72,10 @@ interface MCPLookup {
 // prevents a server that outlives a crashed/reloaded app from squatting the
 // port forever while still allowing brief renderer reloads (issue #488).
 const MCP_APP_ATTACH_TIMEOUT_MS = 30_000
+// A server started from a cold npm shim can take longer than a few seconds to answer (14.8 s on
+// a Windows VM, issue #1167). The app waits this long for it, leaving the rest of the attach
+// grace above for the app to connect once it does.
+const MCP_STARTUP_HEALTH_DEADLINE_MS = MCP_APP_ATTACH_TIMEOUT_MS - 10_000
 
 /** Delays used while a spawned server comes up; tests shorten them. */
 export interface MCPStartupTiming {
@@ -79,6 +83,8 @@ export interface MCPStartupTiming {
   earlyExitMs: number
   /** Delay before each of the health polls after spawning. */
   healthPollMs: number
+  /** How long to keep polling while the child runs before giving up on it. */
+  healthDeadlineMs?: number
 }
 const DEFAULT_STARTUP_TIMING: MCPStartupTiming = { earlyExitMs: 250, healthPollMs: 1000 }
 
@@ -352,6 +358,27 @@ async function pollHealth(
   return null
 }
 
+/**
+ * Polls a server the app just started for as long as it runs, up to a deadline, so a slow start
+ * is not mistaken for a failed one. Resolves to null when the deadline passes or the child exits.
+ */
+async function waitForHealth(
+  deadlineMs: number,
+  delayMs: number,
+  authToken: string | null,
+  childClosed: Promise<unknown>
+): Promise<AutomationHealth | null> {
+  const exited = childClosed.then(() => 'exited' as const)
+  const giveUpAt = Date.now() + deadlineMs
+  for (;;) {
+    const woke = await Promise.race([promiseTimeout(delayMs).then(() => 'waited' as const), exited])
+    if (woke === 'exited') return null
+    const health = await readAutomationHealth(authToken)
+    if (health) return health
+    if (Date.now() >= giveUpAt) return null
+  }
+}
+
 export async function getAutomationAuthToken(): Promise<string | null> {
   if (runtimeAutomationAuthToken) return runtimeAutomationAuthToken
   const health = await readAutomationHealth()
@@ -440,6 +467,23 @@ async function configureDevMCP(): Promise<AutomationServerHandle> {
   return { disconnect: noop, authToken, managed: true }
 }
 
+function exitedStartupError(
+  message: string,
+  event: { code: number | null; signal: number | null },
+  stderr: string
+): MCPStartupError {
+  const details = stderr.trim()
+  return new MCPStartupError(
+    `${message} (code ${event.code ?? 'null'}, signal ${event.signal ?? 'null'})${details ? `: ${details}` : '.'}`,
+    mcpFailure(
+      'exited',
+      compact([`code=${event.code ?? 'null'}`, `signal=${event.signal ?? 'null'}`, details]).join(
+        ' '
+      )
+    )
+  )
+}
+
 async function startMCPIfNeeded(timing: MCPStartupTiming): Promise<AutomationServerHandle | null> {
   runtimeAutomationStartupError = null
   runtimeAutomationStartupFailure = null
@@ -472,6 +516,9 @@ async function startMCPIfNeeded(timing: MCPStartupTiming): Promise<AutomationSer
       OPENPENCIL_MCP_TCP: '1',
       OPENPENCIL_MCP_ROOT: mcpRoot,
       OPENPENCIL_MCP_APP_TIMEOUT_MS: String(MCP_APP_ATTACH_TIMEOUT_MS),
+      // Killing the shell wrapper on Windows leaves the server it started running; the app's end
+      // of the pipe closes with it, and the server exits on that.
+      OPENPENCIL_MCP_EXIT_ON_STDIN_CLOSE: '1',
       OPENPENCIL_MCP_DISABLED_TOOLS: serializeDisabledTools(disabledMCPTools.value),
       OPENPENCIL_MCP_SCOPE: mcpScope()
     }
@@ -507,22 +554,16 @@ async function startMCPIfNeeded(timing: MCPStartupTiming): Promise<AutomationSer
     promiseTimeout(timing.earlyExitMs).then(() => null)
   ])
   if (earlyExit) {
-    const details = startupStderr.trim()
     return rememberStartupError(
-      new MCPStartupError(
-        `MCP server exited before startup completed (code ${earlyExit.code ?? 'null'}, signal ${earlyExit.signal ?? 'null'})${details ? `: ${details}` : '.'}`,
-        mcpFailure(
-          'exited',
-          compact([
-            `code=${earlyExit.code ?? 'null'}`,
-            `signal=${earlyExit.signal ?? 'null'}`,
-            details
-          ]).join(' ')
-        )
-      )
+      exitedStartupError('MCP server exited before startup completed', earlyExit, startupStderr)
     )
   }
-  const health = await pollHealth(5, timing.healthPollMs, authToken)
+  const health = await waitForHealth(
+    timing.healthDeadlineMs ?? MCP_STARTUP_HEALTH_DEADLINE_MS,
+    timing.healthPollMs,
+    authToken,
+    childClosed
+  )
 
   if (health) {
     try {
@@ -553,10 +594,17 @@ async function startMCPIfNeeded(timing: MCPStartupTiming): Promise<AutomationSer
     }
   }
 
+  // A child that exited while the app waited for it is a crash, not a slow start.
+  const exitedWhileWaiting = await Promise.race([childClosed, Promise.resolve(null)])
   try {
     await child.kill().catch(() => undefined)
   } finally {
     runtimeAutomationAuthToken = null
+  }
+  if (exitedWhileWaiting) {
+    return rememberStartupError(
+      exitedStartupError('MCP server exited before it answered', exitedWhileWaiting, startupStderr)
+    )
   }
   return rememberStartupError(
     new MCPStartupError(

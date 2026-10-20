@@ -165,7 +165,8 @@ export function createMCPRuntimeService(dependencies: MCPRuntimeDependencies) {
     }
     replacements++
     await stopOperation(false)
-    if (activeStore) await startOperation()
+    // The user may have stopped the server while this one was being taken down.
+    if (activeStore && !stopRequested) await startOperation()
   }
 
   async function disconnectCurrentServer(): Promise<Error | null> {
@@ -235,10 +236,12 @@ export function createMCPRuntimeService(dependencies: MCPRuntimeDependencies) {
     state,
     refresh: () => enqueue(refreshOperation),
     start(getStore: () => EditorStore): Promise<MCPRuntimeResult> {
-      activeStore = getStore
-      replacements = 0
-      stopRequested = false
-      return enqueue(startOperation)
+      return enqueue(() => {
+        activeStore = getStore
+        replacements = 0
+        stopRequested = false
+        return startOperation()
+      })
     },
     stop: () => {
       replacements = 0

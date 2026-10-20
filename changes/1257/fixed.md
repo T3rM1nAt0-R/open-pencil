@@ -1,1 +1,1 @@
-- Fixed the desktop app being left without an MCP server when the one it started exited on its own; the app now notices and starts a new one.
+- Fixed the desktop app giving up on its MCP server before a slow start finished on Windows (#1167): it now waits for the server for as long as it runs, up to 20 seconds, and no longer leaves the server running when the app stops it. The app also starts a new server when the one it started stops answering.

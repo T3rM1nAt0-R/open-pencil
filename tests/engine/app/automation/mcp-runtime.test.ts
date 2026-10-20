@@ -327,4 +327,87 @@ describe('MCP runtime service', () => {
     // Without the reset the second round would give up after one more spawn.
     expect(spawns).toBe(8)
   })
+
+  test('does not start a replacement when the server is stopped while the old one shuts down', async () => {
+    let spawns = 0
+    let shuttingDown: () => void = () => undefined
+    let release: () => void = () => undefined
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let alive = true
+    const { service } = setup({
+      watchIntervalMs: 5,
+      readHealth: async () => (alive ? { status: 'ok', tools: [descriptor()] } : null),
+      spawn: async () => {
+        spawns++
+        return {
+          authToken: 'token',
+          managed: true,
+          disconnect: async () => {
+            shuttingDown()
+            await held
+          }
+        }
+      }
+    })
+    await service.start(getStore)
+    const goingDown = new Promise<void>((resolve) => {
+      shuttingDown = resolve
+    })
+    alive = false
+    await goingDown
+    const stopped = service.stop()
+    release()
+    await stopped
+    await Bun.sleep(30)
+
+    expect(spawns).toBe(1)
+    expect(service.state.status).toBe('stopped')
+  })
+
+  test('a stop and start queued behind a replacement do not let it start another server', async () => {
+    let spawns = 0
+    let shuttingDown: () => void = () => undefined
+    let release: () => void = () => undefined
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let alive = true
+    const { service } = setup({
+      watchIntervalMs: 5,
+      readHealth: async () => (alive ? { status: 'ok', tools: [descriptor()] } : null),
+      spawn: async () => {
+        spawns++
+        const first = spawns === 1
+        alive = true
+        return {
+          authToken: 'token',
+          managed: true,
+          disconnect: async () => {
+            if (!first) return
+            shuttingDown()
+            await held
+          }
+        }
+      }
+    })
+    await service.start(getStore)
+    const goingDown = new Promise<void>((resolve) => {
+      shuttingDown = resolve
+    })
+    alive = false
+    await goingDown
+    // The watcher is replacing the first server. A stop and a start arrive behind it.
+    const stopped = service.stop()
+    const started = service.start(getStore)
+    release()
+    await stopped
+    await started
+    await Bun.sleep(30)
+
+    // The first server and the explicit start; the replacement was cancelled by the stop.
+    expect(spawns).toBe(2)
+    await service.stop()
+  })
 })
