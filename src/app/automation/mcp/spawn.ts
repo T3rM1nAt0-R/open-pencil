@@ -370,12 +370,20 @@ async function waitForHealth(
 ): Promise<AutomationHealth | null> {
   const exited = childClosed.then(() => 'exited' as const)
   const giveUpAt = Date.now() + deadlineMs
+  const deadline = promiseTimeout(deadlineMs).then(() => 'deadline' as const)
   for (;;) {
-    const woke = await Promise.race([promiseTimeout(delayMs).then(() => 'waited' as const), exited])
-    if (woke === 'exited') return null
-    const health = await readAutomationHealth(authToken)
+    const remainingMs = giveUpAt - Date.now()
+    if (remainingMs <= 0) return null
+    const woke = await Promise.race([
+      promiseTimeout(Math.min(delayMs, remainingMs)).then(() => 'waited' as const),
+      deadline,
+      exited
+    ])
+    if (woke !== 'waited') return null
+    // A probe still running at the deadline does not count.
+    const health = await Promise.race([readAutomationHealth(authToken), deadline])
+    if (health === 'deadline') return null
     if (health) return health
-    if (Date.now() >= giveUpAt) return null
   }
 }
 

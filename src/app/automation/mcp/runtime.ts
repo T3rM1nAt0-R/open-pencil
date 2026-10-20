@@ -164,7 +164,8 @@ export function createMCPRuntimeService(dependencies: MCPRuntimeDependencies) {
       return
     }
     replacements++
-    await stopOperation(false)
+    // A server that could not be taken down is not replaced while it may still be running.
+    if (!(await stopOperation(false)).ok) return
     // The user may have stopped the server while this one was being taken down.
     if (activeStore && !stopRequested) await startOperation()
   }

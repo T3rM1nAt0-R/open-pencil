@@ -252,6 +252,31 @@ describe('MCP runtime service', () => {
     expect(healthChecks).toBe(checks)
   })
 
+  test('does not start a replacement when the dead server could not be taken down', async () => {
+    let spawns = 0
+    let alive = true
+    const { service } = setup({
+      watchIntervalMs: 5,
+      readHealth: async () => (alive ? { status: 'ok', tools: [descriptor()] } : null),
+      spawn: async () => {
+        spawns++
+        return {
+          authToken: 'token',
+          managed: true,
+          disconnect: () => {
+            throw new Error('shutdown failed')
+          }
+        }
+      }
+    })
+    await service.start(getStore)
+    alive = false
+    await until(() => service.state.status === 'error')
+    await Bun.sleep(30)
+
+    expect(spawns).toBe(1)
+  })
+
   test('does not watch a server after it was stopped', async () => {
     let spawns = 0
     let alive = true
