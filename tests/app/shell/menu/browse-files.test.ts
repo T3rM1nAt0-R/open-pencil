@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 
-import type { Router } from 'vue-router'
+import { createMemoryHistory, createRouter } from 'vue-router'
 
-import { homeLocation } from '@/app/home/location'
+import { homeLocation, type HomeLocation } from '@/app/home/location'
 import {
   activeStorageProviderID,
   storageProviderRegistry,
@@ -10,7 +10,15 @@ import {
 } from '@/app/integrations/storage'
 import { browseFiles } from '@/app/shell/menu/navigation'
 
-const router = { push: () => new Promise<void>(() => undefined) } as unknown as Router
+const router = createRouter({
+  history: createMemoryHistory(),
+  routes: [{ path: '/', component: { render: () => null } }]
+})
+
+/** Read through a function, as browsing changes it after the test set it. */
+function shownLocation(): HomeLocation {
+  return homeLocation.value
+}
 
 afterEach(() => {
   const providerID = activeStorageProviderID.value
@@ -26,7 +34,7 @@ describe('browsing files from the File menu', () => {
 
     browseFiles(router)
 
-    expect(homeLocation.value).toEqual({ kind: 'shared' })
+    expect(shownLocation()).toEqual({ kind: 'shared' })
   })
 
   test('opens Home on the storage bucket once it is set up', () => {
@@ -38,6 +46,6 @@ describe('browsing files from the File menu', () => {
 
     browseFiles(router)
 
-    expect(homeLocation.value).toEqual({ kind: 'storage' })
+    expect(shownLocation()).toEqual({ kind: 'storage' })
   })
 })
