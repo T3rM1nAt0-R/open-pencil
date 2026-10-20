@@ -1,8 +1,8 @@
 const figJamPaletteTheme = {
   slots: {
-    swatches: 'flex flex-wrap gap-1',
+    swatches: 'grid grid-cols-11 gap-[3px] justify-items-center',
     swatch:
-      'size-[18px] cursor-pointer rounded-full border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50'
+      'size-4 cursor-pointer rounded-full border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50'
   },
   variants: {
     active: {

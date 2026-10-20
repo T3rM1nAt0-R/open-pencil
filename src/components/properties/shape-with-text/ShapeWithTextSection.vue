@@ -15,14 +15,17 @@ import FigJamPalette from '@/components/shapes/FigJamPalette.vue'
 import { useShapeKindLabels } from '@/components/shapes/labels'
 import ShapeKindPicker from '@/components/shapes/ShapeKindPicker.vue'
 import { useFigJamTextOptions } from '@/components/shapes/text-options'
+import Tip from '@/components/ui/overlay/Tip.vue'
 import PanelFieldGroup from '@/components/ui/panel/PanelFieldGroup.vue'
 import PanelSection from '@/components/ui/panel/PanelSection.vue'
 import AppSelect from '@/components/ui/select/AppSelect.vue'
+import SegmentedControl from '@/components/ui/select/SegmentedControl.vue'
 import theme from '@/theme/select/app'
 
 /**
  * The selected shapes' kind, colour, outline and text, as FigJam's selection toolbar sets them:
- * its palette and fill modes, solid or dashed lines, and its text sizes and typefaces.
+ * its palette with solid, see-through or no fill, solid, dashed or no outline, and its text sizes
+ * and typefaces.
  */
 const shapes = useShapeMessages()
 const { panels } = useI18n()
@@ -45,7 +48,6 @@ const {
   setTypeface
 } = useShapeWithText()
 const label = useShapeKindLabels()
-
 const { sizeOptions, typefaceOptions } = useFigJamTextOptions()
 const typefaceName = computed(() => labelFont.value ?? shapes.value.typeface)
 const styles = tv(theme)()
@@ -61,14 +63,16 @@ const lineOptions = computed<Array<{ value: FigJamLineStyle; label: string }>>((
   { value: 'none', label: shapes.value.lineNone }
 ])
 
-const selectedFill = computed<FigJamFillMode>({
-  get: () => fillMode.value ?? 'fill',
-  set: setFillMode
-})
-const selectedLine = computed<FigJamLineStyle>({
-  get: () => lineStyle.value ?? 'solid',
-  set: setLineStyle
-})
+function pickFillMode(value: string) {
+  const option = fillOptions.value.find((entry) => entry.value === value)
+  if (option) setFillMode(option.value)
+}
+
+function pickLineStyle(value: string) {
+  const option = lineOptions.value.find((entry) => entry.value === value)
+  if (option) setLineStyle(option.value)
+}
+
 const selectedSize = computed<FigJamTextSize>({
   get: () => textSize.value ?? 'small',
   set: setTextSize
@@ -84,7 +88,7 @@ const selectedTypeface = computed<string>({
 
 <template>
   <PanelSection v-if="active && kind" :label="shapes.kind">
-    <div class="grid gap-2.5">
+    <div class="grid gap-3">
       <ShapeKindPicker
         :heading="shapes.kind"
         :selected="kind"
@@ -107,25 +111,47 @@ const selectedTypeface = computed<string>({
         </template>
       </ShapeKindPicker>
       <PanelFieldGroup :label="shapes.fill">
-        <div class="grid gap-1.5">
+        <div class="grid gap-2">
           <FigJamPalette :label="shapes.fill" :selected="color" @select="setColor" />
-          <AppSelect
-            v-model="selectedFill"
-            :label="shapes.fill"
+          <SegmentedControl
+            :model-value="fillMode ?? ''"
             :options="fillOptions"
+            :label="shapes.fill"
             data-property="shape-fill-mode"
-          />
+            @change="pickFillMode"
+          >
+            <template #option="{ option }">
+              <Tip :label="option.label">
+                <span class="flex items-center justify-center">
+                  <icon-lucide-droplet v-if="option.value === 'fill'" class="size-3.5" />
+                  <icon-lucide-blend v-else-if="option.value === 'transparent'" class="size-3.5" />
+                  <icon-lucide-droplet-off v-else class="size-3.5" />
+                </span>
+              </Tip>
+            </template>
+          </SegmentedControl>
         </div>
       </PanelFieldGroup>
       <PanelFieldGroup :label="shapes.line">
-        <div class="grid gap-1.5">
+        <div class="grid gap-2">
           <FigJamPalette :label="shapes.line" :selected="lineColor" @select="setLineColor" />
-          <AppSelect
-            v-model="selectedLine"
-            :label="shapes.line"
+          <SegmentedControl
+            :model-value="lineStyle ?? ''"
             :options="lineOptions"
+            :label="shapes.line"
             data-property="shape-line-style"
-          />
+            @change="pickLineStyle"
+          >
+            <template #option="{ option }">
+              <Tip :label="option.label">
+                <span class="flex items-center justify-center">
+                  <icon-lucide-minus v-if="option.value === 'solid'" class="size-3.5" />
+                  <icon-lucide-ellipsis v-else-if="option.value === 'dashed'" class="size-3.5" />
+                  <icon-lucide-ban v-else class="size-3.5" />
+                </span>
+              </Tip>
+            </template>
+          </SegmentedControl>
         </div>
       </PanelFieldGroup>
       <PanelFieldGroup :label="panels.stickyTextSize">

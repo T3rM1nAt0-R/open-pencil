@@ -123,9 +123,12 @@ test("the properties panel paints a shape with FigJam's palette and sizes its te
   )
   expect(await lastShape()).toMatchObject({ fill: '#874fff', stroke: '#5427b4' })
 
-  await editor.page.locator('[data-property="shape-line-style"]').click()
-  await editor.page.getByRole('option', { name: 'Dashed', exact: true }).click()
-  await expect(editor.page.locator('[data-property="shape-line-style"]')).toContainText('Dashed')
+  const dashed = editor.page.locator('[data-property="shape-line-style"]').getByLabel('Dashed', {
+    exact: true
+  })
+  await dashed.click()
+  await expect(dashed).toHaveAttribute('data-state', 'on')
+  expect(await lastShape()).toMatchObject({ fill: '#874fff' })
 
   await editor.page.locator('[data-property="shape-text-size"]').click()
   await editor.page.getByRole('option', { name: 'Huge', exact: true }).click()
