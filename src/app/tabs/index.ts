@@ -102,26 +102,27 @@ export function createTab(store?: EditorStore, initialGraph?: SceneGraph): Tab {
   return tab
 }
 
+/** The one Home tab. It stays first, cannot be closed, and never turns into a design. */
 export function createHomeTab(): Tab {
+  const existing = tabsRef.value.find((tab) => tab.kind === 'home')
+  if (existing) {
+    activateTab(existing)
+    return existing
+  }
   const tab: Tab = { id: generateTabId(), store: createEditorStore(), kind: 'home' }
-  tabsRef.value = [...tabsRef.value, tab]
+  tabsRef.value = [tab, ...tabsRef.value]
   activateTab(tab)
   return tab
 }
 
-export function leaveHome(tabId: string): void {
-  const tabIndex = tabsRef.value.findIndex((candidate) => candidate.id === tabId)
-  if (tabIndex === -1) return
-  const tab = tabsRef.value[tabIndex]
-  if (tab.kind !== 'home') return
-  tabsRef.value = tabsRef.value.with(tabIndex, { ...tab, kind: 'document' })
-}
-
-export function createDocumentInCurrentTab(): Tab {
-  const current = activeTab.value
-  if (current?.kind !== 'home') return createTab()
-  leaveHome(current.id)
-  return getTabById(current.id) ?? current
+/** Makes sure Home exists in front of the designs without taking focus from the open one. */
+export function ensureHomeTab(): void {
+  if (tabsRef.value.some((tab) => tab.kind === 'home')) return
+  const activeId = activeTabId.value
+  const home = createHomeTab()
+  const active = tabsRef.value.find((tab) => tab.id === activeId)
+  if (active) activateTab(active)
+  else activateTab(home)
 }
 
 export function showNewTab(): void {
@@ -161,7 +162,7 @@ export async function closeTab(tabId: string, unsaved?: 'save' | 'discard'): Pro
   if (idx === -1) return
 
   const closingTab = tabsRef.value[idx]
-  if (closingTab.kind === 'home' && tabsRef.value.length === 1) return
+  if (closingTab.kind === 'home') return
   const choice = unsaved
     ? await confirmDocumentClose(closingTab.store, async () => unsaved)
     : await requestDocumentClose(closingTab.store, closingTab.store.state.documentName)
@@ -199,16 +200,11 @@ function isDOMImportFile(file: File): boolean {
 
 function reusableTabStore(): { store: EditorStore; created: boolean } {
   const current = activeTab.value
-  if (current?.kind === 'home') {
-    leaveHome(current.id)
-    return { store: current.store, created: false }
-  }
   const isUntouched =
-    current?.store.state.documentName === 'Untitled' && !current.store.undo.canUndo
-  if (isUntouched) {
-    leaveHome(current.id)
-    return { store: current.store, created: false }
-  }
+    current?.kind === 'document' &&
+    current.store.state.documentName === 'Untitled' &&
+    !current.store.undo.canUndo
+  if (current && isUntouched) return { store: current.store, created: false }
   return { store: createTab().store, created: true }
 }
 
@@ -545,9 +541,8 @@ export function useTabsStore() {
     tabs: allTabs,
     activeTabId,
     createHomeTab,
-    createDocumentInCurrentTab,
     createTab,
-    leaveHome,
+    ensureHomeTab,
     switchTab,
     closeTab,
     getActiveTabId,

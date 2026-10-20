@@ -25,6 +25,7 @@ import { openWebLinkFromLocation, withoutWebLinkParams } from '@/app/document/io
 import { setActiveEditorStore } from '@/app/editor/active-store'
 import { focusNodesByName } from '@/app/editor/selection/focus'
 import { notificationMessages } from '@/app/i18n/notifications'
+import { recentFilesAvailable } from '@/app/recent-files/preferences'
 import { appRuntimeConfig } from '@/app/runtime/config'
 import { useDocumentDrop } from '@/app/shell/document-drop'
 import { useKeyboard } from '@/app/shell/keyboard/use'
@@ -32,8 +33,8 @@ import { useEditorMenu } from '@/app/shell/menu/use'
 import { toast } from '@/app/shell/ui'
 import {
   activeTab,
-  createDocumentInCurrentTab,
   createHomeTab,
+  ensureHomeTab,
   createTab,
   getActiveStore,
   getTabsSnapshot,
@@ -111,6 +112,11 @@ function openFirstTab(): Tab {
       )
     })
   }
+}
+
+// Home stays in front of the designs wherever the app keeps a list of recent files.
+if (route.path === '/' && !appRuntimeConfig.test && !route.meta.demo && recentFilesAvailable()) {
+  ensureHomeTab()
 }
 
 // A first visit to the demo link is a first run too; the welcome there skips the tour offer.
@@ -297,7 +303,7 @@ onUnmounted(() => {
     <RenameSelectionDialog />
     <CommandPalette />
     <TabBar />
-    <HomeWorkspace v-show="activeTab?.kind === 'home'" @new-document="createDocumentInCurrentTab" />
+    <HomeWorkspace v-show="activeTab?.kind === 'home'" @new-document="createTab" />
     <CloudVersionDialog />
     <EditorWorkspace v-if="shown && shown.tab.kind !== 'home'" :key="shown.key" :tab="shown.tab" />
   </div>
