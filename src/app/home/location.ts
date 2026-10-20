@@ -35,3 +35,18 @@ export const homeLocation = computed<HomeLocation>({
     stored.value = location
   }
 })
+
+type LeaveGuard = (proceed: () => void) => void
+
+let leaveGuard: LeaveGuard | null = null
+
+/** Lets the shown Home page ask before it is left, for edits that are not saved yet. */
+export function setHomeLeaveGuard(guard: LeaveGuard | null): void {
+  leaveGuard = guard
+}
+
+/** Runs a change of Home's place after the shown page agrees to be left. */
+export function whenHomeMayChange(action: () => void): void {
+  if (leaveGuard) leaveGuard(action)
+  else action()
+}

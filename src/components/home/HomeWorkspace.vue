@@ -5,6 +5,7 @@ import { computed, onScopeDispose, ref, useTemplateRef, watch } from 'vue'
 import { useDocumentWorkspace, useI18n, useViewportKind } from '@open-pencil/vue'
 
 import { CLOUD_INCLUDED, CLOUD_STORAGE_PROVIDER_ID } from '@/app/cloud/integration'
+import { setHomeLeaveGuard } from '@/app/home/location'
 import { useHomeLocations } from '@/app/home/locations'
 import {
   activeStorageProviderID,
@@ -58,6 +59,8 @@ function whileSettingsGuard(action: () => void): void {
   if (places.location.value.kind === 'settings' && guard) guard(action)
   else action()
 }
+setHomeLeaveGuard(whileSettingsGuard)
+onScopeDispose(() => setHomeLeaveGuard(null))
 const selectLocation = (next: Parameters<typeof places.select>[0]) =>
   whileSettingsGuard(() => places.select(next))
 

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test'
 
 import { createMemoryHistory, createRouter } from 'vue-router'
 
-import { homeLocation, type HomeLocation } from '@/app/home/location'
+import { homeLocation, setHomeLeaveGuard, type HomeLocation } from '@/app/home/location'
 import {
   activeStorageProviderID,
   storageProviderRegistry,
@@ -26,6 +26,7 @@ afterEach(() => {
     writeStoragePreference(providerID, field.id, '')
   }
   homeLocation.value = { kind: 'recent' }
+  setHomeLeaveGuard(null)
 })
 
 describe('browsing files from the File menu', () => {
@@ -55,5 +56,19 @@ describe('browsing files from the File menu', () => {
     browseFiles(router)
 
     expect(shownLocation()).toEqual({ kind: 'storage' })
+  })
+
+  test('waits for the shown page to agree before leaving it', () => {
+    homeLocation.value = { kind: 'settings' }
+    let proceed: () => void = () => {}
+    setHomeLeaveGuard((next) => {
+      proceed = next
+    })
+
+    browseFiles(router)
+    expect(shownLocation()).toEqual({ kind: 'settings' })
+
+    proceed()
+    expect(shownLocation()).toEqual({ kind: 'recent' })
   })
 })

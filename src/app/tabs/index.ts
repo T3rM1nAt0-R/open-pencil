@@ -339,9 +339,11 @@ export async function openStorageDocumentInNewTab(
   try {
     await showStorageDocument(store, binding, document, load)
     rememberRecentStorageDocument(binding, document.name)
-    void cacheStorageDocumentPreview(document.id, store).catch((error) => {
-      console.warn('[Storage] Failed to draw the design preview', error)
-    })
+    void cacheStorageDocumentPreview(storageLocationOf(binding), document.id, store).catch(
+      (error) => {
+        console.warn('[Storage] Failed to draw the design preview', error)
+      }
+    )
     succeeded = true
   } catch (error) {
     if (!load.signal.aborted) {

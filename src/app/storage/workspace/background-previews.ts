@@ -41,7 +41,7 @@ async function drawPreview(
   )
   const preview = usablePreview(await renderOffscreenPreview(graph))
   if (!preview || !isCurrent()) return preview
-  await saveStoragePreview(id, preview)
+  await saveStoragePreview(location, id, preview)
   return preview
 }
 

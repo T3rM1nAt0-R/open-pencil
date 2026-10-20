@@ -6,6 +6,7 @@ import { renderThumbnail } from '@open-pencil/core/io/formats/raster'
 import { usablePreview } from '@/app/document/io/preview-bytes'
 import { DOCUMENT_PREVIEW_SIZE } from '@/app/document/io/preview-render'
 import type { EditorStore } from '@/app/editor/session'
+import type { StorageLocation } from '@/app/integrations/storage'
 import { cacheRecentFileThumbnail, loadCachedRecentFileThumbnail } from '@/app/recent-files'
 import { getLocalCanvasStore } from '@/app/storage/local-store'
 import { saveStoragePreview } from '@/app/storage/workspace/save-preview'
@@ -56,13 +57,14 @@ export async function cacheOpenedFigCover(
 
 /** Draws a preview once for a storage design that has none, then syncs it. */
 export async function cacheStorageDocumentPreview(
+  location: StorageLocation,
   documentId: string,
   store: EditorStore
 ): Promise<void> {
   const local = getLocalCanvasStore()
   if (usablePreview(await local.readThumb(documentId))) return
   const bytes = await renderDocumentPreview(store)
-  if (bytes) await saveStoragePreview(documentId, bytes)
+  if (bytes) await saveStoragePreview(location, documentId, bytes)
 }
 
 /** Draws the preview again whenever the page it shows, the cover or else the first page, changes. */

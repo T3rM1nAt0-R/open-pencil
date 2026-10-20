@@ -1,2 +1,1 @@
 - The cloud storage list on the home screen no longer flickers when it refreshes; a changed preview is swapped only once the new one has loaded.
-- Reopening the last session brings back a design in cloud storage from its own account and workspace, not the default ones.
