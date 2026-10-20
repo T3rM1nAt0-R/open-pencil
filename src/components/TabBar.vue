@@ -98,11 +98,7 @@ function onClose(e: MouseEvent, tabId: string) {
               <span role="img" :aria-label="files.unsavedChanges" :class="baseStyles.dirtyDot()" />
             </Tip>
           </TabsTrigger>
-          <Tip
-            v-if="!tab.isHome"
-            :label="files.closeTab({ name: tab.name })"
-            side="bottom"
-          >
+          <Tip v-if="!tab.isHome" :label="files.closeTab({ name: tab.name })" side="bottom">
             <button
               type="button"
               data-test-id="tabbar-close"
