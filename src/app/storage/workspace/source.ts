@@ -96,11 +96,12 @@ export function createStorageWorkspaceSource(
       const metadata = await localStore.getMeta(id)
       const own = metadata != null && sameStorageLocation(storageLocationOf(metadata), requested)
       const local = own ? usablePreview(await localStore.readThumb(id)) : null
-      if (local) return local
+      if (local) return isCurrent(requested) ? local : null
       const adapter = createStorageAdapter(requested)
       const remote = usablePreview(adapter.getThumbnail ? await adapter.getThumbnail(id) : null)
       if (remote) {
-        if (isCurrent(requested)) await localStore.writeThumb(id, remote, requested)
+        if (!isCurrent(requested)) return null
+        await localStore.writeThumb(id, remote, requested)
         return remote
       }
       // Nothing to show yet: draw one in the background, without opening the design.
