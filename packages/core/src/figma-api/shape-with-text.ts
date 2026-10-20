@@ -1,8 +1,11 @@
-import type { SceneNode } from '@open-pencil/scene-graph'
+import { createShapeWithText, type SceneGraph, type SceneNode } from '@open-pencil/scene-graph'
 import {
   isShapeWithTextType,
   type ShapeWithTextType
 } from '@open-pencil/scene-graph/shape-with-text'
+
+import type { InterfaceTheme } from '#core/constants'
+import { newLayerDefaults } from '#core/editor/shapes/defaults'
 
 /** A shape with text's FigJam kind; other layers have none. */
 export function shapeTypeOf(node: SceneNode): ShapeWithTextType | undefined {
@@ -18,4 +21,13 @@ export function checkedShapeType(node: SceneNode, value: unknown): ShapeWithText
     throw new Error(`in set_shapeType: Invalid shape type "${String(value)}"`)
   }
   return value
+}
+
+/** A new, empty shape with text on `pageId`, a square until its kind changes. */
+export function newShapeWithText(
+  graph: SceneGraph,
+  pageId: string,
+  theme: InterfaceTheme
+): SceneNode {
+  return createShapeWithText(graph, pageId, newLayerDefaults('SHAPE_WITH_TEXT', theme))
 }
