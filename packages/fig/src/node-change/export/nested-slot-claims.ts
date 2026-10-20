@@ -51,6 +51,10 @@ function atSourceScale(node: SceneNode, ratio: number): SceneNode {
   }
 }
 
+/**
+ * Whether a layer and its source match, descendants included. It stops at the first difference
+ * and only visits one slot's layers, so its cost follows the size of that slot's content.
+ */
 function sameLayer(graph: SceneGraph, layer: SceneNode, source: SceneNode, ratio: number): boolean {
   const a = atSourceScale(layer, ratio)
   const keys = new Set([...Object.keys(a), ...Object.keys(source)] as Array<keyof SceneNode>)

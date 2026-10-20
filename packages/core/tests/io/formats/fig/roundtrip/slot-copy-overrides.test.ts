@@ -43,6 +43,10 @@ async function reopen(graph: SceneGraph) {
   }
 }
 
+function slotContentCount(records: unknown[]): number {
+  return records.filter((record) => (record as SlotRecord).isSlotContent).length
+}
+
 beforeAll(async () => {
   await initCodec()
 })
@@ -78,6 +82,11 @@ describe('a copy of a component that holds an instance with slot content', () =>
     return graph
   }
 
+  async function slotContentWithoutCopy(): Promise<number> {
+    const { records } = await reopen(authored((editor, copy) => editor.graph.deleteNode(copy.id)))
+    return slotContentCount(records)
+  }
+
   test('keeps a slot layer hidden and another recoloured in the copy', async () => {
     const red = {
       type: 'SOLID' as const,
@@ -103,8 +112,8 @@ describe('a copy of a component that holds an instance with slot content', () =>
 
   test('writes no slot content for a copy that left the slot as it was', async () => {
     const { records } = await reopen(authored(() => undefined))
-    // Outer's nested instance assigns the slot once; the untouched copy adds nothing.
-    expect(records.filter((record) => (record as SlotRecord).isSlotContent)).toHaveLength(1)
+    // The untouched copy adds nothing to what Outer's own nested instance writes.
+    expect(slotContentCount(records)).toBe(await slotContentWithoutCopy())
   })
 
   test('writes no slot content for a copy whose nested instance was swapped but kept its slot', async () => {
@@ -125,14 +134,14 @@ describe('a copy of a component that holds an instance with slot content', () =>
         editor.graph.swapInstanceComponent(nested.id, other.id)
       })
     )
-    expect(records.filter((record) => (record as SlotRecord).isSlotContent)).toHaveLength(1)
+    expect(slotContentCount(records)).toBe(await slotContentWithoutCopy())
   })
 
   test('writes no slot content for a copy that was only rescaled', async () => {
     const { records } = await reopen(
       authored((editor, copy) => rescaleNodeTree(editor.graph, copy.id, 1.5))
     )
-    expect(records.filter((record) => (record as SlotRecord).isSlotContent)).toHaveLength(1)
+    expect(slotContentCount(records)).toBe(await slotContentWithoutCopy())
   })
 
   test('keeps a slot edit made in a rescaled copy', async () => {
