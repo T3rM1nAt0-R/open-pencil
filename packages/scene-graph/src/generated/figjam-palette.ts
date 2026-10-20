@@ -267,9 +267,11 @@ export function figJamLineStyleFields(
   style: FigJamLineStyle
 ): Partial<SceneNode> {
   const dashPattern = style === 'dashed' ? [...FIGJAM_SHAPE_DASH] : []
-  const strokes = shape.strokes.map(
-    (stroke): Stroke => ({ ...stroke, opacity: style === 'none' ? 0 : 1, dashPattern: [...dashPattern] })
-  )
+  const strokes = shape.strokes.map((stroke): Stroke => ({
+    ...stroke,
+    opacity: style === 'none' ? 0 : 1,
+    dashPattern: [...dashPattern]
+  }))
   return { strokes, dashPattern }
 }
 
