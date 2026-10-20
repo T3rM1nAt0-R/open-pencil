@@ -72,6 +72,12 @@ describe('shapes with text in the editor', () => {
     })
     editor.setShapesWithTextFillMode([id], 'transparent')
     expect(editor.graph.getNode(id)?.fills[0]?.opacity).toBe(0.5)
+    editor.setShapesWithTextFillMode([id], 'none')
+    editor.setShapesWithTextColor([id], 'violet')
+    // A colour picked for a shape without fill fills it again.
+    expect(editor.graph.getNode(id)?.fills[0]?.opacity).toBe(1)
+    editor.undo.undo()
+    editor.undo.undo()
     editor.undo.undo()
     editor.undo.undo()
     expect(hex(editor.graph.getNode(id)?.fills[0]?.color)).toBe('#ffffff')

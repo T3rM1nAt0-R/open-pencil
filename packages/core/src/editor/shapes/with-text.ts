@@ -80,11 +80,15 @@ export function createShapeWithTextActions(ctx: EditorContext) {
     if (label) ctx.graph.updateNode(label.id, painted.label)
   }
 
-  /** Paints the shapes in palette colour `name`, each keeping its fill mode. */
+  /**
+   * Paints the shapes in palette colour `name`. A see-through fill stays see-through, and a shape
+   * without fill is filled again.
+   */
   function setShapesWithTextColor(ids: Iterable<string>, name: FigJamColorName) {
-    editShapes('Change shape color', ids, (shape) =>
-      paint(shape, name, figJamFillMode(shape.fills.at(0)))
-    )
+    editShapes('Change shape color', ids, (shape) => {
+      const mode = figJamFillMode(shape.fills.at(0))
+      paint(shape, name, mode === 'none' ? 'fill' : mode)
+    })
   }
 
   /** Fills the shapes solid, see-through, or not at all, keeping their colour. */

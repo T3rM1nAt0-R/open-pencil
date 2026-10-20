@@ -81,10 +81,15 @@ describe("FigJam's shape colours", () => {
     const { shape } = placedShape()
     const dashed = figJamLineStyleFields(shape, 'dashed')
     expect(dashed.dashPattern).toEqual([16, 10])
+    // Strokes are drawn with their own dash, and files keep the layer's.
+    expect(dashed.strokes?.[0]?.dashPattern).toEqual([16, 10])
     expect(figJamLineStyle({ ...shape, ...dashed })).toBe('dashed')
     const hidden = figJamLineStyleFields(shape, 'none')
     expect(hidden.strokes?.[0]).toMatchObject({ opacity: 0, weight: 4 })
     expect(figJamLineStyle({ ...shape, ...hidden })).toBe('none')
+    // Colouring a hidden outline shows it again.
+    const shown = figJamLineColorFields({ ...shape, ...hidden }, 'red')
+    expect(shown.strokes?.[0]?.opacity).toBe(1)
   })
 })
 

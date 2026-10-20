@@ -1,6 +1,7 @@
 const figJamPaletteTheme = {
   slots: {
     swatches: 'grid grid-cols-11 gap-[3px] justify-items-center',
+    none: 'flex items-center justify-center bg-transparent text-muted',
     swatch:
       'size-4 cursor-pointer rounded-full border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50'
   },

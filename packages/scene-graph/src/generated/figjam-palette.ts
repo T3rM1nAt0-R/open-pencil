@@ -258,28 +258,32 @@ export function figJamShapePaint(
   return result
 }
 
-/** A shape's outline drawn `style`, as FigJam's line menu draws it; the weight stays. */
+/**
+ * A shape's outline drawn `style`, as FigJam's line menu draws it; the weight stays. The dash is
+ * the layer's, as files keep it, and each stroke's, as it is drawn.
+ */
 export function figJamLineStyleFields(
   shape: Pick<SceneNode, 'strokes'>,
   style: FigJamLineStyle
 ): Partial<SceneNode> {
-  const strokes = shape.strokes.map((stroke): Stroke => ({
-    ...stroke,
-    opacity: style === 'none' ? 0 : 1
-  }))
-  return { strokes, dashPattern: style === 'dashed' ? [...FIGJAM_SHAPE_DASH] : [] }
+  const dashPattern = style === 'dashed' ? [...FIGJAM_SHAPE_DASH] : []
+  const strokes = shape.strokes.map(
+    (stroke): Stroke => ({ ...stroke, opacity: style === 'none' ? 0 : 1, dashPattern: [...dashPattern] })
+  )
+  return { strokes, dashPattern }
 }
 
 /** The line style a shape's outline shows. */
-export function figJamLineStyle(
-  shape: Pick<SceneNode, 'strokes' | 'dashPattern'>
-): FigJamLineStyle {
+export function figJamLineStyle(shape: Pick<SceneNode, 'strokes'>): FigJamLineStyle {
   const stroke = shape.strokes.at(0)
   if (!stroke || !stroke.visible || stroke.opacity === 0) return 'none'
-  return shape.dashPattern.length > 0 ? 'dashed' : 'solid'
+  return (stroke.dashPattern?.length ?? 0) > 0 ? 'dashed' : 'solid'
 }
 
-/** A shape's outline in palette colour `name`, as FigJam's line menu colours it. */
+/**
+ * A shape's outline in palette colour `name`, as FigJam's line menu colours it; a hidden outline
+ * shows again, keeping its dash.
+ */
 export function figJamLineColorFields(
   shape: Pick<SceneNode, 'strokes'>,
   name: FigJamColorName
@@ -287,7 +291,7 @@ export function figJamLineColorFields(
   const color = figJamColor(name)
   const strokes =
     shape.strokes.length > 0
-      ? shape.strokes.map((stroke): Stroke => ({ ...stroke, color }))
+      ? shape.strokes.map((stroke): Stroke => ({ ...stroke, color, opacity: 1 }))
       : [
           {
             type: 'SOLID',

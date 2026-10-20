@@ -123,11 +123,15 @@ test("the properties panel paints a shape with FigJam's palette and sizes its te
   )
   expect(await lastShape()).toMatchObject({ fill: '#874fff', stroke: '#5427b4' })
 
-  const dashed = editor.page.locator('[data-property="shape-line-style"]').getByLabel('Dashed', {
-    exact: true
-  })
+  const dashed = editor.page.locator('[data-property="shape-line-dashed"]')
   await dashed.click()
-  await expect(dashed).toHaveAttribute('data-state', 'on')
+  await expect(dashed).toHaveAttribute('aria-pressed', 'true')
+  const noFill = editor.page
+    .getByRole('radiogroup', { name: 'Fill' })
+    .getByRole('radio', { name: 'None', exact: true })
+  await noFill.click()
+  await expect(noFill).toHaveAttribute('aria-checked', 'true')
+  await fill.getByRole('radio', { name: 'Violet', exact: true }).click()
   expect(await lastShape()).toMatchObject({ fill: '#874fff' })
 
   await editor.page.locator('[data-property="shape-text-size"]').click()
