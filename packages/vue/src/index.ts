@@ -126,6 +126,8 @@ export {
   type VariableModeOption
 } from '#vue/controls/variable-modes/helpers'
 export { useMask } from '#vue/controls/mask/use'
+export { useConnector } from '#vue/controls/connector/use'
+export { useShapeWithText } from '#vue/controls/shape-with-text/use'
 export { useStickyNote } from '#vue/controls/sticky/use'
 export { useIcon } from '#vue/controls/icon/use'
 export { useIconSearch } from '#vue/controls/icon/search'

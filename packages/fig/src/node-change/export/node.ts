@@ -752,6 +752,12 @@ function applyComponentMetadata(
   }
 }
 
+/** Whether the node is still saved in the box Figma gave it, not in its own. */
+function savedInFigmaBox(node: SceneNode): boolean {
+  const payload = effectiveFigmaSourcePayload(node)
+  return !!payload.rawSize && !!payload.rawTransform
+}
+
 function exportNodeSize(node: SceneNode): Vector {
   // rawSize and rawTransform are a matched pair describing the ORIGINAL Figma
   // box. Once the transform no longer backs the node, exportNodeTransform
@@ -759,10 +765,8 @@ function exportNodeSize(node: SceneNode): Vector {
   // an un-expanded rawSize disagrees about the box (for rotation, a different
   // centre) and the node drifts on reimport. Use rawSize only while the
   // transform still backs it.
-  const payload = effectiveFigmaSourcePayload(node)
-  return payload.rawSize && payload.rawTransform
-    ? { ...payload.rawSize }
-    : { x: node.width, y: node.height }
+  const { rawSize } = effectiveFigmaSourcePayload(node)
+  return rawSize && savedInFigmaBox(node) ? { ...rawSize } : { x: node.width, y: node.height }
 }
 
 function exportNodeTransform(context: SceneNodeToKiwiContext, node: SceneNode): Matrix {
@@ -902,6 +906,13 @@ function applyNodeVisualProps(
     }
   }
   if (!node.autoRename) nc.autoRename = false
+}
+
+/** The width a shape with text was given, which FigJam's record has no field for. */
+function applyShapeUserWidthPluginData(node: SceneNode): void {
+  const width =
+    node.type === 'SHAPE_WITH_TEXT' && node.shapeUserWidth > 0 ? node.shapeUserWidth : undefined
+  node.pluginData = withPluginData(node.pluginData, OPEN_PENCIL_PLUGIN_DATA.shapeUserWidth, width)
 }
 
 /**
@@ -1048,7 +1059,8 @@ export function sceneNodeToKiwiWithContext(
   applyExportSettingsPluginData(node)
   applyLibrarySourcePluginData(node)
   serializeNodeStatus(node, nc)
-  applyTextPathBoxPluginData(node)
+  applyShapeUserWidthPluginData(node)
+  applyTextPathBoxPluginData(node, savedInFigmaBox(node))
   const pluginData = mergePluginData(node.pluginData)
   if (pluginData.length > 0) nc.pluginData = pluginData
   if (node.pluginRelaunchData.length > 0) {
