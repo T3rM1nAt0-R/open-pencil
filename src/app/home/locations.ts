@@ -2,12 +2,16 @@ import { computed } from 'vue'
 
 import { useHomeCloud } from '@/app/cloud/integration'
 import { homeSettingsSection, type SettingsSection } from '@/app/settings/dialog'
-import type { HomeLocation as CloudHomeLocation } from '@/components/home/cloud/types'
 
 import { homeLocation, type HomeLocation } from './location'
 
 /** A Home location as the sidebar and the phone menu name it. */
-export type HomeLocationView = CloudHomeLocation
+export type HomeLocationView =
+  | { kind: 'recent'; id: 'recent' }
+  | { kind: 'workspace'; id: string }
+  | { kind: 'shared'; id: 'shared' }
+  | { kind: 'storage'; id: 'storage' }
+  | { kind: 'settings'; id: 'settings' }
 
 const VIEWS = {
   recent: { kind: 'recent', id: 'recent' },
