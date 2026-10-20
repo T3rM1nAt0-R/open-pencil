@@ -23,6 +23,15 @@ const IDENTITY_FIELDS = new Set([
   'instanceOverrides'
 ])
 
+/** Scale maps hold `1` for a field that was never rescaled, which is the same as no entry. */
+function withoutUnitScales(
+  scales: Partial<Record<string, number>>
+): Partial<Record<string, number>> {
+  return Object.fromEntries(
+    Object.entries(scales).filter(([, value]) => value === undefined || !sameValue(value, 1))
+  )
+}
+
 /**
  * Whether two field values match, where numbers that differ only by the rounding of a rescale
  * are the same and a field a rescale left undefined is the same as one that is missing.
@@ -45,9 +54,16 @@ function sameValue(a: unknown, b: unknown): boolean {
  */
 function atSourceScale(node: SceneNode, ratio: number): SceneNode {
   if (ratio === 1) return node
+  const unscale = (scales: Partial<Record<string, number>>) =>
+    Object.fromEntries(
+      Object.entries(scales).map(([field, value]) => [field, value && value / ratio])
+    )
   return {
     ...node,
     ...scaleNodeChanges(node, 1 / ratio, true),
+    // A rescale also changes the units its variable bindings and assignments resolve in.
+    variableBindingScales: unscale(node.variableBindingScales),
+    variableAssignmentScales: unscale(node.variableAssignmentScales),
     componentScale: node.componentScale / ratio
   }
 }
@@ -56,12 +72,42 @@ function atSourceScale(node: SceneNode, ratio: number): SceneNode {
  * Whether a layer and its source match, descendants included. It stops at the first difference
  * and only visits one slot's layers, so its cost follows the size of that slot's content.
  */
-function sameLayer(graph: SceneGraph, layer: SceneNode, source: SceneNode, ratio: number): boolean {
-  const a = atSourceScale(layer, ratio)
-  const keys = new Set([...Object.keys(a), ...Object.keys(source)] as Array<keyof SceneNode>)
-  for (const key of keys) {
-    if (!IDENTITY_FIELDS.has(key) && !sameValue(a[key], source[key])) return false
+function sameLayer(
+  graph: SceneGraph,
+  layer: SceneNode,
+  source: SceneNode,
+  ratio: number,
+  slotProperty?: { from: string; to: string }
+): boolean {
+  const scaled = atSourceScale(layer, ratio)
+  const a: SceneNode = {
+    ...scaled,
+    variableBindingScales: withoutUnitScales(scaled.variableBindingScales),
+    variableAssignmentScales: withoutUnitScales(scaled.variableAssignmentScales),
+    // A replacement component gives the slot a property id of its own; the layers match by name.
+    componentPropertyReferences: scaled.componentPropertyReferences.map((reference) =>
+      reference.propertyId === slotProperty?.from
+        ? { ...reference, propertyId: slotProperty.to }
+        : reference
+    )
   }
+  const b: SceneNode = {
+    ...source,
+    variableBindingScales: withoutUnitScales(source.variableBindingScales),
+    variableAssignmentScales: withoutUnitScales(source.variableAssignmentScales)
+  }
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)] as Array<keyof SceneNode>)
+  for (const key of keys) {
+    if (!IDENTITY_FIELDS.has(key) && !sameValue(a[key], b[key])) return false
+  }
+  // A copy's clone of an instance points at the layer it clones; a swap points it at another
+  // component, which is an edit of the slot.
+  if (
+    layer.type === 'INSTANCE' &&
+    layer.componentId !== source.id &&
+    layer.componentId !== source.componentId
+  )
+    return false
   const aChildren = graph.getChildren(layer.id)
   const bChildren = graph.getChildren(source.id)
   return (
@@ -105,17 +151,19 @@ function slotDiffersFromSource(
   const source = sourceId ? graph.getNode(sourceId) : undefined
   // A replacement component names its slot the same but gives it a property id of its own.
   const slotName = context.componentPropertyDefinitionsById.get(propertyId)?.name
-  const counterpart =
+  const match =
     source?.type === 'INSTANCE' && slotName !== undefined
       ? [...slotFrames(graph, source)].find(([sourcePropertyId]) => {
           const definition = context.componentPropertyDefinitionsById.get(sourcePropertyId)
           return definition?.type === 'SLOT' && definition.name === slotName
-        })?.[1]
+        })
       : undefined
-  return (
-    !counterpart ||
-    !sameLayer(graph, frame, counterpart, frame.componentScale / counterpart.componentScale)
-  )
+  if (!match) return true
+  const [sourcePropertyId, counterpart] = match
+  return !sameLayer(graph, frame, counterpart, frame.componentScale / counterpart.componentScale, {
+    from: propertyId,
+    to: sourcePropertyId
+  })
 }
 
 /**

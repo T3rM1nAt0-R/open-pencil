@@ -1,7 +1,5 @@
 import { beforeAll, describe, expect, test } from 'bun:test'
 
-import { releaseFigPopulationWorker } from '#core/kiwi/fig/population/client'
-
 import { expectDefined } from '#core-tests/helpers/assert'
 
 import {
@@ -13,7 +11,13 @@ import {
 } from '@open-pencil/core'
 import { createEditor } from '@open-pencil/core/editor'
 import { parseFigBuffer } from '@open-pencil/fig'
-import { createComponentPropertyId, rescaleNodeTree, slotPropertyId } from '@open-pencil/scene-graph'
+import {
+  createComponentPropertyId,
+  rescaleNodeTree,
+  slotPropertyId
+} from '@open-pencil/scene-graph'
+
+import { releaseFigPopulationWorker } from '#core/kiwi/fig/population/client'
 
 interface SlotRecord {
   isSlotContent?: boolean
@@ -53,7 +57,8 @@ beforeAll(async () => {
 
 describe('a copy of a component that holds an instance with slot content', () => {
   function authored(
-    edit: (editor: ReturnType<typeof createEditor>, copy: SceneNode, slot: string) => void
+    edit: (editor: ReturnType<typeof createEditor>, copy: SceneNode, slot: string) => void,
+    withLeaf = false
   ) {
     const editor = createEditor()
     const { graph } = editor
@@ -76,14 +81,20 @@ describe('a copy of a component that holds an instance with slot content', () =>
     )
     editor.createShape('RECTANGLE', 0, 0, 20, 20, nestedSlot.id, 'A')
     editor.createShape('RECTANGLE', 0, 0, 20, 20, nestedSlot.id, 'B')
+    if (withLeaf) {
+      const leaf = graph.createNode('COMPONENT', page, { name: 'Leaf', width: 10, height: 10 })
+      expectDefined(graph.createInstance(leaf.id, nestedSlot.id)).name = 'L'
+    }
     const copy = expectDefined(graph.createInstance(outer.id, page))
     copy.name = 'Copy'
     edit(editor, copy, slot)
     return graph
   }
 
-  async function slotContentWithoutCopy(): Promise<number> {
-    const { records } = await reopen(authored((editor, copy) => editor.graph.deleteNode(copy.id)))
+  async function slotContentWithoutCopy(withLeaf = false): Promise<number> {
+    const { records } = await reopen(
+      authored((editor, copy) => editor.graph.deleteNode(copy.id), withLeaf)
+    )
     return slotContentCount(records)
   }
 
@@ -153,5 +164,46 @@ describe('a copy of a component that holds an instance with slot content', () =>
     const copy = find(reopened, firstPage(reopened), 'Copy')
     expect(find(reopened, copy.id, 'A').visible).toBe(false)
     expect(find(reopened, copy.id, 'B').visible).toBe(true)
+  })
+  test('writes no slot content for a rescaled copy whose slot holds an instance', async () => {
+    const { records } = await reopen(
+      authored((editor, copy) => rescaleNodeTree(editor.graph, copy.id, 1.5), true)
+    )
+    expect(slotContentCount(records)).toBe(await slotContentWithoutCopy(true))
+  })
+
+  test('keeps an instance in the slot swapped to another component in the copy', async () => {
+    const { records } = await reopen(
+      authored((editor, copy) => {
+        const other = editor.graph.createNode('COMPONENT', editor.state.currentPageId, {
+          name: 'Leaf2',
+          width: 10,
+          height: 10
+        })
+        editor.graph.swapInstanceComponent(find(editor.graph, copy.id, 'L').id, other.id)
+      }, true)
+    )
+    expect(slotContentCount(records)).toBeGreaterThan(await slotContentWithoutCopy(true))
+  })
+
+  test('writes no slot content when a replacement component names the slot with an id of its own', async () => {
+    const { records } = await reopen(
+      authored((editor, copy) => {
+        const slot = createComponentPropertyId()
+        const other = editor.graph.createNode('COMPONENT', editor.state.currentPageId, {
+          name: 'Other',
+          componentPropertyDefinitions: [{ id: slot, name: 'Body', type: 'SLOT', defaultValue: '' }]
+        })
+        editor.graph.createNode('FRAME', other.id, {
+          name: 'Body',
+          width: 200,
+          height: 100,
+          componentPropertyReferences: [{ propertyId: slot, field: 'SLOT_CONTENT' }]
+        })
+        const nested = expectDefined(editor.graph.getChildren(copy.id).at(0))
+        editor.graph.swapInstanceComponent(nested.id, other.id)
+      })
+    )
+    expect(slotContentCount(records)).toBe(await slotContentWithoutCopy())
   })
 })
