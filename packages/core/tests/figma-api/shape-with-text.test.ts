@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'bun:test'
 
-import { FigmaAPI } from '@open-pencil/core/figma-api'
 import { SceneGraph } from '@open-pencil/scene-graph'
+
+import { FigmaAPI } from '#core/figma-api'
 
 const RED = [
   { type: 'SOLID' as const, color: { r: 1, g: 0, b: 0, a: 1 }, opacity: 1, visible: true }

@@ -44,7 +44,6 @@ import {
 } from '#core/figma-api/transform'
 import type { FigmaTransform } from '#core/figma-api/types'
 import { figmaRotation } from '#core/geometry/figma'
-import { textAutoResizeChanges } from '#core/layout/text-auto-resize'
 
 const TRANSFORM_FIELDS: ReadonlySet<string> = new Set(NODE_TRANSFORM_FIELDS)
 
@@ -300,16 +299,12 @@ function resizeNode(
         (value, key) => node[key] !== value
       )
     : {}
-  // A shape with text takes the height as the one it was given and grows to fit its label.
-  const fitted =
-    node.type === 'SHAPE_WITH_TEXT' ? textAutoResizeChanges(node, { width, height }) : {}
   scene.updateNode(node.id, {
     width,
     height,
     ...recaptured,
     ...sizing,
-    ...(fixesText ? { textAutoResize: 'NONE' as const } : {}),
-    ...fitted
+    ...(fixesText ? { textAutoResize: 'NONE' as const } : {})
   })
   if (placed.size > 0 && size.width > 0 && size.height > 0) {
     const changes = computeConstrainedResizeChanges(scene, node.id, size, { width, height }, placed)
@@ -320,8 +315,7 @@ function resizeNode(
     'height',
     ...Object.keys(recaptured),
     ...Object.keys(sizing),
-    ...(fixesText ? ['textAutoResize'] : []),
-    ...Object.keys(fitted)
+    ...(fixesText ? ['textAutoResize'] : [])
   ])
   setTransform(target, internals, () => before)
 }
