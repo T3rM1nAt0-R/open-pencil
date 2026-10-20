@@ -1,6 +1,7 @@
 import { isEqual, isPlainObject } from 'es-toolkit'
 
 import {
+  findInstanceAncestor,
   getInstanceOverride,
   scaleNodeChanges,
   slotPropertyId,
@@ -92,9 +93,10 @@ function slotDiffersFromSource(
   propertyId: string
 ): boolean {
   // A swap replaces the nested instance's component and keeps the one it copied in the owner.
+  const sourceOwner = (nested.parentId && findInstanceAncestor(graph, nested.parentId)) || owner
   const linked = getInstanceOverride(
-    owner.instanceOverrides,
-    owner.id,
+    sourceOwner.instanceOverrides,
+    sourceOwner.id,
     nested.id,
     'sourceComponentId'
   )
