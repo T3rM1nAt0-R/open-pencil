@@ -60,15 +60,13 @@ describe('browsing files from the File menu', () => {
 
   test('waits for the shown page to agree before leaving it', () => {
     homeLocation.value = { kind: 'settings' }
-    let proceed: () => void = () => {}
-    setHomeLeaveGuard((next) => {
-      proceed = next
-    })
+    const held: (() => void)[] = []
+    setHomeLeaveGuard((next) => held.push(next))
 
     browseFiles(router)
     expect(shownLocation()).toEqual({ kind: 'settings' })
 
-    proceed()
+    held[0]?.()
     expect(shownLocation()).toEqual({ kind: 'recent' })
   })
 })
