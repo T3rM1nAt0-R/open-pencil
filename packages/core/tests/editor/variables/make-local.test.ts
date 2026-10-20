@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 
 import { expectDefined } from '#core-tests/helpers/assert'
 
-import { buildFigmaClipboardHTML, parseFigmaClipboard } from '@open-pencil/core'
+import { buildFigmaClipboardHTML, parseFigmaClipboard } from '@open-pencil/core/clipboard'
 import { initCodec } from '@open-pencil/core/kiwi'
 
 import { createEditor } from '#core/editor'
