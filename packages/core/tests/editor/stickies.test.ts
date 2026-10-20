@@ -53,7 +53,7 @@ describe('sticky notes', () => {
   test('text size and author changes are single undo steps over the whole note', () => {
     const { editor, pageId } = setup()
     const sticky = editor.createStickyNote(pageId, { x: 0, y: 0 })
-    editor.setFigJamTextSize([sticky.id], 'large')
+    editor.setStickyTextSize([sticky.id], 'large')
     expect(sublayers(editor, sticky).body).toMatchObject({ fontSize: 40, lineHeight: 60 })
     editor.setStickyAuthorVisible([sticky.id], false)
     expect(sublayers(editor, sticky).author.visible).toBe(false)
@@ -87,6 +87,14 @@ describe('sticky notes', () => {
     expect(editor.graph.getNode(sticky.id)).toMatchObject({ x: 176, width: 240 })
     editor.undo.undo()
     expect(editor.graph.getNode(sticky.id)).toMatchObject({ x: 0, width: 416 })
+  })
+
+  test('a new text size keeps the body in its typeface, as Scribbled sets no tracking', () => {
+    const { editor, pageId } = setup()
+    const sticky = editor.createStickyNote(pageId, { x: 0, y: 0 })
+    editor.graph.updateNode(sublayers(editor, sticky).body.id, { fontFamily: 'Figma Hand' })
+    editor.setStickyTextSize([sticky.id], 'large')
+    expect(sublayers(editor, sticky).body).toMatchObject({ fontSize: 40, letterSpacing: 0 })
   })
 
   test("typing in a note's body renames a note that was never renamed", () => {

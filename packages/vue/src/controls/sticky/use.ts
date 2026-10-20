@@ -45,7 +45,7 @@ export function useStickyNote() {
   }
 
   function setTextSize(value: FigJamTextSize) {
-    editor.setFigJamTextSize(ids.value, value)
+    editor.setStickyTextSize(ids.value, value)
   }
 
   function setAuthorVisible(value: boolean) {

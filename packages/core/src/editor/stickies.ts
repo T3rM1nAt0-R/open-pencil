@@ -6,6 +6,7 @@ import {
   stickyWidth,
   STICKY_SIZE,
   figJamTextSizeFields,
+  figJamTypeface,
   stickySublayers
 } from '@open-pencil/scene-graph'
 import type { SceneNode, FigJamTextSize } from '@open-pencil/scene-graph'
@@ -75,11 +76,13 @@ export function createStickyActions(ctx: EditorContext) {
     })
   }
 
-  /** Sets the size of the notes' body text to one of FigJam's presets. */
-  function setFigJamTextSize(ids: Iterable<string>, size: FigJamTextSize) {
+  /** Sets the size of the notes' body text to one of FigJam's presets, in the body's typeface. */
+  function setStickyTextSize(ids: Iterable<string>, size: FigJamTextSize) {
     editStickies('Change sticky text size', ids, (sticky) => {
       const body = stickySublayers(ctx.graph, sticky)?.body
-      if (body) ctx.graph.updateNode(body.id, figJamTextSizeFields(size))
+      if (body) {
+        ctx.graph.updateNode(body.id, figJamTextSizeFields(size, figJamTypeface(body) ?? 'simple'))
+      }
     })
   }
 
@@ -123,7 +126,7 @@ export function createStickyActions(ctx: EditorContext) {
     setStickyWide,
     createStickyNote,
     setStickyColor,
-    setFigJamTextSize,
+    setStickyTextSize,
     setStickyAuthorVisible,
     scaleStickyNote
   }
