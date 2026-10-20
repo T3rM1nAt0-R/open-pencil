@@ -93,7 +93,7 @@ const selectedTypeface = computed<string>({
             data-property="shape-fill-transparent"
             @click="setFillMode(fillMode === 'transparent' ? 'fill' : 'transparent')"
           >
-            <icon-lucide-blend class="size-3.5" />
+            <icon-lucide-contrast class="size-3.5" />
           </IconButton>
         </div>
         <FigJamPalette
@@ -115,7 +115,7 @@ const selectedTypeface = computed<string>({
             data-property="shape-line-dashed"
             @click="setLineStyle(lineStyle === 'dashed' ? 'solid' : 'dashed')"
           >
-            <icon-lucide-ellipsis class="size-3.5" />
+            <icon-lucide-circle-dashed class="size-3.5" />
           </IconButton>
         </div>
         <FigJamPalette
