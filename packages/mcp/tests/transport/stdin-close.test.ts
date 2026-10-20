@@ -12,7 +12,15 @@ afterEach(() => {
   for (const cleanup of cleanups.splice(0)) cleanup()
 })
 
-/** Starts the server on a private socket and waits until it reports that it is listening. */
+/** A port nothing listens on, since Windows has no Unix socket for the server to use. */
+function freePort(): number {
+  const probe = Bun.serve({ port: 0, fetch: () => new Response('') })
+  const { port } = probe
+  void probe.stop(true)
+  return port
+}
+
+/** Starts the server and waits until it reports that it is listening. */
 async function startServer(env: Record<string, string>) {
   const directory = mkdtempSync(join(tmpdir(), 'op-mcp-stdin-'))
   const child = Bun.spawn(['bun', ENTRY], {
@@ -21,7 +29,7 @@ async function startServer(env: Record<string, string>) {
     stderr: 'pipe',
     env: {
       ...process.env,
-      PORT: '0',
+      PORT: String(freePort()),
       OPENPENCIL_MCP_SOCKET: join(directory, 'mcp.sock'),
       OPENPENCIL_MCP_AUTH_TOKEN: '',
       ...env
