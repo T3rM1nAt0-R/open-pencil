@@ -1,1 +1,1 @@
-- Fixed the desktop app giving up on its MCP server before a slow start finished on Windows (#1167): it now waits for the server for as long as it runs, up to 20 seconds, and no longer leaves the server running when the app stops it. The app also starts a new server when the one it started stops answering.
+- The desktop app waits up to 20 seconds for a slow-starting MCP server on Windows instead of giving up early, and stopping the server from the app no longer leaves it running (#1167). The app also starts a new MCP server when the one it started stops answering.
