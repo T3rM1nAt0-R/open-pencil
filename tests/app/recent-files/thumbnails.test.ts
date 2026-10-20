@@ -23,8 +23,9 @@ describe('recent file thumbnails without IndexedDB', () => {
       await thumbnails.cacheRecentFileThumbnail('design.fig', PNG_PREVIEW)
       await thumbnails.clearRecentFileThumbnails()
       expect(warn.mock.calls.length).toBe(3)
-      // Load, the probe that finds whether Blobs store, cache, and clear.
-      expect(open.mock.calls.length).toBe(4)
+      // Load, cache, and clear, plus the probe for Blob support when no earlier test ran it.
+      expect(open.mock.calls.length).toBeGreaterThanOrEqual(3)
+      expect(open.mock.calls.length).toBeLessThanOrEqual(4)
     } finally {
       warn.mockRestore()
       open.mockRestore()
