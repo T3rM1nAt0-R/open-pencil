@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 
-import type { StorageDocument } from '@/app/integrations/storage'
+import type { StorageDocument, StorageLocation } from '@/app/integrations/storage'
 import {
   describeOpenTabs,
   parseLastSession,
@@ -56,6 +56,7 @@ describe('last session', () => {
     const opened: string[] = []
     const focused: string[] = []
     const storageOpens: StorageDocument[] = []
+    const storageLocations: StorageLocation[] = []
     let current = ''
     const openers = {
       activeProviderId: 's3',
@@ -74,7 +75,8 @@ describe('last session', () => {
         if (documentId === 'deleted') return null
         return documentId === 'd1' ? { name: 'D1 renamed', updatedAt: '2026-10-13' } : undefined
       },
-      async openStorageDocument(document: StorageDocument) {
+      async openStorageDocument(document: StorageDocument, location: StorageLocation) {
+        storageLocations.push(location)
         current = document.id
         opened.push(document.id)
         storageOpens.push(document)
@@ -86,7 +88,14 @@ describe('last session', () => {
       {
         documents: [
           { kind: 'local', path: '/a.fig' },
-          { kind: 'storage', providerId: 's3', documentId: 'd1', name: 'D1' },
+          {
+            kind: 'storage',
+            providerId: 's3',
+            documentId: 'd1',
+            name: 'D1',
+            profileId: 'work',
+            containerId: 'team'
+          },
           { kind: 'room', roomId: 'room-1' }
         ],
         active: 0
@@ -94,6 +103,8 @@ describe('last session', () => {
       openers
     )
     expect(ok).toBe(true)
+    // The design reopens from its own account and workspace, not the default ones.
+    expect(storageLocations).toEqual([{ providerId: 's3', profileId: 'work', containerId: 'team' }])
     expect(opened).toEqual(['/a.fig', 'd1', 'room-1'])
     expect(focused).toEqual(['/a.fig'])
     // The remote's own metadata decides whether a cached copy is still current.

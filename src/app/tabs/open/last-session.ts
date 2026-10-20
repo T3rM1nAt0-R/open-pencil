@@ -1,11 +1,13 @@
 import { useLocalStorage } from '@vueuse/core'
 import * as v from 'valibot'
 
-import type {
-  StorageDocument,
-  StorageDocumentBinding,
-  StorageAdapter,
-  StorageDocumentMetadata
+import {
+  storageLocationOf,
+  type StorageAdapter,
+  type StorageDocument,
+  type StorageDocumentBinding,
+  type StorageDocumentMetadata,
+  type StorageLocation
 } from '@/app/integrations/storage'
 
 const LAST_SESSION_STORAGE_KEY = 'open-pencil:last-session'
@@ -16,7 +18,10 @@ const sessionDocumentSchema = v.variant('kind', [
     kind: v.literal('storage'),
     providerId: v.string(),
     documentId: v.string(),
-    name: v.string()
+    name: v.string(),
+    /** Which account and workspace the design lives in, when the provider has them. */
+    profileId: v.optional(v.string()),
+    containerId: v.optional(v.string())
   }),
   v.object({ kind: v.literal('room'), roomId: v.string() })
 ])
@@ -88,8 +93,11 @@ export type LastSessionOpeners = {
    * The remote's current metadata, so a newer remote copy wins over a cached one. Null when
    * the design is gone from storage; undefined when the provider cannot tell.
    */
-  storageMetadata(documentId: string): Promise<StorageDocumentMetadata | null | undefined>
-  openStorageDocument(document: StorageDocument): Promise<void>
+  storageMetadata(
+    documentId: string,
+    location: StorageLocation
+  ): Promise<StorageDocumentMetadata | null | undefined>
+  openStorageDocument(document: StorageDocument, location: StorageLocation): Promise<void>
   activeTabId(): string
   focus(tabId: string): void
 }
@@ -123,7 +131,8 @@ export async function restoreLastSession(
       } else if (document.kind === 'room') {
         if (!openers.joinRoom(document.roomId)) throw new Error('Not a room ID')
       } else if (document.providerId === openers.activeProviderId) {
-        const metadata = await openers.storageMetadata(document.documentId)
+        const location = storageLocationOf(document)
+        const metadata = await openers.storageMetadata(document.documentId, location)
         // A design deleted from storage must not come back from a cached local copy.
         if (metadata === null) {
           allOpened = false
@@ -132,7 +141,8 @@ export async function restoreLastSession(
         await openers.openStorageDocument(
           metadata
             ? { ...metadata, id: document.documentId, metadataAuthoritative: true }
-            : { id: document.documentId, name: document.name, updatedAt: '' }
+            : { id: document.documentId, name: document.name, updatedAt: '' },
+          location
         )
       } else {
         allOpened = false

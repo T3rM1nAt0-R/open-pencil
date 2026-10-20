@@ -35,7 +35,9 @@ async function drawPreview(
   const figBytes = localFig ?? (await createStorageAdapter(location).getDocument(id)).bytes
   const fileBytes = Uint8Array.from(figBytes)
   const graph = await readFigForDisplay(
-    new File([fileBytes.buffer], `${id}.fig`, { type: 'application/octet-stream' })
+    new File([fileBytes.buffer], `${id}.fig`, { type: 'application/octet-stream' }),
+    undefined,
+    { warn: false }
   )
   const preview = usablePreview(await renderOffscreenPreview(graph))
   if (!preview || !isCurrent()) return preview

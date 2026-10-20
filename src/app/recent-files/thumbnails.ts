@@ -114,7 +114,7 @@ export async function loadRecentFileThumbnail(path: string): Promise<Uint8Array 
         return offset === bytes.byteLength ? bytes : bytes.subarray(0, offset)
       }
     })
-    return embedded
+    return usablePreview(embedded)
   } finally {
     await file.close()
   }

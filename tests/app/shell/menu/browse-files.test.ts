@@ -37,6 +37,14 @@ describe('browsing files from the File menu', () => {
     expect(shownLocation()).toEqual({ kind: 'shared' })
   })
 
+  test('never lands on Settings when browsing files', () => {
+    homeLocation.value = { kind: 'settings' }
+
+    browseFiles(router)
+
+    expect(shownLocation()).toEqual({ kind: 'recent' })
+  })
+
   test('opens Home on the storage bucket once it is set up', () => {
     const providerID = activeStorageProviderID.value
     for (const field of storageProviderRegistry.get(providerID).preferenceFields) {

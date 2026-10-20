@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useLocalStorage } from '@vueuse/core'
-import { computed, onScopeDispose, ref, watch } from 'vue'
+import { computed, onScopeDispose, ref, useTemplateRef, watch } from 'vue'
 
 import { useDocumentWorkspace, useI18n, useViewportKind } from '@open-pencil/vue'
 
@@ -50,6 +50,16 @@ const query = ref('')
 const openError = ref<string | null>(null)
 const storageConfigured = ref(storagePreferencesComplete(activeStorageProviderID.value))
 const places = useHomeLocations()
+const settingsWorkspace = useTemplateRef('settingsWorkspace')
+
+/** Leaving Settings with unsaved edits asks first, as it does between its sections. */
+function whileSettingsGuard(action: () => void): void {
+  const guard = settingsWorkspace.value?.request
+  if (places.location.value.kind === 'settings' && guard) guard(action)
+  else action()
+}
+const selectLocation = (next: Parameters<typeof places.select>[0]) =>
+  whileSettingsGuard(() => places.select(next))
 
 /** A new design lands in the place Home shows: a Cloud workspace, the bucket, or a local file. */
 function newDocument() {
@@ -250,10 +260,10 @@ function formattedDate(updatedAt: string): string {
         :account="places.account.value"
         :workspaces="places.workspaces.value"
         :storage="sidebarStorage"
-        @select="places.select"
+        @select="selectLocation"
         @connect="places.connect"
-        @account-settings="places.accountSettings"
-        @storage-settings="places.storageSettings"
+        @account-settings="whileSettingsGuard(places.accountSettings)"
+        @storage-settings="whileSettingsGuard(places.storageSettings)"
         @switch-server="places.connect"
         @new-workspace="places.newWorkspace"
         @sign-out="places.signOut"
@@ -266,7 +276,7 @@ function formattedDate(updatedAt: string): string {
         :account="places.account.value"
         :workspaces="places.workspaces.value"
         :storage="sidebarStorage"
-        @select="places.select"
+        @select="selectLocation"
         @connect="places.connect"
         @new-workspace="places.newWorkspace"
       />
@@ -284,7 +294,7 @@ function formattedDate(updatedAt: string): string {
       class="flex h-[calc(100vh-9rem)] min-h-[28rem] overflow-hidden rounded-lg border border-border"
       data-test-id="home-settings-panel"
     >
-      <SettingsWorkspace v-model:section="homeSettingsSection" />
+      <SettingsWorkspace ref="settingsWorkspace" v-model:section="homeSettingsSection" />
     </div>
     <CloudWorkspaceSection
       v-else-if="places.workspace.value && places.serverId.value"

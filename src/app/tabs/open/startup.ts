@@ -2,7 +2,7 @@ import { useEventListener } from '@vueuse/core'
 import { watch } from 'vue'
 
 import { joinRoom, roomForStore } from '@/app/collab/rooms'
-import { activeStorageProviderID, createActiveStorageAdapter } from '@/app/integrations/storage'
+import { activeStorageProviderID, createStorageAdapter } from '@/app/integrations/storage'
 import { appRuntimeConfig } from '@/app/runtime/config'
 import { appPreferences, type StartupOpen } from '@/app/settings/preferences/store'
 import { openFileFromPath } from '@/app/shell/menu/files'
@@ -50,10 +50,10 @@ export async function reopenLastSession(messages: {
       await openFileFromPath(path)
     },
     joinRoom: (roomId) => joinRoom(roomId, { tabName: messages.sharedFile }) !== null,
-    storageMetadata: (documentId) =>
-      storedDocumentMetadata(createActiveStorageAdapter(activeStorageProviderID.value), documentId),
-    async openStorageDocument(document) {
-      await openStorageDocumentInNewTab(document)
+    storageMetadata: (documentId, location) =>
+      storedDocumentMetadata(createStorageAdapter(location), documentId),
+    async openStorageDocument(document, location) {
+      await openStorageDocumentInNewTab(document, location)
     },
     activeTabId: getActiveTabId,
     focus: switchTab

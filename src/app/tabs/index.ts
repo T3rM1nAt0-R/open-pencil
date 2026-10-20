@@ -203,7 +203,9 @@ function reusableTabStore(): { store: EditorStore; created: boolean } {
   const isUntouched =
     current?.kind === 'document' &&
     current.store.state.documentName === 'Untitled' &&
-    !current.store.undo.canUndo
+    !current.store.undo.canUndo &&
+    current.store.getStorageBinding() === null &&
+    current.store.getSourceIdentity().path === null
   if (current && isUntouched) return { store: current.store, created: false }
   return { store: createTab().store, created: true }
 }
