@@ -1,4 +1,4 @@
-import type { ShapeWithTextType } from './shape-with-text'
+import type { ShapeWithTextType } from './kinds'
 
 /** The height of a database's elliptical cap: FigJam keeps it 24 px tall at any size. */
 export function databaseCap(w: number, h: number): number {

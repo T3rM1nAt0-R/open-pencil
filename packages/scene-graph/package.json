@@ -175,7 +175,7 @@
     },
     "./shape-with-text": {
       "types": "./dist/shape-with-text.d.ts",
-      "bun": "./src/shape-with-text.ts",
+      "bun": "./src/shape-with-text/index.ts",
       "import": "./dist/shape-with-text.js",
       "default": "./dist/shape-with-text.js"
     },
