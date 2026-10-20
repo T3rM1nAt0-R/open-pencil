@@ -2,6 +2,7 @@ import { isEqual } from 'es-toolkit'
 
 import { isGeneratedFrame, readIcon, slotPropertyId } from '@open-pencil/scene-graph'
 import type { SceneGraph, SceneNode } from '@open-pencil/scene-graph'
+import type { ShapeWithTextType } from '@open-pencil/scene-graph/shape-with-text'
 
 import type { LayerNode, LayerRow, LayerSelectionMode } from '#vue/primitives/LayerTree/context'
 
@@ -10,7 +11,7 @@ function explicitModeIds(node: SceneNode): string[] | undefined {
   return ids.length > 0 ? ids : undefined
 }
 
-function shapeWithTextTypeOf(node: SceneNode): string | undefined {
+function shapeWithTextTypeOf(node: SceneNode): ShapeWithTextType | undefined {
   return node.type === 'SHAPE_WITH_TEXT' ? node.shapeWithTextType : undefined
 }
 

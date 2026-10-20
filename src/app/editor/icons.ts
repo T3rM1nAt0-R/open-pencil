@@ -25,7 +25,7 @@ import IconTriangle from '~icons/lucide/triangle'
 import IconType from '~icons/lucide/type'
 
 import { readIcon, slotPropertyId, type SceneNode } from '@open-pencil/scene-graph'
-import { isShapeWithTextType } from '@open-pencil/scene-graph/shape-with-text'
+import type { ShapeWithTextType } from '@open-pencil/scene-graph/shape-with-text'
 
 import type { Tool } from '@/app/editor/session'
 import { SHAPE_KIND_ICONS } from '@/app/editor/shape-icons'
@@ -84,10 +84,10 @@ export function nodeIcon(node: {
   layoutMode: string
   slot?: boolean
   icon?: boolean
-  shapeWithTextType?: string
+  shapeWithTextType?: ShapeWithTextType
 }) {
   if (node.slot) return IconSlot
-  if (node.type === 'SHAPE_WITH_TEXT' && isShapeWithTextType(node.shapeWithTextType)) {
+  if (node.type === 'SHAPE_WITH_TEXT' && node.shapeWithTextType) {
     return SHAPE_KIND_ICONS[node.shapeWithTextType]
   }
   if (node.icon && node.type === 'FRAME') return IconSmile

@@ -14,6 +14,7 @@ import { credentialsMessageDefaults, credentialsMessages } from '#vue/i18n/messa
 import { designCheckMessageDefaults, designCheckMessages } from '#vue/i18n/messages/design-check'
 import { diagnosticsMessageDefaults, diagnosticsMessages } from '#vue/i18n/messages/diagnostics'
 import { editorMessageDefaults, editorMessages } from '#vue/i18n/messages/editor'
+import { figJamMessageDefaults, figJamMessages } from '#vue/i18n/messages/figjam'
 import { filesMessageDefaults, filesMessages } from '#vue/i18n/messages/files'
 import { fontsMessageDefaults, fontsMessages } from '#vue/i18n/messages/fonts'
 import { mediaMessageDefaults, mediaMessages } from '#vue/i18n/messages/media'
@@ -47,6 +48,7 @@ export {
   designCheckMessages,
   diagnosticsMessages,
   editorMessages,
+  figJamMessages,
   filesMessages,
   fontsMessages,
   mediaMessages,
@@ -80,6 +82,7 @@ export const messageDefaults = {
   designCheck: designCheckMessageDefaults,
   diagnostics: diagnosticsMessageDefaults,
   editor: editorMessageDefaults,
+  figjam: figJamMessageDefaults,
   files: filesMessageDefaults,
   fonts: fontsMessageDefaults,
   media: mediaMessageDefaults,
