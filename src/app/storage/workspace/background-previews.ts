@@ -1,7 +1,12 @@
 import { readFigForDisplay } from '@/app/document/io/fig'
 import { usablePreview } from '@/app/document/io/preview-bytes'
 import { renderOffscreenPreview } from '@/app/document/io/preview-render'
-import { createStorageAdapter, type StorageLocation } from '@/app/integrations/storage'
+import {
+  createStorageAdapter,
+  sameStorageLocation,
+  storageLocationOf,
+  type StorageLocation
+} from '@/app/integrations/storage'
 import { getLocalCanvasStore } from '@/app/storage/local-store'
 import { saveStoragePreview } from '@/app/storage/workspace/save-preview'
 
@@ -27,9 +32,11 @@ async function drawPreview(
   await whenIdle()
   if (!isCurrent()) return null
   const local = getLocalCanvasStore()
-  const existing = usablePreview(await local.readThumb(id))
+  // A cached row of the same id can belong to another place; only its own place's bytes count.
+  const found = await local.getMeta(id)
+  const metadata = found && sameStorageLocation(storageLocationOf(found), location) ? found : null
+  const existing = metadata ? usablePreview(await local.readThumb(id)) : null
   if (existing) return existing
-  const metadata = await local.getMeta(id)
   const localFig = metadata?.hasFig ? await local.readFig(id) : null
   if (!localFig && !isCurrent()) return null
   const figBytes = localFig ?? (await createStorageAdapter(location).getDocument(id)).bytes
