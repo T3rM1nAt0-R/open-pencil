@@ -55,7 +55,7 @@ import { installInstanceOverrideAccessors, type FigmaInstanceOverride } from './
 import { getPageBackgrounds, setPageBackgrounds } from './page-backgrounds'
 import * as PluginData from './plugin-data'
 import { nodeProxyToJSON } from './serialization'
-import { checkedShapeType, shapeTypeOf } from './shape-with-text'
+import { installShapeWithTextAccessors } from './shape-with-text'
 import { installSlotAccessors, prepareSlotMove, prepareSlotRemoval } from './slots'
 import type { FigmaLetterSpacing, FigmaLineHeight } from './text'
 import * as TextProxy from './text'
@@ -169,14 +169,12 @@ export class FigmaNodeProxy {
   declare readonly explicitVariableModes: Readonly<Record<string, string>>
   declare readonly resolvedVariableModes: Readonly<Record<string, string>>
   declare readonly overrides: FigmaInstanceOverride[] | undefined
-  /**
-   * A sticky note's body, its author line, and whether it is wide; undefined on other layers.
-   * A shape with text has `text` too: its label.
-   */
+  /** A sticky note's body or a shape's label, a sticky's author line, and whether it is wide. */
   declare readonly text: FigmaNodeProxy | undefined
   declare readonly authorName: string | undefined
   declare authorVisible: boolean | undefined
   declare isWideWidth: boolean | undefined
+  declare shapeType: ShapeWithTextType | undefined
   declare resetOverrides: () => void
 
   declare strokeWeight: number
@@ -296,16 +294,6 @@ export class FigmaNodeProxy {
 
   deleteCharacters(start: number, end: number): void {
     TextProxy.deleteCharacters(this[INTERNAL_GRAPH], this._raw(), start, end)
-  }
-
-  /** A shape with text's FigJam kind; other layers have none. */
-  get shapeType(): ShapeWithTextType | undefined {
-    return shapeTypeOf(this._raw())
-  }
-  set shapeType(value: ShapeWithTextType) {
-    const kind = checkedShapeType(this._raw(), value)
-    prepareFollowedFieldEdit(this[INTERNAL_GRAPH], this._raw(), 'shapeType', 'shape-type')
-    this._update({ shapeWithTextType: kind })
   }
 
   get isMask(): boolean {
@@ -608,3 +596,4 @@ installComponentPropertyAccessors(FigmaNodeProxy.prototype, proxyInternals)
 installInstanceOverrideAccessors(FigmaNodeProxy.prototype, proxyInternals)
 installSlotAccessors(FigmaNodeProxy.prototype, proxyInternals)
 installDevStatusAccessors(FigmaNodeProxy.prototype, proxyInternals)
+installShapeWithTextAccessors(FigmaNodeProxy.prototype, proxyInternals)

@@ -84,6 +84,7 @@ export type {
   FigmaPolygonNode,
   FigmaRectangleNode,
   FigmaSectionNode,
+  FigmaShapeWithTextNode,
   FigmaSlotNode,
   FigmaStarNode,
   FigmaTextNode,
@@ -222,8 +223,7 @@ export class FigmaAPI implements NodeProxyHost {
   }
 
   createShapeWithText(): FigmaShapeWithTextNode {
-    const shape = newShapeWithText(this.graph, this._currentPageId, this.theme)
-    return this.wrapNode(shape.id) as FigmaShapeWithTextNode
+    return this.wrapNode(newShapeWithText(this).id) as FigmaShapeWithTextNode
   }
 
   createVector(): FigmaVectorNode {
