@@ -8,6 +8,8 @@ const homeLocationSchema = v.variant('kind', [
   v.object({ kind: v.literal('recent') }),
   v.object({ kind: v.literal('storage') }),
   v.object({ kind: v.literal('shared') }),
+  /** Settings, shown in the place of the documents. */
+  v.object({ kind: v.literal('settings') }),
   /** A workspace of the server Home shows. */
   v.object({ kind: v.literal('workspace'), id: v.string() })
 ])

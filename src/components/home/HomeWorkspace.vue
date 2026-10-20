@@ -25,7 +25,7 @@ import {
   type RecentDocument
 } from '@/app/recent-files'
 import { useCredentialSettings } from '@/app/settings/credentials/preferences/use'
-import { openSettingsDialog } from '@/app/settings/dialog'
+import { homeSettingsSection, openSettingsDialog } from '@/app/settings/dialog'
 import { openFileFromPath } from '@/app/shell/menu/use'
 import { createStoredDocument } from '@/app/storage/workspace/create'
 import { onStorageWorkspaceEvent } from '@/app/storage/workspace/events'
@@ -37,6 +37,7 @@ import HomeLayout from '@/components/home/HomeLayout.vue'
 import HomeSearchActions from '@/components/home/search/HomeSearchActions.vue'
 import HomeLocationMenu from '@/components/home/sidebar/HomeLocationMenu.vue'
 import HomeSidebar from '@/components/home/sidebar/HomeSidebar.vue'
+import SettingsWorkspace from '@/components/settings/SettingsWorkspace.vue'
 import AppButton from '@/components/ui/button/AppButton.vue'
 import IconButton from '@/components/ui/button/IconButton.vue'
 import SegmentedControl from '@/components/ui/select/SegmentedControl.vue'
@@ -271,14 +272,22 @@ function formattedDate(updatedAt: string): string {
       />
     </template>
     <HomeSearchActions
+      v-if="places.location.value.kind !== 'settings'"
       v-model="query"
       :destination="newDesignTarget?.label ?? null"
       @new-document="newDocument"
     />
 
     <p v-if="openError" class="mb-4 text-xs text-error" role="alert">{{ openError }}</p>
+    <div
+      v-if="places.location.value.kind === 'settings'"
+      class="flex h-[calc(100vh-9rem)] min-h-[28rem] overflow-hidden rounded-lg border border-border"
+      data-test-id="home-settings-panel"
+    >
+      <SettingsWorkspace v-model:section="homeSettingsSection" />
+    </div>
     <CloudWorkspaceSection
-      v-if="places.workspace.value && places.serverId.value"
+      v-else-if="places.workspace.value && places.serverId.value"
       :server-id="places.serverId.value"
       :workspace="places.workspace.value"
       :query="normalizedQuery"

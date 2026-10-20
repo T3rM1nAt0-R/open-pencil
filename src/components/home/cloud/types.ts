@@ -4,6 +4,7 @@ export type HomeLocation =
   | { kind: 'workspace'; id: string }
   | { kind: 'shared'; id: 'shared' }
   | { kind: 'storage'; id: 'storage' }
+  | { kind: 'settings'; id: 'settings' }
 
 export type HomeCloudAccount = {
   id: string
