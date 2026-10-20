@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { useLocalStorage } from '@vueuse/core'
-import { computed, ref, watch } from 'vue'
+import { computed, onScopeDispose, ref, useTemplateRef, watch } from 'vue'
 
 import { useDocumentWorkspace, useI18n, useViewportKind } from '@open-pencil/vue'
 
 import { CLOUD_INCLUDED, CLOUD_STORAGE_PROVIDER_ID } from '@/app/cloud/integration'
+import { setHomeLeaveGuard } from '@/app/home/location'
 import { useHomeLocations } from '@/app/home/locations'
 import {
   activeStorageProviderID,
@@ -25,9 +26,10 @@ import {
   type RecentDocument
 } from '@/app/recent-files'
 import { useCredentialSettings } from '@/app/settings/credentials/preferences/use'
-import { openSettingsDialog } from '@/app/settings/dialog'
+import { homeSettingsSection, openSettingsDialog } from '@/app/settings/dialog'
 import { openFileFromPath } from '@/app/shell/menu/use'
 import { createStoredDocument } from '@/app/storage/workspace/create'
+import { onStorageWorkspaceEvent } from '@/app/storage/workspace/events'
 import { activeStorageLocation, createStorageWorkspaceSource } from '@/app/storage/workspace/source'
 import { openStorageDocumentInNewTab } from '@/app/tabs'
 import { CloudSharedSection, CloudWorkspaceSection } from '@/components/cloud/integration'
@@ -36,6 +38,7 @@ import HomeLayout from '@/components/home/HomeLayout.vue'
 import HomeSearchActions from '@/components/home/search/HomeSearchActions.vue'
 import HomeLocationMenu from '@/components/home/sidebar/HomeLocationMenu.vue'
 import HomeSidebar from '@/components/home/sidebar/HomeSidebar.vue'
+import SettingsWorkspace from '@/components/settings/SettingsWorkspace.vue'
 import AppButton from '@/components/ui/button/AppButton.vue'
 import IconButton from '@/components/ui/button/IconButton.vue'
 import SegmentedControl from '@/components/ui/select/SegmentedControl.vue'
@@ -48,6 +51,18 @@ const query = ref('')
 const openError = ref<string | null>(null)
 const storageConfigured = ref(storagePreferencesComplete(activeStorageProviderID.value))
 const places = useHomeLocations()
+const settingsWorkspace = useTemplateRef('settingsWorkspace')
+
+/** Leaving Settings with unsaved edits asks first, as it does between its sections. */
+function whileSettingsGuard(action: () => void): void {
+  const guard = settingsWorkspace.value?.request
+  if (places.location.value.kind === 'settings' && guard) guard(action)
+  else action()
+}
+setHomeLeaveGuard(whileSettingsGuard)
+onScopeDispose(() => setHomeLeaveGuard(null))
+const selectLocation = (next: Parameters<typeof places.select>[0]) =>
+  whileSettingsGuard(() => places.select(next))
 
 /** A new design lands in the place Home shows: a Cloud workspace, the bucket, or a local file. */
 function newDocument() {
@@ -157,6 +172,20 @@ const newDesignTarget = computed<{ location: StorageLocation; label: string } | 
   return null
 })
 const storagePreviewURL = storageWorkspace.previewURL
+// A design drawn after its card asked shows its preview without a reload.
+onScopeDispose(
+  onStorageWorkspaceEvent((event) => {
+    if (event.kind !== 'preview' || !event.documentId) return
+    storageWorkspace.loadPreview(event.documentId)
+    const recent = recentFiles.value.find(
+      (document) =>
+        document.kind === 'storage' &&
+        document.providerId === event.providerId &&
+        document.documentId === event.documentId
+    )
+    if (recent) workspace.loadPreview(recent.id)
+  })
+)
 const vStoragePreview = storageWorkspace.previewDirective
 const normalizedQuery = computed(() => query.value.trim().toLocaleLowerCase(locale.value))
 const filteredRecentFiles = computed(() => {
@@ -234,10 +263,10 @@ function formattedDate(updatedAt: string): string {
         :account="places.account.value"
         :workspaces="places.workspaces.value"
         :storage="sidebarStorage"
-        @select="places.select"
+        @select="selectLocation"
         @connect="places.connect"
-        @account-settings="places.accountSettings"
-        @storage-settings="places.storageSettings"
+        @account-settings="whileSettingsGuard(places.accountSettings)"
+        @storage-settings="whileSettingsGuard(places.storageSettings)"
         @switch-server="places.connect"
         @new-workspace="places.newWorkspace"
         @sign-out="places.signOut"
@@ -250,20 +279,28 @@ function formattedDate(updatedAt: string): string {
         :account="places.account.value"
         :workspaces="places.workspaces.value"
         :storage="sidebarStorage"
-        @select="places.select"
+        @select="selectLocation"
         @connect="places.connect"
         @new-workspace="places.newWorkspace"
       />
     </template>
     <HomeSearchActions
+      v-if="places.location.value.kind !== 'settings'"
       v-model="query"
       :destination="newDesignTarget?.label ?? null"
       @new-document="newDocument"
     />
 
     <p v-if="openError" class="mb-4 text-xs text-error" role="alert">{{ openError }}</p>
+    <div
+      v-if="places.location.value.kind === 'settings'"
+      class="flex h-[calc(100vh-9rem)] min-h-[28rem] overflow-hidden rounded-lg border border-border"
+      data-test-id="home-settings-panel"
+    >
+      <SettingsWorkspace ref="settingsWorkspace" v-model:section="homeSettingsSection" />
+    </div>
     <CloudWorkspaceSection
-      v-if="places.workspace.value && places.serverId.value"
+      v-else-if="places.workspace.value && places.serverId.value"
       :server-id="places.serverId.value"
       :workspace="places.workspace.value"
       :query="normalizedQuery"
