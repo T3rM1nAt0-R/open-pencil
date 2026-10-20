@@ -52,7 +52,9 @@ export async function reopenLastSession(messages: {
     joinRoom: (roomId) => joinRoom(roomId, { tabName: messages.sharedFile }) !== null,
     storageMetadata: (documentId) =>
       storedDocumentMetadata(createActiveStorageAdapter(activeStorageProviderID.value), documentId),
-    openStorageDocument: openStorageDocumentInNewTab,
+    async openStorageDocument(document) {
+      await openStorageDocumentInNewTab(document)
+    },
     activeTabId: getActiveTabId,
     focus: switchTab
   })

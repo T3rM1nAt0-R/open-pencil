@@ -286,7 +286,7 @@ export function readFigBytes(
   name: string,
   signal?: AbortSignal
 ): Promise<SceneGraph> {
-  return readFigForTab(figFile(bytes, name), signal)
+  return readFigForDisplay(figFile(bytes, name), signal)
 }
 
 /**
