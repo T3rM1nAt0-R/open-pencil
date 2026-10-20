@@ -6,7 +6,11 @@ import { renderThumbnail } from '@open-pencil/core/io/formats/raster'
 import { usablePreview } from '@/app/document/io/preview-bytes'
 import { DOCUMENT_PREVIEW_SIZE } from '@/app/document/io/preview-render'
 import type { EditorStore } from '@/app/editor/session'
-import type { StorageLocation } from '@/app/integrations/storage'
+import {
+  sameStorageLocation,
+  storageLocationOf,
+  type StorageLocation
+} from '@/app/integrations/storage'
 import { cacheRecentFileThumbnail, loadCachedRecentFileThumbnail } from '@/app/recent-files'
 import { getLocalCanvasStore } from '@/app/storage/local-store'
 import { saveStoragePreview } from '@/app/storage/workspace/save-preview'
@@ -62,7 +66,10 @@ export async function cacheStorageDocumentPreview(
   store: EditorStore
 ): Promise<void> {
   const local = getLocalCanvasStore()
-  if (usablePreview(await local.readThumb(documentId))) return
+  // A cached preview of the same id may belong to another place, so it is not this design's.
+  const meta = await local.getMeta(documentId)
+  const own = meta && sameStorageLocation(storageLocationOf(meta), location)
+  if (own && usablePreview(await local.readThumb(documentId))) return
   const bytes = await renderDocumentPreview(store)
   if (bytes) await saveStoragePreview(location, documentId, bytes)
 }
