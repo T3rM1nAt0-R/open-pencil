@@ -1,9 +1,9 @@
 import { BLACK } from '../constants'
-import type { SceneGraph } from '../index'
-import type { ShapeWithTextType } from '../shape-with-text/kinds'
-import { shapeWithTextLabelBox } from '../shape-with-text/fit'
-import type { Fill, SceneNode } from '../types'
 import { FIGJAM_TYPEFACES, figJamTextSizeFields } from '../figjam/text'
+import type { SceneGraph } from '../index'
+import { shapeWithTextLabelBox } from '../shape-with-text/fit'
+import type { ShapeWithTextType } from '../shape-with-text/kinds'
+import type { Fill, SceneNode } from '../types'
 import type { GeneratedFrameKind } from './kind'
 
 /** FigJam's plugin API makes a shape with text 208 px square. */
