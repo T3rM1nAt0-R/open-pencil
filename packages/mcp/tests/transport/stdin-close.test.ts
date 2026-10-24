@@ -61,7 +61,8 @@ describe('closing the standard input of the HTTP server', () => {
   })
 
   test('leaves a server started by hand running', async () => {
-    const child = await startServer({})
+    // Set off explicitly, so a value the test run inherits does not turn it on.
+    const child = await startServer({ OPENPENCIL_MCP_EXIT_ON_STDIN_CLOSE: '0' })
     await child.stdin.end()
     const outcome = await Promise.race([child.exited, Bun.sleep(500).then(() => 'running')])
 
