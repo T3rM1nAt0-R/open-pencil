@@ -1,22 +1,20 @@
-import type { CloudDiscovery } from '#cloud/contract'
+import { cloudServerOrigin, type CloudDiscovery } from '#cloud/contract'
+import { withoutFragment, withQuery } from 'ufo'
 
 import type { CloudSocialProvider } from './client'
 
-/** The instance owns authentication; only its configured editor may receive the return. */
+/** The instance owns authentication; only its own editor may receive the return. */
 export function cloudEditorReturnURL(discovery: CloudDiscovery, value: string): string {
-  if (!discovery.appURL) throw new Error('This instance does not advertise a public editor URL')
-  const editor = new URL(discovery.appURL)
   const destination = new URL(value)
   if (
-    !['https:', 'http:'].includes(editor.protocol) ||
-    destination.origin !== editor.origin ||
+    !['https:', 'http:'].includes(destination.protocol) ||
+    destination.origin !== cloudServerOrigin(discovery) ||
     destination.username ||
     destination.password
   ) {
     throw new Error('Authentication return URL must belong to this instance editor')
   }
-  destination.hash = ''
-  return destination.href
+  return withoutFragment(destination.href)
 }
 
 /**
@@ -29,13 +27,19 @@ export function cloudSignInURL(
   returnURL: string,
   provider?: CloudSocialProvider
 ): string {
-  const destination = cloudEditorReturnURL(discovery, returnURL)
-  const continuation = new URL('/auth/return', discovery.authURL)
-  continuation.searchParams.set('editor', destination)
-  const signIn = new URL('/auth/sign-in', discovery.authURL)
-  signIn.searchParams.set('redirect', `${continuation.pathname}${continuation.search}`)
-  if (provider && discovery.authentication.socialProviders.includes(provider)) {
-    signIn.searchParams.set('provider', provider)
-  }
-  return signIn.href
+  const offered = provider && discovery.authentication.socialProviders.includes(provider)
+  // The pages are at the server's root, whatever path the auth API has.
+  return withQuery(new URL('/auth/sign-in', discovery.authURL).href, {
+    redirect: withQuery('/auth/return', { editor: cloudEditorReturnURL(discovery, returnURL) }),
+    provider: offered ? provider : undefined
+  })
+}
+
+/** Accept only same-origin application paths for post-authentication navigation. */
+export function cloudRedirectPath(value: unknown, fallback = '/app'): string {
+  if (typeof value !== 'string' || !value.startsWith('/') || value.startsWith('//')) return fallback
+  const origin = 'https://redirect.invalid'
+  const url = new URL(value, origin)
+  if (url.origin !== origin) return fallback
+  return `${url.pathname}${url.search}${url.hash}`
 }

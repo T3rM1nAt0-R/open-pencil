@@ -4,12 +4,14 @@ import { guidToString, isUnsetGuid } from '@open-pencil/kiwi/fig/guid'
 import {
   DEFAULT_FONT_FAMILY,
   DEFAULT_STROKE_MITER_LIMIT,
-  DEFAULT_STROKE_WEIGHT,
-  OPEN_PENCIL_PLUGIN_DATA,
-  styleToWeight
-} from '@open-pencil/scene-graph'
+  DEFAULT_STROKE_WEIGHT
+} from '@open-pencil/scene-graph/constants'
+import { getNodeLocalMatrix } from '@open-pencil/scene-graph/coordinate'
+import { styleToWeight } from '@open-pencil/scene-graph/font-style'
 import { createDefaultSourceMetadata } from '@open-pencil/scene-graph/node-defaults'
+import { OPEN_PENCIL_PLUGIN_DATA } from '@open-pencil/scene-graph/plugin-data'
 import { POINT_COUNT_RANGE } from '@open-pencil/scene-graph/polygon'
+import { isShapeWithTextType } from '@open-pencil/scene-graph/shape-with-text'
 import { parseVariantName } from '@open-pencil/scene-graph/variant-name'
 /* eslint-disable max-lines -- kiwi↔scene conversion helpers are tightly coupled */
 
@@ -44,7 +46,7 @@ import {
   resolveVectorNetwork,
   resolveVectorStyleOverrideFills
 } from './vector/geometry'
-import { decodeVectorNetworkBlob, type StyleOverride } from './vector/network'
+import { decodeVectorNetworkBlob, textPathStartSegment, type StyleOverride } from './vector/network'
 
 export { convertEffects, convertFills, convertStrokes, setVariableColorResolver } from './paint'
 export { importStyleRuns } from './style/runs'
@@ -77,12 +79,10 @@ import type {
   ComponentPropertyType,
   SymbolLink,
   VariantPropSpec,
-  VariableModeMap,
-  Vector
+  VariableModeMap
 } from '@open-pencil/scene-graph'
-import type { GUID } from '@open-pencil/scene-graph/primitives'
+import type { Vector, GUID } from '@open-pencil/scene-graph/primitives'
 
-export { guidToString, stringToGuid } from '@open-pencil/kiwi/fig/guid'
 import { numericVariableAssignmentScales, sourceVariableBindingScales } from './variable/bindings'
 export { VARIABLE_BINDING_FIELDS, VARIABLE_BINDING_FIELDS_INVERSE } from './variable/bindings'
 
@@ -253,27 +253,29 @@ export function convertFigmaTransformProps(
   let y = nc.transform?.m12 ?? 0
   let rotation = 0
   let flipX = false
-  if (nc.transform) {
+  const type = mapNodeType(nc.type)
+  // Documents and variables are not placed; every layer type is.
+  if (nc.transform && type !== 'DOCUMENT' && type !== 'VARIABLE') {
     const t = nc.transform
     const det = t.m00 * t.m11 - t.m01 * t.m10
     if (det < 0) flipX = true
     rotation = Math.atan2(t.m10, flipX ? t.m11 : t.m00) * (180 / Math.PI)
 
-    // Scene nodes apply their reflection and rotation around the center. Decompose the Figma
-    // matrix into that same linear transform, then recover the node translation so recomposing
-    // it produces the original matrix. Reflected rotations need their angle read from the
-    // second row; treating them as ordinary rotations reverses connector instances by 180°.
-    const radians = (rotation * Math.PI) / 180
-    const cos = Math.cos(radians)
-    const sin = Math.sin(radians)
-    const centerX = width / 2
-    const centerY = height / 2
-    const m00 = flipX ? -cos : cos
-    const m01 = flipX ? sin : -sin
-    const m10 = sin
-    const m11 = cos
-    x = t.m02 - centerX + m00 * centerX + m01 * centerY
-    y = t.m12 - centerY + m10 * centerX + m11 * centerY
+    // Reflected rotations need their angle read from the second row; treating them as ordinary
+    // rotations reverses connector instances by 180°. The Scene Graph's placement at the origin,
+    // with its own pivot and reflection, then gives the translation Figma's matrix adds.
+    const placed = getNodeLocalMatrix({
+      type,
+      x: 0,
+      y: 0,
+      width,
+      height,
+      rotation,
+      flipX,
+      flipY: false
+    })
+    x = t.m02 - placed[2]
+    y = t.m12 - placed[5]
   }
 
   return { x, y, width, height, rotation, flipX, flipY: false }
@@ -406,6 +408,27 @@ function convertParagraphProps(
   }
 }
 
+/** A size a record gives, or 0 (unset) when it is missing, negative or not a finite number. */
+function givenSize(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0
+}
+
+/**
+ * A FigJam shape with text's kind, the height it was given and whether it keeps that height; its
+ * label is read as a sublayer.
+ */
+function convertShapeWithTextProps(
+  nc: NodeChange
+): Partial<Pick<SceneNode, 'shapeWithTextType' | 'shapeUserHeight' | 'shapeTruncates'>> {
+  if (nc.type !== 'SHAPE_WITH_TEXT') return {}
+  const kind = isShapeWithTextType(nc.shapeWithTextType) ? nc.shapeWithTextType : 'SQUARE'
+  return {
+    shapeWithTextType: kind,
+    shapeUserHeight: givenSize(nc.shapeUserHeight),
+    shapeTruncates: nc.shapeTruncates === true
+  }
+}
+
 function convertTextProps(nc: NodeChange, blobs: Uint8Array[]): TextProps {
   return {
     text: nc.textData?.characters ?? '',
@@ -475,12 +498,8 @@ function visibleContainerDerivedLayout(
     (nc.strokePaints?.some((paint) => paint.visible !== false) ?? false)
   if (layoutMode === 'NONE' || !hasHugAxis || !hasVisiblePaint) return undefined
 
-  return {
-    x: nc.transform?.m02 ?? 0,
-    y: nc.transform?.m12 ?? 0,
-    width: nc.size?.x ?? 100,
-    height: nc.size?.y ?? 100
-  }
+  const { x, y, width, height } = convertFigmaTransformProps(nc)
+  return { x, y, width, height }
 }
 
 function minimumSizeDimension(size: NodeChange['minSize'], axis: 'x' | 'y'): number | null {
@@ -608,7 +627,8 @@ function convertTextPathData(nc: NodeChange, blobs: Uint8Array[]): SceneNode['te
       network: decodeVectorNetworkBlob(blob, vectorData.styleOverrideTable),
       normalizedSize: { x: normalizedSize.x, y: normalizedSize.y },
       tValue: textPathStart?.tValue ?? 0,
-      forward: textPathStart?.forward ?? true
+      forward: textPathStart?.forward ?? true,
+      startSegment: textPathStartSegment(blob)
     }
   } catch {
     return null
@@ -708,6 +728,7 @@ export function nodeChangeToProps(
     ...convertCornerProps(nc),
     ...convertPolygonProps(nc),
     ...convertTextProps(nc, blobs),
+    ...convertShapeWithTextProps(nc),
     horizontalConstraint: mapConstraint(nc.horizontalConstraint as string),
     verticalConstraint: mapConstraint(nc.verticalConstraint as string),
     ...convertLayoutProps(nc),
@@ -718,7 +739,11 @@ export function nodeChangeToProps(
     maxHeight: maximumSizeDimension(nc.maxSize, 'y'),
     targetAspectRatio: targetAspectRatio(nc),
     isMask: nc.mask ?? false,
-    maskType: (nc.maskType ?? 'ALPHA') as 'ALPHA' | 'VECTOR' | 'LUMINANCE',
+    // A .fig file stores a vector mask as OUTLINE.
+    maskType: (nc.maskType === 'OUTLINE' ? 'VECTOR' : (nc.maskType ?? 'ALPHA')) as
+      | 'ALPHA'
+      | 'VECTOR'
+      | 'LUMINANCE',
     maskIsOutline: nc.maskIsOutline ?? false,
     expanded: true,
     autoRename: (nc.autoRename ?? true) as boolean,
@@ -1178,6 +1203,7 @@ export const FIGMA_RAW_NODE_FIELD_KEYS = [
   'letterSpacing',
   'textTracking',
   'fontVersion',
+  'emojiImageSet',
   'textUserLayoutVersion',
   'textExplicitLayoutVersion',
   'fontVariations',

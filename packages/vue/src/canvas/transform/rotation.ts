@@ -1,7 +1,7 @@
+import type { Editor } from '@open-pencil/core'
 import { ROTATION_SNAP_DEGREES } from '@open-pencil/core/constants'
-import type { Editor } from '@open-pencil/core/editor'
 import { createSceneGeometry } from '@open-pencil/core/geometry'
-import { layerRotates } from '@open-pencil/scene-graph'
+import { layerRotates } from '@open-pencil/scene-graph/generated'
 
 import {
   hitTestCornerRotationByMatrix,
@@ -24,7 +24,7 @@ export function tryStartRotation(
   if (editor.state.selectedIds.size !== 1) return false
   const id = [...editor.state.selectedIds][0]
   const node = editor.graph.getNode(id)
-  // A generated frame such as a sticky note may stay upright.
+  // FigJam keeps sticky notes upright, and a connector follows its ends.
   if (!node || node.locked || !layerRotates(node)) return false
 
   const geometry = createSceneGeometry(editor.graph, editor.state.rotationPreview)

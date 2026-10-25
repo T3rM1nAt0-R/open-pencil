@@ -1,23 +1,24 @@
+import { createPostgresCloudDatabase } from '#cloud/runtime/postgres/database'
 import { createS3ObjectStore } from '#cloud/runtime/s3/objects'
-import { createDocumentCleanupService, createUploadCleanupService } from '#cloud/server'
+import {
+  cleanupPassOptions,
+  createCleanupServices,
+  createConfiguredCloudPolicy,
+  runCleanup
+} from '#cloud/server'
 
 import { loadNodeCloudServerConfig } from './config'
-import { createNodeCloudDatabase } from './database'
 
 const config = await loadNodeCloudServerConfig(process.env)
-const database = createNodeCloudDatabase({ connectionString: config.databaseURL })
+const database = createPostgresCloudDatabase({ connectionString: config.databaseURL })
 const objects = createS3ObjectStore(config)
 try {
-  const uploads = await createUploadCleanupService(database, objects).cleanupExpiredUploads({
-    batchSize: config.cleanupBatchSize,
-    leaseDurationMs: config.cleanupLeaseDurationMs
-  })
-  const documents = await createDocumentCleanupService(database, objects).cleanupDeletedDocuments({
-    batchSize: config.cleanupBatchSize,
-    leaseDurationMs: config.cleanupLeaseDurationMs,
-    retentionMs: config.documentRetentionMs
-  })
-  console.log(JSON.stringify({ uploads, documents }))
+  const policy = createConfiguredCloudPolicy(config, database)
+  const result = await runCleanup(
+    createCleanupServices(config, database, objects, policy),
+    cleanupPassOptions(config)
+  )
+  console.log(JSON.stringify(result))
 } finally {
   await database.destroy()
 }

@@ -204,12 +204,8 @@
     "open-pencil/no-mcp-parent-relative-imports": "error",
     "open-pencil/no-vue-parent-relative-imports": "error",
     "open-pencil/no-cli-parent-relative-imports": "error",
-    "open-pencil/no-mcp-core-barrel-imports": "error",
-    "open-pencil/no-cli-core-barrel-imports": "error",
-    "open-pencil/no-script-core-barrel-imports": "error",
     "open-pencil/no-core-self-package-imports": "error",
     "open-pencil/no-inline-prompt-constants": "error",
-    "open-pencil/no-app-vue-core-barrel-imports": "error",
     "open-pencil/no-direct-graph-emitter-subscriptions": "error",
     "open-pencil/no-on-unmounted-in-composition-roots": "error",
     "open-pencil/no-composable-state-wrappers": "error",
@@ -452,8 +448,14 @@
     {
       "files": ["packages/cloud/src/server/**/*.ts"],
       "rules": {
-        "open-pencil/no-cloud-raw-sql": "error",
+        "open-pencil/no-raw-sql": "error",
         "open-pencil/no-cloud-dynamic-html": "error"
+      }
+    },
+    {
+      "files": ["packages/feedback/src/**/*.ts"],
+      "rules": {
+        "open-pencil/no-raw-sql": "error"
       }
     },
     {
@@ -463,7 +465,7 @@
         "packages/cloud/src/server/db/migrations/**/*.ts"
       ],
       "rules": {
-        "open-pencil/no-cloud-raw-sql": "off"
+        "open-pencil/no-raw-sql": "off"
       }
     },
     {
@@ -514,6 +516,18 @@
       "files": ["**/*.{ts,vue}"],
       "rules": {
         "open-pencil/no-unvalidated-json-parse": "error"
+      }
+    },
+    {
+      "files": ["src/**/*.{ts,vue}", "packages/*/src/**/*.{ts,vue}"],
+      "rules": {
+        "open-pencil/valibot-schema-conventions": "error"
+      }
+    },
+    {
+      "files": ["tools/*/*/src/**/*.ts"],
+      "rules": {
+        "open-pencil/valibot-schema-conventions": ["error", { "placement": false }]
       }
     },
     {
@@ -603,6 +617,7 @@
     {
       "files": [
         "packages/core/src/io/formats/fig/export/index.ts",
+        "packages/core/src/io/formats/fig/export/worker.ts",
         "packages/core/src/kiwi/fig/parse/worker.ts"
       ],
       "rules": {

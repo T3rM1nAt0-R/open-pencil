@@ -1,13 +1,20 @@
-import { parseCommitUpload, parseCreateDocument, parseCreateUpload } from '#cloud/contract'
+import {
+  parseCommitImageUploads,
+  parseCommitUpload,
+  parseCreateDocument,
+  parseCreateUpload,
+  parseRequestImageLinks,
+  parseRequestImageUploads
+} from '#cloud/contract'
 import type { CloudActor } from '#cloud/server/auth'
 import type { CloudDatabase } from '#cloud/server/db'
-import type { DocumentService } from '#cloud/server/documents/service'
 import {
   DocumentConflictError,
   DocumentForbiddenError,
   DocumentNotFoundError,
   UploadInvalidError
-} from '#cloud/server/documents/service'
+} from '#cloud/server/documents/errors'
+import type { DocumentService } from '#cloud/server/documents/service'
 import { StorageQuotaExceededError } from '#cloud/server/quota'
 import { CLOUD_RATE_LIMITS, createActorRateLimiter } from '#cloud/server/rate-limit'
 import { validatedJSON } from '#cloud/server/validation'
@@ -20,7 +27,8 @@ export type DocumentRouteEnvironment = {
   }
 }
 
-function domainError(context: Context, error: unknown): Response | null {
+/** The response a document domain error stands for, or null for any other error. */
+export function documentDomainError(context: Context, error: unknown): Response | null {
   if (error instanceof DocumentNotFoundError) {
     return context.json({ error: { code: 'not_found' as const } }, 404)
   }
@@ -39,6 +47,20 @@ function domainError(context: Context, error: unknown): Response | null {
   return null
 }
 
+/** Answers with what `respond` gives, or with the response a document domain error stands for. */
+async function documentResponse<T extends Response>(
+  context: Context,
+  respond: () => Promise<T>
+): Promise<T | Response> {
+  try {
+    return await respond()
+  } catch (error) {
+    const response = documentDomainError(context, error)
+    if (response) return response
+    throw error
+  }
+}
+
 export function createDocumentRoutes(
   service: DocumentService,
   rateLimit?: { database: Kysely<CloudDatabase>; secret: string }
@@ -53,6 +75,16 @@ export function createDocumentRoutes(
         CLOUD_RATE_LIMITS.documentCreation,
         (context) => context.req.method !== 'POST',
         (context) => context.req.param('workspaceId') ?? 'unknown'
+      )
+    )
+    router.use(
+      '/documents/:documentId/images',
+      createActorRateLimiter(
+        rateLimit.database,
+        rateLimit.secret,
+        CLOUD_RATE_LIMITS.uploadCreation,
+        (context) => context.req.method !== 'POST',
+        (context) => context.req.param('documentId') ?? 'unknown'
       )
     )
     router.use(
@@ -84,7 +116,7 @@ export function createDocumentRoutes(
           usage: await service.usage(context.get('actor').userId, context.req.param('workspaceId'))
         })
       } catch (error) {
-        const response = domainError(context, error)
+        const response = documentDomainError(context, error)
         if (response) return response
         throw error
       }
@@ -101,7 +133,7 @@ export function createDocumentRoutes(
           )
           return context.json({ document }, 201)
         } catch (error) {
-          const response = domainError(context, error)
+          const response = documentDomainError(context, error)
           if (response) return response
           throw error
         }
@@ -112,7 +144,7 @@ export function createDocumentRoutes(
         await service.remove(context.get('actor').userId, context.req.param('documentId'))
         return context.body(null, 204)
       } catch (error) {
-        const response = domainError(context, error)
+        const response = documentDomainError(context, error)
         if (response) return response
         throw error
       }
@@ -123,7 +155,7 @@ export function createDocumentRoutes(
           access: await service.access(context.get('actor').userId, context.req.param('documentId'))
         })
       } catch (error) {
-        const response = domainError(context, error)
+        const response = documentDomainError(context, error)
         if (response) return response
         throw error
       }
@@ -137,25 +169,59 @@ export function createDocumentRoutes(
           )
         })
       } catch (error) {
-        const response = domainError(context, error)
+        const response = documentDomainError(context, error)
         if (response) return response
         throw error
       }
     })
-    .post('/documents/:documentId/uploads', validatedJSON(parseCreateUpload), async (context) => {
-      try {
-        const result = await service.createUpload(
-          context.get('actor').userId,
-          context.req.param('documentId'),
-          context.req.valid('json')
+    .post('/documents/:documentId/uploads', validatedJSON(parseCreateUpload), (context) =>
+      documentResponse(context, async () =>
+        context.json(
+          await service.createUpload(
+            context.get('actor').userId,
+            context.req.param('documentId'),
+            context.req.valid('json')
+          ),
+          201
         )
-        return context.json(result, 201)
-      } catch (error) {
-        const response = domainError(context, error)
-        if (response) return response
-        throw error
-      }
-    })
+      )
+    )
+    .post(
+      '/documents/:documentId/images/commit',
+      validatedJSON(parseCommitImageUploads),
+      (context) =>
+        documentResponse(context, async () => {
+          await service.commitImageUploads(
+            context.get('actor').userId,
+            context.req.param('documentId'),
+            context.req.valid('json').uploads
+          )
+          return context.body(null, 204)
+        })
+    )
+    .post('/documents/:documentId/images/links', validatedJSON(parseRequestImageLinks), (context) =>
+      documentResponse(context, async () =>
+        context.json(
+          await service.imageLinks(
+            context.get('actor').userId,
+            context.req.param('documentId'),
+            context.req.valid('json').checksums
+          )
+        )
+      )
+    )
+    .post('/documents/:documentId/images', validatedJSON(parseRequestImageUploads), (context) =>
+      documentResponse(context, async () =>
+        context.json(
+          await service.requestImageUploads(
+            context.get('actor').userId,
+            context.req.param('documentId'),
+            context.req.valid('json')
+          ),
+          201
+        )
+      )
+    )
     .post('/uploads/:uploadId/commit', validatedJSON(parseCommitUpload), async (context) => {
       try {
         const document = await service.commitUpload(
@@ -165,7 +231,7 @@ export function createDocumentRoutes(
         )
         return context.json({ document })
       } catch (error) {
-        const response = domainError(context, error)
+        const response = documentDomainError(context, error)
         if (response) return response
         throw error
       }

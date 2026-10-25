@@ -4,8 +4,9 @@ import { expectDefined } from '#core-tests/helpers/assert'
 
 import { createEditor } from '@open-pencil/core/editor'
 import { FigmaAPI } from '@open-pencil/core/figma-api'
-import { exportFigFile, renderNodesToSVG } from '@open-pencil/core/io'
-import { initCodec } from '@open-pencil/core/kiwi'
+import { exportFigFile } from '@open-pencil/core/io/formats/fig'
+import { renderNodesToSVG } from '@open-pencil/core/io/formats/svg'
+import { initCodec } from '@open-pencil/kiwi/fig/codec'
 import { materializeDocument, parseFigBuffer } from '@open-pencil/fig'
 import { SceneGraph } from '@open-pencil/scene-graph'
 

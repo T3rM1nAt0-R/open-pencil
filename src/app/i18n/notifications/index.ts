@@ -2,7 +2,7 @@ import { createI18n, params } from '@nanostores/i18n'
 import type { ComponentsJSON } from '@nanostores/i18n'
 import { useStore } from '@nanostores/vue'
 
-import { locale, type Locale, type TranslatedLocale } from '@open-pencil/vue'
+import { locale, type Locale, type TranslatedLocale } from '@open-pencil/vue/i18n'
 
 export const notificationMessageDefaults = {
   chatInitializationFailed: params('Could not initialize chat: {error}'),
@@ -14,6 +14,9 @@ export const notificationMessageDefaults = {
   tokensLeftOut: params('Left out of the stylesheet: {names}.'),
   designTokensLeftOut: params('Left out of the design tokens: {names}.'),
   designTokensImported: params('Imported {count} design tokens.'),
+  unsupportedVariableExpressions: params(
+    'OpenPencil can’t evaluate these variables yet, so layers keep the values saved in the file: {names}.'
+  ),
   nodeID: 'node ID',
   nodeIDs: 'node IDs',
   xPath: 'XPath',

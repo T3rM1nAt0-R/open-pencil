@@ -1,11 +1,11 @@
 import { difference } from 'es-toolkit/array'
 
-import type { SceneNode } from '../'
 import { CORNER_FIELDS, PAINT_FIELDS, STROKE_FIELDS } from '../fields/appearance'
 import { SIZE_FIELDS, TRANSFORM_FIELDS } from '../fields/geometry'
 import { AUTO_LAYOUT_FIELDS, SIZE_CONSTRAINT_FIELDS } from '../fields/layout'
 import { TEXT_STYLE_FIELDS } from '../fields/text'
 import { STYLE_LINK_FIELDS } from '../shared-styles'
+import type { SceneNode } from '../types'
 
 export const INSTANCE_SYNC_TEXT_PROPS = [
   'name',
@@ -25,6 +25,7 @@ export const INSTANCE_SYNC_TEXT_PROPS = [
 
 /** Fields that belong to another one: overriding the owner keeps them too. */
 export const INSTANCE_SYNC_FIELD_OWNERS: Readonly<Partial<Record<string, string>>> = {
+  fillStyleId: 'fills',
   styleRuns: 'text',
   textParagraphs: 'text'
 }
@@ -44,7 +45,10 @@ export const INSTANCE_FOLLOWED_FIELDS = [
   'maskType',
   'arcData',
   'pointCount',
-  'starInnerRadius'
+  'starInnerRadius',
+  'shapeWithTextType',
+  'shapeUserHeight',
+  'shapeTruncates'
 ] as const
 
 /** Fields a component's layer gives its copies unless an instance overrides them. */

@@ -1,3 +1,4 @@
+import type { SceneGraph, SceneNode } from '@open-pencil/scene-graph'
 import {
   generatedFrameText,
   isGeneratedFrame,
@@ -5,8 +6,7 @@ import {
   stickyScale,
   stickySublayers,
   stickyWidth
-} from '@open-pencil/scene-graph'
-import type { SceneGraph, SceneNode } from '@open-pencil/scene-graph'
+} from '@open-pencil/scene-graph/generated'
 
 import {
   graph,
@@ -44,7 +44,7 @@ export function installStickyNodeProxyAccessors(
   internals: NodeProxyInternals
 ): void {
   Object.defineProperties(prototype, {
-    // A generated frame's text, such as a sticky note's body, as Figma's `text`.
+    // A sticky note's body and a connector's label are both what Figma calls `text`.
     text: {
       get(this: ProxyThis): FigmaNodeProxy | undefined {
         const text = generatedFrameText(graph(this, internals), raw(this, internals))

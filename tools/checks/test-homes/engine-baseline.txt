@@ -144,7 +144,6 @@ tests/engine/figma/api/components.test.ts
 tests/engine/figma/api/corner/radius.test.ts
 tests/engine/figma/api/create/combine-as-variants.test.ts
 tests/engine/figma/api/create/component-from-node.test.ts
-tests/engine/figma/api/create/expose-instance-swap.test.ts
 tests/engine/figma/api/create/instance-fill-override.test.ts
 tests/engine/figma/api/document/pages.test.ts
 tests/engine/figma/api/expanded.test.ts
@@ -327,10 +326,6 @@ tests/engine/mcp/tools.test.ts
 tests/engine/mcp/transport/paths.test.ts
 tests/engine/mcp/webmcp/registration.test.ts
 tests/engine/mcp/webmcp/settings.test.ts
-tests/engine/pen/file.test.ts
-tests/engine/pen/layout.test.ts
-tests/engine/pen/var-padding.test.ts
-tests/engine/pen/variables.test.ts
 tests/engine/profiler/capture-stack.test.ts
 tests/engine/profiler/draw-call-counter.test.ts
 tests/engine/profiler/frame-stats.test.ts
@@ -356,8 +351,6 @@ tests/engine/render/canvas/effect-raster-integration.test.ts
 tests/engine/render/canvas/effects/edge-cases.test.ts
 tests/engine/render/canvas/effects/inner-shadow.test.ts
 tests/engine/render/canvas/effects/ordering.test.ts
-tests/engine/render/canvas/effects/path-shapes.test.ts
-tests/engine/render/canvas/effects/spread.test.ts
 tests/engine/render/canvas/effects/text-shadow.test.ts
 tests/engine/render/canvas/effects/types.test.ts
 tests/engine/render/canvas/font-readiness.test.ts

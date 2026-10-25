@@ -2,10 +2,13 @@
 import { useLocalStorage } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
 
-import { useDocumentWorkspace, useI18n, useViewportKind } from '@open-pencil/vue'
+import { useDocumentWorkspace } from '@open-pencil/vue/document/workspace'
+import { useViewportKind } from '@open-pencil/vue/editor/viewport-kind'
+import { useI18n } from '@open-pencil/vue/i18n'
 
 import { CLOUD_INCLUDED, CLOUD_STORAGE_PROVIDER_ID } from '@/app/cloud/integration'
 import { useHomeLocations } from '@/app/home/locations'
+import { useDateFormat } from '@/app/i18n/date'
 import {
   activeStorageProviderID,
   createStorageAdapter,
@@ -218,10 +221,10 @@ async function openStorageDocument(document: StorageDocument): Promise<void> {
   }
 }
 
+const dates = useDateFormat()
+/** A file's last change; a file that never reported one shows nothing. */
 function formattedDate(updatedAt: string): string {
-  const date = new Date(updatedAt)
-  if (date.getTime() === 0) return ''
-  return date.toLocaleString(locale.value)
+  return Date.parse(updatedAt) === 0 ? '' : dates.format(updatedAt, 'dateTime')
 }
 </script>
 
@@ -262,8 +265,10 @@ function formattedDate(updatedAt: string): string {
     />
 
     <p v-if="openError" class="mb-4 text-xs text-error" role="alert">{{ openError }}</p>
+    <!-- Nothing until Cloud says which workspace Home opens on. -->
+    <template v-if="places.settling.value" />
     <CloudWorkspaceSection
-      v-if="places.workspace.value && places.serverId.value"
+      v-else-if="places.workspace.value && places.serverId.value"
       :server-id="places.serverId.value"
       :workspace="places.workspace.value"
       :query="normalizedQuery"
