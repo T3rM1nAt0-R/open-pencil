@@ -11,7 +11,7 @@ import {
 } from 'reka-ui'
 import { computed } from 'vue'
 
-import { useCloudMessages } from '@open-pencil/vue'
+import { useCloudMessages } from '@open-pencil/vue/i18n'
 
 import { menu } from '@/components/ui/menu/menu'
 import { homeLocationMenu } from '@/theme/home/location-menu'
@@ -27,9 +27,12 @@ const {
   account = null,
   workspaces = [],
   sharedCount = 0,
-  storage = null
+  storage = null,
+  cloud = true
 } = defineProps<{
   active: HomeLocation
+  /** The build has Cloud, so its sign-in and workspaces have a place. */
+  cloud?: boolean
   account?: HomeCloudAccount | null
   workspaces?: { id: string; name: string; documentCount?: number; attention?: boolean }[]
   sharedCount?: number
@@ -84,8 +87,8 @@ const isActive = (location: HomeLocation) =>
           />
         </DropdownMenuItem>
 
-        <DropdownMenuSeparator :class="menuUI.separator()" />
-        <DropdownMenuGroup>
+        <DropdownMenuSeparator v-if="cloud" :class="menuUI.separator()" />
+        <DropdownMenuGroup v-if="cloud">
           <DropdownMenuLabel :class="menuUI.label()">
             {{ account ? t.homeCloudOnHost({ host: account.host }) : t.productName }}
           </DropdownMenuLabel>

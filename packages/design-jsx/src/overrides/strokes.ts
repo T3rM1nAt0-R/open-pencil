@@ -1,5 +1,5 @@
+import { designJSXProp } from '#design-jsx/definitions'
 import { STROKE_ALIGN, STROKE_CAP, STROKE_JOIN } from '#design-jsx/enums'
-import { designJSXProp } from '#design-jsx/schema'
 
 import type { SceneNode, Stroke } from '@open-pencil/scene-graph'
 import { parseColor } from '@open-pencil/scene-graph/color'
@@ -22,7 +22,7 @@ function isColor(value: unknown): value is Color {
   return value !== null && typeof value === 'object' && 'r' in value && 'a' in value
 }
 
-function isStrokeValue(value: unknown): value is StrokeValue {
+export function isStrokeValue(value: unknown): value is StrokeValue {
   if (value === null || typeof value !== 'object' || !('color' in value)) return false
   return typeof value.color === 'string' || isColor(value.color)
 }

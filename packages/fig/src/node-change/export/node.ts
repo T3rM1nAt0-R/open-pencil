@@ -12,13 +12,12 @@ import type {
 } from '@open-pencil/scene-graph'
 import {
   DEFAULT_STROKE_MITER_LIMIT,
-  DEFAULT_STROKE_WEIGHT,
-  isGeneratedFrame,
-  OPEN_PENCIL_PLUGIN_DATA,
-  withPluginData
-} from '@open-pencil/scene-graph'
+  DEFAULT_STROKE_WEIGHT
+} from '@open-pencil/scene-graph/constants'
+import { isGeneratedFrame } from '@open-pencil/scene-graph/generated'
 import { layoutGridCount } from '@open-pencil/scene-graph/layout'
 import { siblingOrderKeys } from '@open-pencil/scene-graph/order-keys'
+import { OPEN_PENCIL_PLUGIN_DATA, withPluginData } from '@open-pencil/scene-graph/plugin-data'
 import type { GUID, Matrix, Vector } from '@open-pencil/scene-graph/primitives'
 
 /* eslint-disable max-lines */
@@ -171,6 +170,15 @@ function serializeVariableModes(
     return [{ variableSetID: { guid: collectionGuid }, variableModeID: modeGuid }]
   })
   return entries.length > 0 ? { entries } : undefined
+}
+
+function applyVariableModes(
+  context: SceneNodeToKiwiContext,
+  node: SceneNode,
+  record: KiwiNodeChange
+): void {
+  const modes = serializeVariableModes(node, context.varIdToGuid, context.modeIdToGuid)
+  if (modes) record.variableModeBySetMap = modes
 }
 
 const FIGMA_PAYLOAD_VARIABLE_MAP_FIELDS = new Set([
@@ -752,6 +760,12 @@ function applyComponentMetadata(
   }
 }
 
+/** Whether the node is still saved in the box Figma gave it, not in its own. */
+function savedInFigmaBox(node: SceneNode): boolean {
+  const payload = effectiveFigmaSourcePayload(node)
+  return !!payload.rawSize && !!payload.rawTransform
+}
+
 function exportNodeSize(node: SceneNode): Vector {
   // rawSize and rawTransform are a matched pair describing the ORIGINAL Figma
   // box. Once the transform no longer backs the node, exportNodeTransform
@@ -759,10 +773,8 @@ function exportNodeSize(node: SceneNode): Vector {
   // an un-expanded rawSize disagrees about the box (for rotation, a different
   // centre) and the node drifts on reimport. Use rawSize only while the
   // transform still backs it.
-  const payload = effectiveFigmaSourcePayload(node)
-  return payload.rawSize && payload.rawTransform
-    ? { ...payload.rawSize }
-    : { x: node.width, y: node.height }
+  const { rawSize } = effectiveFigmaSourcePayload(node)
+  return rawSize && savedInFigmaBox(node) ? { ...rawSize } : { x: node.width, y: node.height }
 }
 
 function exportNodeTransform(context: SceneNodeToKiwiContext, node: SceneNode): Matrix {
@@ -982,6 +994,7 @@ export function overridableNodeFields(
   applyNodeStateProps(node, nc)
   applyNodeVisualProps({ ...context, fontDigestMap: undefined }, node, nc)
   context.serializeLayoutProps(node, nc)
+  applyVariableModes(context, node, nc)
   return nc
 }
 
@@ -1038,17 +1051,12 @@ export function sceneNodeToKiwiWithContext(
   context.serializeVariableBindings(node, nc, context.graph, context.varIdToGuid)
   mergeParameterBindings(nc)
   applyRawFigmaNodeFields(context, node, nc)
-  const variableModeBySetMap = serializeVariableModes(
-    node,
-    context.varIdToGuid,
-    context.modeIdToGuid
-  )
-  if (variableModeBySetMap) nc.variableModeBySetMap = variableModeBySetMap
+  applyVariableModes(context, node, nc)
 
   applyExportSettingsPluginData(node)
   applyLibrarySourcePluginData(node)
   serializeNodeStatus(node, nc)
-  applyTextPathBoxPluginData(node)
+  applyTextPathBoxPluginData(node, savedInFigmaBox(node))
   const pluginData = mergePluginData(node.pluginData)
   if (pluginData.length > 0) nc.pluginData = pluginData
   if (node.pluginRelaunchData.length > 0) {

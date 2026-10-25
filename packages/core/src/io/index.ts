@@ -14,36 +14,7 @@ export {
   htmlFormat,
   tailwindJSXFormat
 } from './formats'
-export {
-  exportFigFile,
-  parseFigFile,
-  readFigFile,
-  type FigFileExtrasOptions,
-  type ParseFigFileOptions
-} from './formats/fig'
-export { parsePenFile, readPenFile } from '@open-pencil/pen'
 export { isDrawioExportFileName } from './formats/drawio'
-export {
-  computeContentBounds,
-  renderNodesToImage,
-  renderThumbnail,
-  initCanvasKit,
-  headlessRenderNodes,
-  headlessRenderThumbnail,
-  type RasterExportFormat,
-  type ExportFormat
-} from './formats/raster'
-export {
-  createSVGNodes,
-  createSVGNodesFromImport,
-  isSVGMarkup,
-  prepareSVGImport,
-  renderNodesToSVG,
-  geometryBlobToSVGPath,
-  vectorNetworkToSVGPaths,
-  type SVGImportData,
-  type SVGImportOptions
-} from './formats/svg'
 export { vectorElement } from './formats/html/vectors'
 export {
   renderNodesToPPTX,

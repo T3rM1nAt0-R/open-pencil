@@ -1,8 +1,9 @@
 import type { Ref } from 'vue'
 
-import { opacityFromBuffer } from '@open-pencil/core/editor'
-import { generatedFrameText } from '@open-pencil/scene-graph'
-import type { useEditorCommands, useViewportKind } from '@open-pencil/vue'
+import { opacityFromBuffer } from '@open-pencil/core'
+import { generatedFrameText } from '@open-pencil/scene-graph/generated'
+import type { useEditorCommands } from '@open-pencil/vue/editor/commands'
+import type { useViewportKind } from '@open-pencil/vue/editor/viewport-kind'
 
 import type { PropertiesTab } from '@/app/ai/chat/use'
 import { useComments } from '@/app/comments/use'
@@ -27,6 +28,7 @@ export function createKeyboardActions({
     return (
       store.state.nodeEditState &&
       (store.state.nodeEditState.selectedVertexIndices.size > 0 ||
+        store.state.nodeEditState.selectedSegmentIndices.size > 0 ||
         store.state.nodeEditState.selectedHandles.size > 0)
     )
   }
@@ -55,8 +57,8 @@ export function createKeyboardActions({
       store.enterNodeEditMode(node.id)
       return
     }
-    // A generated frame opens its text, such as a sticky note's body, all of it selected,
-    // keeping the frame selected.
+    // A sticky note opens its body and a connector its label, all of it selected, keeping the
+    // note or connector selected.
     const text = (node && generatedFrameText(store.graph, node)) ?? node
     if (text?.type === 'TEXT') {
       requestAnimationFrame(() => {

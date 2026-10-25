@@ -10,7 +10,7 @@ import {
 import { tv } from 'tailwind-variants'
 import { computed, ref, useSlots, watch } from 'vue'
 
-import { useRetainedPopup } from '@open-pencil/vue'
+import { useRetainedPopup } from '@open-pencil/vue/lifecycle/retention'
 
 import AppSelectContent from '@/components/ui/select/AppSelectContent.vue'
 import AppSelectItem from '@/components/ui/select/AppSelectItem.vue'
@@ -90,6 +90,8 @@ const itemUI = computed(() => ({ item: ui?.item, indicator: ui?.indicator }))
       v-bind="$attrs"
       :class="styles.trigger({ class: ui?.trigger })"
     >
+      <!-- An icon before the chosen option, such as the glyph its menu row shows. -->
+      <slot name="leading" />
       <SelectValue :placeholder="placeholder" :class="styles.value({ class: ui?.value })">
         {{ displayLabel ?? selectedLabel ?? placeholder }}
       </SelectValue>

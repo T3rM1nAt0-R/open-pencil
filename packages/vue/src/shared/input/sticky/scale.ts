@@ -1,14 +1,14 @@
 import { toRaw } from 'vue'
 
-import type { Editor } from '@open-pencil/core/editor'
+import type { Editor } from '@open-pencil/core'
+import type { SceneNode } from '@open-pencil/scene-graph'
 import {
   isWideSticky,
-  scaleNodeChanges,
   stickyScale,
   stickySublayers,
   stickyWidth
-} from '@open-pencil/scene-graph'
-import type { SceneNode } from '@open-pencil/scene-graph'
+} from '@open-pencil/scene-graph/generated'
+import { scaleNodeChanges } from '@open-pencil/scene-graph/scaling'
 
 import { getHitHandleByMatrix } from '#vue/shared/input/geometry'
 import { calculateResizeRect } from '#vue/shared/input/resize/rect'
@@ -17,7 +17,8 @@ import type { DragStickyScale } from '#vue/shared/input/types'
 /** The smallest scale a corner drag takes a note to, so it never folds away. */
 const MIN_STICKY_SCALE = 0.1
 
-function subtree(editor: Editor, root: SceneNode): Map<string, SceneNode> {
+/** The note and every layer in it, as they are now, to scale from. */
+export function subtree(editor: Editor, root: SceneNode): Map<string, SceneNode> {
   const nodes = new Map<string, SceneNode>()
   const visit = (node: SceneNode) => {
     nodes.set(node.id, { ...node })
@@ -25,6 +26,11 @@ function subtree(editor: Editor, root: SceneNode): Map<string, SceneNode> {
   }
   visit(root)
   return nodes
+}
+
+/** Whether a layer's handles scale it as a sticky note's do, rather than resize it. */
+export function scalesByHandles(node: SceneNode): boolean {
+  return node.type === 'STICKY' && !node.locked
 }
 
 /**
@@ -39,7 +45,7 @@ export function tryStartStickyScale(
 ): DragStickyScale | null {
   if (editor.state.selectedIds.size !== 1) return null
   const node = editor.graph.getNode([...editor.state.selectedIds][0])
-  if (node?.type !== 'STICKY' || node.locked) return null
+  if (!node || !scalesByHandles(node)) return null
   const hit = getHitHandleByMatrix(
     cx,
     cy,

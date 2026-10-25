@@ -17,7 +17,8 @@ import {
 import { useTemplateRef, watch } from 'vue'
 import IconChevronRight from '~icons/lucide/chevron-right'
 
-import { vTestId, useI18n } from '@open-pencil/vue'
+import { useI18n } from '@open-pencil/vue/i18n'
+import { vTestId } from '@open-pencil/vue/testing'
 
 import { useEditorStore } from '@/app/editor/active-store'
 import { openSettingsDialog } from '@/app/settings/dialog'
@@ -38,7 +39,7 @@ import {
 import { appMenuShortcutLabel } from '@/app/shell/menu/shortcut'
 import { resolvedAppTheme } from '@/app/shell/theme'
 import BrandMark from '@/components/brand/BrandMark.vue'
-import CloudDocumentStatusHost from '@/components/cloud/status/CloudDocumentStatusHost.vue'
+import { CloudDocumentStatusHost } from '@/components/cloud/integration'
 import { useScrollOverflow } from '@/components/shell/useScrollOverflow'
 import IconButton from '@/components/ui/button/IconButton.vue'
 import AppShortcutText from '@/components/ui/menu/AppShortcutText.vue'
