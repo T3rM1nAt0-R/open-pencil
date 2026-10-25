@@ -1,27 +1,34 @@
 import type { CloudFetch } from '#cloud/client/discovery'
 import {
   acceptedInvitationSchema,
+  aiTokenSchema,
   cloudSessionSchema,
   cloudUserProfileSchema,
   collaborationTicketSchema,
   createInvitationContinuationSchema,
   documentAccessSchema,
   documentDownloadSchema,
+  objectUploadSchema,
   documentGrantSchema,
   documentInvitationSchema,
   documentShareSchema,
   documentSummarySchema,
+  documentVersionDownloadSchema,
+  documentVersionResponseSchema,
+  documentVersionsSchema,
+  restoredDocumentSchema,
   sharedDocumentSchema,
   invitationContinuationSchema,
   invitationPreviewSchema,
   resolvedDocumentShareSchema,
   type AcceptDocumentInvitationInput,
+  type AIToken,
   type CloudSession,
   type CloudUserProfile,
   type CollaborationTicket,
   type CreateInvitationContinuationInput,
   type InvitationContinuation,
-  type CommitUploadInput,
+  type CommitUploadRequest,
   type CreateDocumentInput,
   type CreateDocumentInvitationInput,
   type CreateDocumentShareInput,
@@ -32,6 +39,12 @@ import {
   type DocumentInvitation,
   type DocumentShare,
   type DocumentSummary,
+  type DocumentVersion,
+  type DocumentVersionDownload,
+  type DocumentVersions,
+  type DuplicateDocumentVersionInput,
+  type SaveDocumentVersionInput,
+  type UpdateDocumentVersionInput,
   type SharedDocument,
   type InvitationPreview,
   type LookupCloudUserInput,
@@ -41,9 +54,11 @@ import {
   type AcceptedInvitation
 } from '#cloud/contract'
 import type { CloudAPI, PublicCloudAPI } from '#cloud/server/api'
+import { pickBy } from 'es-toolkit/object'
 import { hc } from 'hono/client'
 import * as v from 'valibot'
 
+import { createImageRequests } from './images'
 import { CloudAPIError, parseResponse, responseBody, type CloudClientDiagnostic } from './response'
 import { createWorkspaceRequests } from './workspaces'
 
@@ -79,29 +94,7 @@ const sharedDocumentResponseSchema = v.object({
 const userLookupResponseSchema = v.object({ user: v.nullable(cloudUserProfileSchema) })
 const uploadResponseSchema = v.object({
   id: v.pipe(v.string(), v.uuid()),
-  upload: v.variant('kind', [
-    v.object({
-      kind: v.literal('single'),
-      url: v.pipe(v.string(), v.url()),
-      method: v.literal('PUT'),
-      headers: v.record(v.string(), v.string()),
-      expiresAt: v.string()
-    }),
-    v.object({
-      kind: v.literal('multipart'),
-      uploadId: v.string(),
-      partSize: v.pipe(v.number(), v.integer(), v.minValue(1)),
-      parts: v.array(
-        v.object({
-          partNumber: v.pipe(v.number(), v.integer(), v.minValue(1)),
-          url: v.pipe(v.string(), v.url()),
-          method: v.literal('PUT'),
-          headers: v.record(v.string(), v.string())
-        })
-      ),
-      expiresAt: v.string()
-    })
-  ])
+  upload: objectUploadSchema
 })
 
 export type CloudRequestOptions = {
@@ -144,6 +137,14 @@ export function createCloudAPIClient(baseURL: string, options: CloudRequestOptio
       if (response.status === 401) return null
       return v.parse(cloudSessionSchema, await responseBody(response, options.onDiagnostic))
     },
+    /** A short-lived token for the deployment's AI service, on the workspace's behalf. */
+    async requestAIToken(workspaceId: string): Promise<AIToken> {
+      return parseResponse(
+        client.ai.token.$post({ json: { workspaceId } }),
+        aiTokenSchema,
+        options.onDiagnostic
+      )
+    },
     async lookupUser(
       documentId: string,
       input: LookupCloudUserInput
@@ -169,6 +170,7 @@ export function createCloudAPIClient(baseURL: string, options: CloudRequestOptio
       return response.user
     },
     ...createWorkspaceRequests(client, options.onDiagnostic),
+    ...createImageRequests(client, publicClient, options.onDiagnostic),
     /** Documents shared with the person directly, outside their workspaces. */
     async listSharedDocuments(): Promise<SharedDocument[]> {
       const response = await parseResponse(
@@ -433,10 +435,86 @@ export function createCloudAPIClient(baseURL: string, options: CloudRequestOptio
         options.onDiagnostic
       )
     },
-    async commitUpload(uploadId: string, input: CommitUploadInput): Promise<DocumentSummary> {
+    async commitUpload(uploadId: string, input: CommitUploadRequest): Promise<DocumentSummary> {
       const response = await parseResponse(
         client.uploads[':uploadId'].commit.$post({
           param: { uploadId },
+          json: { ...input, images: input.images ?? [] }
+        }),
+        documentResponseSchema,
+        options.onDiagnostic
+      )
+      return response.document
+    },
+    /** A page of the document's version history, newest first. */
+    async listDocumentVersions(
+      documentId: string,
+      page: { before?: string; limit?: number } = {}
+    ): Promise<DocumentVersions> {
+      return parseResponse(
+        client.documents[':documentId'].versions.$get({
+          param: { documentId },
+          query: pickBy(page, (value) => value !== undefined)
+        }),
+        documentVersionsSchema,
+        options.onDiagnostic
+      )
+    },
+    async saveDocumentVersion(
+      documentId: string,
+      input: SaveDocumentVersionInput
+    ): Promise<DocumentVersion> {
+      const response = await parseResponse(
+        client.documents[':documentId'].versions.$post({ param: { documentId }, json: input }),
+        documentVersionResponseSchema,
+        options.onDiagnostic
+      )
+      return response.version
+    },
+    async updateDocumentVersion(
+      documentId: string,
+      versionId: string,
+      input: UpdateDocumentVersionInput
+    ): Promise<DocumentVersion> {
+      const response = await parseResponse(
+        client.documents[':documentId'].versions[':versionId'].$patch({
+          param: { documentId, versionId },
+          json: input
+        }),
+        documentVersionResponseSchema,
+        options.onDiagnostic
+      )
+      return response.version
+    },
+    async getDocumentVersion(
+      documentId: string,
+      versionId: string
+    ): Promise<DocumentVersionDownload> {
+      return parseResponse(
+        client.documents[':documentId'].versions[':versionId'].$get({
+          param: { documentId, versionId }
+        }),
+        documentVersionDownloadSchema,
+        options.onDiagnostic
+      )
+    },
+    async restoreDocumentVersion(documentId: string, versionId: string) {
+      return parseResponse(
+        client.documents[':documentId'].versions[':versionId'].restore.$post({
+          param: { documentId, versionId }
+        }),
+        restoredDocumentSchema,
+        options.onDiagnostic
+      )
+    },
+    async duplicateDocumentVersion(
+      documentId: string,
+      versionId: string,
+      input: DuplicateDocumentVersionInput
+    ): Promise<DocumentSummary> {
+      const response = await parseResponse(
+        client.documents[':documentId'].versions[':versionId'].duplicate.$post({
+          param: { documentId, versionId },
           json: input
         }),
         documentResponseSchema,

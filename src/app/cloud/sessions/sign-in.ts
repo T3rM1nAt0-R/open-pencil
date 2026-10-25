@@ -1,8 +1,9 @@
 import { useSessionStorage } from '@vueuse/core'
+import { withoutFragment } from 'ufo'
 import { ref } from 'vue'
 
 import { cloudSignInURL, type CloudSocialProvider } from '@open-pencil/cloud/client'
-import type { CloudDiscovery } from '@open-pencil/cloud/contract'
+import { cloudServerOrigin, type CloudDiscovery } from '@open-pencil/cloud/contract'
 
 import { IS_BROWSER, IS_TAURI } from '@/constants'
 
@@ -17,16 +18,14 @@ const pendingSignIn = IS_BROWSER
  * else — the desktop app, another editor address — approves a code instead.
  */
 export function cloudSignInRoute(discovery: CloudDiscovery): 'redirect' | 'device' {
-  if (IS_TAURI || !discovery.appURL) return 'device'
-  return new URL(discovery.appURL).origin === globalThis.location.origin ? 'redirect' : 'device'
+  if (IS_TAURI) return 'device'
+  return cloudServerOrigin(discovery) === globalThis.location.origin ? 'redirect' : 'device'
 }
 
 export type CloudSignInMethod = CloudSocialProvider | 'email'
 
 function returnURL(): string {
-  const url = new URL(globalThis.location.href)
-  url.hash = ''
-  return url.href
+  return withoutFragment(globalThis.location.href)
 }
 
 /**

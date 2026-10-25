@@ -1,11 +1,9 @@
-import {
-  setInstanceOverride,
-  type Color,
-  type NodeType,
-  type SceneGraph,
-  type SceneNode
-} from '@open-pencil/scene-graph'
+import { omitBy } from 'es-toolkit/object'
+
+import type { NodeType, SceneGraph, SceneNode } from '@open-pencil/scene-graph'
 import { parseColor } from '@open-pencil/scene-graph/color'
+import { setInstanceOverride } from '@open-pencil/scene-graph/instances/overrides'
+import type { Color } from '@open-pencil/scene-graph/primitives'
 
 import type { RekaScope } from './behaviours'
 import { renderRekaNode } from './behaviours/render'
@@ -16,9 +14,12 @@ import {
   componentPropertyScope,
   inferComponentSetProperties
 } from './component-properties'
-import { elementNodeType } from './elements'
-import { applySizeOverrides, propsToOverrides } from './props-overrides'
+import { CONNECTOR_ELEMENT, resolveConnectorEnds } from './connectors'
+import { elementNodeType, elementOwnLayer, type OwnLayerRenderer } from './elements'
+import { applySizeOverrides, propsToOverrides, shapeOverrides } from './props-overrides'
+import { LayerRefs } from './refs'
 import { prepareScalarBindings } from './scalar-bindings'
+import { readElementProps } from './schema'
 import type { DesignJSXServices } from './services'
 import { isTextContent, TEXT_CONTENT_NAMES, textContentFields } from './text-content'
 import { FRAGMENT, isTreeNode } from './tree'
@@ -53,21 +54,30 @@ export async function renderRoots<Artwork>(
   const parentId = options.parentId ?? graph.getPages()[0].id
 
   const nodes: SceneNode[] = []
+  const connectors: Array<{ node: SceneNode; tree: TreeNode }> = []
+  const refs = new LayerRefs()
+  const onNode = (element: TreeNode, node: SceneNode) => {
+    if (element.type === CONNECTOR_ELEMENT) connectors.push({ node, tree: element })
+    else refs.mark(element.props.ref, node)
+    options.onNode?.(element, node)
+  }
   for (const root of roots) {
-    const node = await renderNode(services, graph, root, parentId, options.onNode)
+    const node = await renderNode(services, graph, root, parentId, onNode)
     if (options.x !== undefined) graph.updateNode(node.id, { x: options.x })
     if (options.y !== undefined) graph.updateNode(node.id, { y: options.y })
     nodes.push(node)
   }
 
   const rootIds = nodes.map((node) => node.id)
+  const warnings = [...refs.warnings, ...resolveConnectorEnds(graph, rootIds, connectors, refs)]
   if (!options.deferLayout) services.layout(graph, rootIds)
 
   return nodes.map((node) => ({
     id: node.id,
     name: node.name,
     type: node.type,
-    childIds: node.childIds
+    childIds: node.childIds,
+    ...(warnings.length > 0 && { warnings })
   }))
 }
 
@@ -177,6 +187,30 @@ function preparePropsForRender(
   }
 
   return { props, bindings }
+}
+
+/**
+ * An element that draws its own layer. Its props are resolved as any layer's are, so a
+ * `designVar()` binds, and its layer props become fields as any layer's do; the element reads the
+ * rest itself.
+ */
+function renderOwnLayerElement(
+  graph: SceneGraph,
+  tree: TreeNode,
+  parentId: string,
+  element: OwnLayerRenderer
+): SceneNode {
+  const { props, bindings } = preparePropsForRender(graph, tree.props, false, parentId)
+  const parentLayout = graph.getNode(parentId)?.layoutMode ?? 'NONE'
+  const layer = omitBy(
+    propsToOverrides(readElementProps(element.layer, props), false, parentLayout),
+    (value) => value === undefined
+  )
+  const node = element.render(graph, { ...tree, props }, parentId, layer)
+  for (const [field, variableId] of Object.entries(bindings)) {
+    graph.bindVariable(element.bindingTarget?.(graph, node, field) ?? node.id, field, variableId)
+  }
+  return node
 }
 
 function applyBindings(graph: SceneGraph, nodeId: string, bindings: Record<string, string>): void {
@@ -446,6 +480,7 @@ export function elementOverrides(
   const { props, bindings } = preparePropsForRender(graph, tree.props, isText, parentId)
   const overrides = {
     ...propsToOverrides(props, isText, parentLayout),
+    ...shapeOverrides(nodeType, props),
     ...componentMetadata(props, nodeType, componentPropertyScope(graph, parentId))
   }
 
@@ -487,8 +522,10 @@ function renderOwnElement<Artwork>(
       return renderArtworkNode(services, graph, tree, parentId)
     case 'instance':
       return renderInstanceNode(graph, tree, parentId)
-    default:
-      return null
+    default: {
+      const element = elementOwnLayer(tree.type)
+      return element ? Promise.resolve(renderOwnLayerElement(graph, tree, parentId, element)) : null
+    }
   }
 }
 

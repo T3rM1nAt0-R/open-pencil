@@ -2,10 +2,13 @@
 import { useLocalStorage } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
 
-import { useDocumentWorkspace, useI18n, useViewportKind } from '@open-pencil/vue'
+import { useDocumentWorkspace } from '@open-pencil/vue/document/workspace'
+import { useViewportKind } from '@open-pencil/vue/editor/viewport-kind'
+import { useI18n } from '@open-pencil/vue/i18n'
 
-import { CLOUD_STORAGE_PROVIDER_ID } from '@/app/cloud/sessions/token'
+import { CLOUD_INCLUDED, CLOUD_STORAGE_PROVIDER_ID } from '@/app/cloud/integration'
 import { useHomeLocations } from '@/app/home/locations'
+import { useDateFormat } from '@/app/i18n/date'
 import {
   activeStorageProviderID,
   createStorageAdapter,
@@ -30,8 +33,7 @@ import { openFileFromPath } from '@/app/shell/menu/use'
 import { createStoredDocument } from '@/app/storage/workspace/create'
 import { activeStorageLocation, createStorageWorkspaceSource } from '@/app/storage/workspace/source'
 import { openStorageDocumentInNewTab } from '@/app/tabs'
-import CloudSharedSection from '@/components/home/cloud/CloudSharedSection.vue'
-import CloudWorkspaceSection from '@/components/home/cloud/CloudWorkspaceSection.vue'
+import { CloudSharedSection, CloudWorkspaceSection } from '@/components/cloud/integration'
 import DocumentEntry from '@/components/home/document/DocumentEntry.vue'
 import HomeLayout from '@/components/home/HomeLayout.vue'
 import HomeSearchActions from '@/components/home/search/HomeSearchActions.vue'
@@ -219,10 +221,10 @@ async function openStorageDocument(document: StorageDocument): Promise<void> {
   }
 }
 
+const dates = useDateFormat()
+/** A file's last change; a file that never reported one shows nothing. */
 function formattedDate(updatedAt: string): string {
-  const date = new Date(updatedAt)
-  if (date.getTime() === 0) return ''
-  return date.toLocaleString(locale.value)
+  return Date.parse(updatedAt) === 0 ? '' : dates.format(updatedAt, 'dateTime')
 }
 </script>
 
@@ -230,6 +232,7 @@ function formattedDate(updatedAt: string): string {
   <HomeLayout data-test-id="recent-files-home">
     <template #sidebar>
       <HomeSidebar
+        :cloud="CLOUD_INCLUDED"
         :active="places.active.value"
         :account="places.account.value"
         :workspaces="places.workspaces.value"
@@ -245,6 +248,7 @@ function formattedDate(updatedAt: string): string {
     </template>
     <template #locations>
       <HomeLocationMenu
+        :cloud="CLOUD_INCLUDED"
         :active="places.active.value"
         :account="places.account.value"
         :workspaces="places.workspaces.value"
@@ -261,8 +265,10 @@ function formattedDate(updatedAt: string): string {
     />
 
     <p v-if="openError" class="mb-4 text-xs text-error" role="alert">{{ openError }}</p>
+    <!-- Nothing until Cloud says which workspace Home opens on. -->
+    <template v-if="places.settling.value" />
     <CloudWorkspaceSection
-      v-if="places.workspace.value && places.serverId.value"
+      v-else-if="places.workspace.value && places.serverId.value"
       :server-id="places.serverId.value"
       :workspace="places.workspace.value"
       :query="normalizedQuery"

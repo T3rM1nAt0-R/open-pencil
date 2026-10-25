@@ -2,8 +2,12 @@ import { useSessionStorage } from '@vueuse/core'
 import * as v from 'valibot'
 import { computed, ref, shallowRef } from 'vue'
 
-import { CloudAPIError, cloudDesktopLinkURL, createCloudAPIClient } from '@open-pencil/cloud/client'
-import type { AcceptedInvitation, InvitationPreview } from '@open-pencil/cloud/contract'
+import { CloudAPIError, createCloudAPIClient } from '@open-pencil/cloud/client'
+import {
+  cloudDesktopLinkURL,
+  type AcceptedInvitation,
+  type InvitationPreview
+} from '@open-pencil/cloud/contract'
 
 import { openHomeLocation } from '@/app/shell/menu/navigation'
 import { openStorageDocumentInNewTab } from '@/app/tabs'
@@ -101,7 +105,7 @@ export async function checkCloudInvitation(): Promise<void> {
   cloudInvitationState.value = signedInServer() ? 'ready' : 'sign-in'
 }
 
-/** Opens an invitation link: `/cloud/invitations/:id?server=…#token`. */
+/** Opens an invitation link: `/invitations/:id#token` on its server. */
 export function beginCloudInvitation(id: string, server: string, token: string): void {
   stored.value = JSON.stringify({ id, server, token } satisfies PendingInvitation)
   cloudInvitationOpen.value = true

@@ -1,14 +1,10 @@
 import { computed } from 'vue'
 
-import { openCloudConnect } from '@/app/cloud/connect/flow'
-import { cloudServerHost } from '@/app/cloud/servers/address'
-import { homeCloudServer } from '@/app/cloud/servers/store'
-import { cloudConnection } from '@/app/cloud/sessions/connection'
-import { signOutOfCloud } from '@/app/cloud/sessions/sign-out'
-import { openNewWorkspace } from '@/app/cloud/workspaces/manage'
+import { useHomeCloud } from '@/app/cloud/integration'
+import { recentFilesAvailable } from '@/app/recent-files/preferences'
 import { openSettingsDialog } from '@/app/settings/dialog'
 
-import { homeLocation, type HomeLocation } from './location'
+import { homeLocation, homeLocationChosen, type HomeLocation } from './location'
 
 /** A Home location as the sidebar and the phone menu name it. */
 export type HomeLocationView =
@@ -33,27 +29,20 @@ function fromView(location: HomeLocationView): HomeLocation {
 
 /**
  * Where Home can list documents from: Recent, the workspaces and shared documents of the server
- * Home shows when signed in to it, and storage. A Cloud location the account can no longer
- * reach falls back to Recent.
+ * Home shows when signed in to it, and storage. Until the person picks a place, Home shows
+ * Recent, or the first workspace where this app keeps no recent files. A Cloud location the
+ * account can no longer reach falls back to Recent.
  */
 export function useHomeLocations() {
-  const connection = computed(() => {
-    const server = homeCloudServer.value
-    return server ? { server, ...cloudConnection(server.id) } : null
-  })
-  const signedIn = computed(() =>
-    connection.value?.state === 'signed-in' ? connection.value : null
-  )
-  const account = computed(() => {
-    const current = signedIn.value
-    if (!current?.account) return null
-    return { ...current.account, host: cloudServerHost(current.server.url) }
-  })
-  const workspaces = computed(() => signedIn.value?.workspaces ?? [])
+  const cloud = useHomeCloud()
+  const workspaces = cloud.workspaces
 
+  const defaultsToWorkspace = computed(() => !homeLocationChosen.value && !recentFilesAvailable())
   const location = computed<HomeLocation>(() => {
+    const first = workspaces.value.at(0)
+    if (defaultsToWorkspace.value && first) return { kind: 'workspace', id: first.id }
     const chosen = homeLocation.value
-    if (chosen.kind === 'shared' && !signedIn.value) return { kind: 'recent' }
+    if (chosen.kind === 'shared' && !cloud.signedIn.value) return { kind: 'recent' }
     if (chosen.kind === 'workspace' && !workspaces.value.some((entry) => entry.id === chosen.id)) {
       return { kind: 'recent' }
     }
@@ -67,26 +56,21 @@ export function useHomeLocations() {
   })
 
   return {
-    account,
+    account: cloud.account,
     workspaces,
     location,
+    /** Whether Home waits for Cloud to say which workspace it opens on, rather than show Recent. */
+    settling: computed(() => defaultsToWorkspace.value && cloud.checking.value),
     workspace,
-    serverId: computed(() => signedIn.value?.server.id ?? null),
+    serverId: cloud.serverId,
     active: computed(() => toView(location.value)),
     select(next: HomeLocationView) {
       homeLocation.value = fromView(next)
     },
-    // Signing back in goes straight to the server Home shows; without one, choose a server.
-    connect: () => openCloudConnect({ serverId: homeCloudServer.value?.id }),
+    connect: cloud.connect,
     accountSettings: () => openSettingsDialog('cloud'),
-    newWorkspace() {
-      const server = signedIn.value?.server
-      if (server) openNewWorkspace(server.id)
-    },
+    newWorkspace: cloud.newWorkspace,
     storageSettings: () => openSettingsDialog('storage'),
-    async signOut() {
-      const current = signedIn.value
-      if (current?.discovery) await signOutOfCloud(current.server.id, current.discovery)
-    }
+    signOut: cloud.signOut
   }
 }

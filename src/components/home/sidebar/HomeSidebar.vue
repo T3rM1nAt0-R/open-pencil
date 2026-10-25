@@ -10,7 +10,7 @@ import {
 } from 'reka-ui'
 import { computed } from 'vue'
 
-import { useCloudMessages } from '@open-pencil/vue'
+import { useCloudMessages } from '@open-pencil/vue/i18n'
 
 import IconButton from '@/components/ui/button/IconButton.vue'
 import { menu } from '@/components/ui/menu/menu'
@@ -28,9 +28,12 @@ const {
   account = null,
   workspaces = [],
   sharedCount = 0,
-  storage = null
+  storage = null,
+  cloud = true
 } = defineProps<{
   active: HomeLocation
+  /** The build has Cloud, so its sign-in and workspaces have a place. */
+  cloud?: boolean
   account?: HomeCloudAccount | null
   workspaces?: { id: string; name: string; documentCount?: number; attention?: boolean }[]
   sharedCount?: number
@@ -63,7 +66,7 @@ const workspaceLocations = computed(() =>
 
 <template>
   <nav :class="ui.root()" :aria-label="t.homeLocations">
-    <div :class="[ui.items(), 'pt-1']">
+    <div :class="ui.group()">
       <button
         type="button"
         :class="ui.item()"
@@ -75,7 +78,7 @@ const workspaceLocations = computed(() =>
       </button>
     </div>
 
-    <div :class="ui.group()">
+    <div v-if="cloud" :class="ui.group()">
       <div :class="ui.header()">
         <span :class="ui.title()">{{ t.productName }}</span>
         <div v-if="account" :class="ui.actions()">

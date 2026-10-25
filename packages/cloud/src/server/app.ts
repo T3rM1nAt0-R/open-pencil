@@ -7,14 +7,21 @@ import {
   createEnrollmentService,
   type EnrollmentService
 } from '#cloud/admin'
-import { CLOUD_DISCOVERY_PATH, CLOUD_PROTOCOL_VERSION, type CloudDiscovery } from '#cloud/contract'
+import {
+  CLOUD_AI_JWKS_PATH,
+  CLOUD_DISCOVERY_PATH,
+  CLOUD_PROTOCOL_VERSION,
+  type CloudDiscovery
+} from '#cloud/contract'
 import { createAccountRoutes } from '#cloud/server/account/routes'
+import { createAITokenService, type AISigningKey } from '#cloud/server/ai'
 import {
   createCloudAPIRouter,
   createPublicCloudAPIRouter,
   type CloudAPIEnvironment
 } from '#cloud/server/api'
 import {
+  createAuthenticationEmailService,
   createCloudIdentityResolver,
   createCloudSessionResolver,
   type CloudAuthAdapter,
@@ -22,19 +29,23 @@ import {
   type CloudSessionResolver
 } from '#cloud/server/auth'
 import { createCollaborationTicketService } from '#cloud/server/collaboration'
-import { cloudDiscoveryFromConfig, type CloudServerConfig } from '#cloud/server/config'
+import {
+  CloudConfigError,
+  cloudDiscoveryFromConfig,
+  type CloudServerConfig
+} from '#cloud/server/config'
 import type { CloudDatabase } from '#cloud/server/db'
 import { createDocumentService } from '#cloud/server/documents'
+import { createDocumentVersionService } from '#cloud/server/documents/versions'
 import type { TransactionalEmailService } from '#cloud/server/email'
+import { createInternalRoutes, createInternalService } from '#cloud/server/internal'
 import type { InvitationDelivery, InvitationOutbox } from '#cloud/server/invitations'
 import type { ObjectStore } from '#cloud/server/objects'
 import {
+  createConfiguredCloudPolicy,
   createDefaultCloudPolicy,
   createEntitlementService,
-  DatabaseEntitlementSource,
   EntitlementOpenFeatureProvider,
-  StaticEntitlementSource,
-  staticEntitlementValues,
   type CloudPolicy,
   type EntitlementSource
 } from '#cloud/server/policy'
@@ -62,11 +73,17 @@ export type CloudServices = {
   enrollment?: EnrollmentService
   entitlementSource?: EntitlementSource
   policy?: CloudPolicy
+  /** The imported `aiSigningKey`, required when the config names one. See `loadAISigningKey`. */
+  aiSigningKey?: AISigningKey
   /**
    * Where clients reach this runtime's collaboration relay. Without one, Cloud rooms fall back to
    * peer-to-peer and writes are not enforced by the server.
    */
   relayURL?: string
+  /** Ends a restored document's live rooms, on the relay this runtime runs, if any. */
+  onDocumentRestored?: (documentId: string) => void
+  /** Tells a document's live rooms its version history changed, on the relay this runtime runs. */
+  onDocumentVersionsChanged?: (documentId: string) => void
 }
 
 type CloudEnvironment = CloudAPIEnvironment
@@ -154,26 +171,26 @@ export function createCloudApp(services: CloudServices) {
   const workspaces = createWorkspaceService(services.database)
   const workspaceMembers = createWorkspaceMemberService(services.database, {
     email: services.transactionalEmail,
-    publicURL: services.config.publicURL,
-    appURL: services.config.appURL ?? services.config.publicURL
+    publicURL: services.config.publicURL
   })
   const enrollment =
     services.enrollment ??
     createEnrollmentService(services.database, {
-      appURL: services.config.appURL ?? services.config.publicURL,
-      portalURL: services.config.publicURL,
+      publicURL: services.config.publicURL,
       adminRecipients: services.config.enrollmentAdminNotificationEmails,
       email: services.transactionalEmail
     })
   const admin = createCloudAdminRoutes(
     {
       email: createAdminEmailService(services.database, services.transactionalEmail, {
-        appURL: services.config.appURL ?? services.config.publicURL,
-        portalURL: services.config.publicURL
+        publicURL: services.config.publicURL
       }),
       enrollment,
       users: createAdminUserService(services.database, services.auth, {
-        requireMFA: services.config.deploymentAdminMFARequired
+        requireMFA: services.config.deploymentAdminMFARequired,
+        notify: services.transactionalEmail
+          ? createAuthenticationEmailService(services.transactionalEmail, services.config.publicURL)
+          : undefined
       }),
       audit: createAdminAuditService(services.database),
       operations: createAdminOperationsService(services.database, services.config)
@@ -186,17 +203,21 @@ export function createCloudApp(services: CloudServices) {
       requireMFA: services.config.deploymentAdminMFARequired
     }
   )
-  const entitlementSource =
-    services.entitlementSource ??
-    (services.config.staticEntitlements
-      ? new StaticEntitlementSource(staticEntitlementValues(services.config.staticEntitlements))
-      : new DatabaseEntitlementSource(services.database))
   const policy =
     services.policy ??
-    createDefaultCloudPolicy(new EntitlementOpenFeatureProvider(entitlementSource))
+    (services.entitlementSource
+      ? createDefaultCloudPolicy(new EntitlementOpenFeatureProvider(services.entitlementSource))
+      : createConfiguredCloudPolicy(services.config, services.database))
   const documents = createDocumentService(services.database, services.objects, {
     policy,
-    technicalMaximumUploadBytes: services.config.technicalLimits.maximumUploadBytes
+    technicalMaximumUploadBytes: services.config.technicalLimits.maximumUploadBytes,
+    onVersionsChanged: services.onDocumentVersionsChanged
+  })
+  const versions = createDocumentVersionService(services.database, services.objects, {
+    policy,
+    deploymentMode: services.config.deployment,
+    onRestored: services.onDocumentRestored,
+    onVersionsChanged: services.onDocumentVersionsChanged
   })
   const entitlements = createEntitlementService(
     services.database,
@@ -209,7 +230,6 @@ export function createCloudApp(services: CloudServices) {
     outbox: services.invitationOutbox,
     continuationSecret: services.config.authSecret,
     publicURL: services.config.publicURL,
-    appURL: services.config.appURL ?? services.config.publicURL,
     policy,
     deploymentMode: services.config.deployment,
     workspaceInvitations: workspaceMembers
@@ -222,6 +242,19 @@ export function createCloudApp(services: CloudServices) {
     policy,
     deploymentMode: services.config.deployment
   })
+  if (services.config.aiSigningKey && !services.aiSigningKey) {
+    throw new CloudConfigError('The AI service needs the signing key imported by loadAISigningKey')
+  }
+  const aiTokens = services.aiSigningKey
+    ? createAITokenService({
+        database: services.database,
+        policy,
+        deploymentMode: services.config.deployment,
+        issuer: new URL(services.config.publicURL).origin,
+        signingKey: services.aiSigningKey,
+        lifetimeSeconds: services.config.aiTokenLifetimeSeconds
+      })
+    : undefined
 
   const requireActiveSession = async (context: Context, next: () => Promise<void>) => {
     const actor = await resolveSession(context.req.raw)
@@ -256,6 +289,7 @@ export function createCloudApp(services: CloudServices) {
     (context) =>
       context.req.method === 'GET' ||
       context.req.path.endsWith('/collaboration-ticket') ||
+      context.req.path === '/api/ai/token' ||
       context.req.path.endsWith('/invitations') ||
       context.req.path.endsWith('/uploads') ||
       /^\/api\/workspaces(?:\/[^/]+\/documents)?$/.test(context.req.path)
@@ -276,7 +310,9 @@ export function createCloudApp(services: CloudServices) {
     database: services.database,
     rateLimitSecret: services.config.authSecret,
     documents,
+    versions,
     entitlements,
+    aiTokens,
     sharing,
     workspaces,
     workspaceMembers,
@@ -285,12 +321,21 @@ export function createCloudApp(services: CloudServices) {
   const publicCloudAPI = createPublicCloudAPIRouter({
     collaboration,
     documents,
+    versions,
     entitlements,
     sharing,
     workspaces,
     workspaceMembers,
     resolveSession
   })
+
+  // Services such as billing authenticate with their own token, not a session.
+  const internalAPI = services.config.internalServiceToken
+    ? createInternalRoutes(
+        createInternalService(services.database),
+        services.config.internalServiceToken
+      )
+    : new Hono()
 
   return new Hono<CloudEnvironment>()
     .use(CLOUD_DISCOVERY_PATH, cloudCORS)
@@ -337,6 +382,9 @@ export function createCloudApp(services: CloudServices) {
       }
     })
     .get(CLOUD_DISCOVERY_PATH, (context) => context.json(discovery))
+    .get(CLOUD_AI_JWKS_PATH, async (context) =>
+      aiTokens ? context.json(aiTokens.jwks()) : context.notFound()
+    )
     .on(['GET', 'POST'], '/api/auth/*', async (context) => {
       if (POLICY_MANAGED_AUTH_PATHS.has(context.req.path)) {
         return context.json({ error: { code: 'forbidden' as const } }, 403)
@@ -355,6 +403,7 @@ export function createCloudApp(services: CloudServices) {
     .use('/api/shares/*', publicRateLimiter)
     .use('/api/invitations/*', publicRateLimiter)
     .route('/api', publicCloudAPI)
+    .route('/api/internal', internalAPI)
     .use('/api/*', requireActiveSession)
     .route('/api/admin', admin)
     .use('/api/*', authenticatedMutationLimiter)

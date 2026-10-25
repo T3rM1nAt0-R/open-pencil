@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
-import { useCloudPortalMessages, useI18n } from '@open-pencil/vue'
+import { useCloudPortalMessages, useI18n } from '@open-pencil/vue/i18n'
 
 import { usePortal } from '@/app/cloud-portal/context'
 import { usePortalFailureMessages } from '@/app/cloud-portal/failure'
-import { portalDate } from '@/app/cloud-portal/format'
 import { portalURL } from '@/app/cloud-portal/navigation'
 import { usePortalAction, usePortalLoad } from '@/app/cloud-portal/state'
+import { formatDate } from '@/app/i18n/date'
 import AppAlert from '@/components/ui/feedback/AppAlert.vue'
+import { useHeldContent } from '@/components/ui/overlay/held'
 
 import PortalAccountSecurity from '../account/PortalAccountSecurity.vue'
 import PortalAuthenticatorSetup from '../account/PortalAuthenticatorSetup.vue'
@@ -54,7 +55,7 @@ const linkedMethods = computed(() =>
   (methods.value?.methods ?? []).map((method) => ({
     id: method.id,
     provider: method.provider,
-    linkedOn: portalDate(method.createdAt, locale.value),
+    linkedOn: formatDate(method.createdAt, 'date', locale.value),
     canUnlink: method.canUnlink
   }))
 )
@@ -135,6 +136,10 @@ const busy = computed(
     verifyAction.busy.value
 )
 const passwordError = computed(() => (passwordStep.value ? passwordAction.error.value : null))
+const passwordShown = useHeldContent(passwordStep)
+const passwordErrorShown = useHeldContent(passwordError, () => passwordStep.value !== null)
+const setupShown = useHeldContent(setupURI)
+const codesShown = useHeldContent(recoveryCodes)
 const error = computed(
   () =>
     change.error.value ??
@@ -144,7 +149,7 @@ const error = computed(
 
 function link(provider: PortalSignInMethod) {
   void change.run(async () => {
-    const { url } = await portal.api.linkSocial(provider, portalURL('/account'))
+    const { url } = await portal.api.linkSocial(provider, portalURL('/account/security'))
     globalThis.location.assign(url)
   })
 }
@@ -209,7 +214,7 @@ function addPasskey() {
         passkeys.map((passkey) => ({
           id: passkey.id,
           name: passkey.name ?? null,
-          addedOn: portalDate(passkey.createdAt, locale)
+          addedOn: formatDate(passkey.createdAt, 'date', locale)
         }))
       "
       :passkeys-available="mfa.passkeysAvailable"
@@ -227,9 +232,9 @@ function addPasskey() {
 
     <PortalPasswordDialog
       :open="passwordStep !== null"
-      :purpose="passwordStep === 'change' ? 'change' : 'confirm'"
+      :purpose="passwordShown === 'change' ? 'change' : 'confirm'"
       :minimum-password-length="minimum"
-      :error="passwordError"
+      :error="passwordErrorShown"
       :saving="busy"
       @update:open="(open) => !open && closePasswordStep()"
       @submit="
@@ -237,18 +242,16 @@ function addPasskey() {
       "
     />
     <PortalAuthenticatorSetup
-      v-if="setupURI"
-      :open="true"
-      :uri="setupURI"
+      :open="setupURI !== null"
+      :uri="setupShown ?? ''"
       :error="verifyAction.error.value"
       :verifying="busy"
       @update:open="(open) => !open && closeAuthenticatorSetup()"
       @verify="verifyAction.run"
     />
     <PortalRecoveryCodes
-      v-if="recoveryCodes"
-      :open="true"
-      :codes="recoveryCodes"
+      :open="recoveryCodes !== null"
+      :codes="codesShown ?? []"
       @update:open="(open) => !open && (recoveryCodes = null)"
     />
   </div>

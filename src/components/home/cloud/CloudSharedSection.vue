@@ -3,12 +3,12 @@ import { useAsyncState, useLocalStorage } from '@vueuse/core'
 import { computed, watch } from 'vue'
 
 import type { SharedDocument } from '@open-pencil/cloud/contract'
-import { useCloudMessages, useI18n } from '@open-pencil/vue'
+import { useCloudMessages, useI18n } from '@open-pencil/vue/i18n'
 
 import { findCloudServer } from '@/app/cloud/servers/store'
 import { cloudAPIClient, cloudConnection } from '@/app/cloud/sessions/connection'
 import { CLOUD_STORAGE_PROVIDER_ID } from '@/app/cloud/sessions/token'
-import { formatCommentTime, useCommentClock } from '@/app/comments/time'
+import { useDateFormat } from '@/app/i18n/date'
 import { openStorageDocumentInNewTab } from '@/app/tabs'
 
 import CloudWorkspaceView from './CloudWorkspaceView.vue'
@@ -23,7 +23,7 @@ const { serverId, query = '' } = defineProps<{
 
 const { locale } = useI18n()
 const t = useCloudMessages()
-const now = useCommentClock()
+const dates = useDateFormat()
 const view = useLocalStorage<'grid' | 'list'>('open-pencil:home-files-view', 'grid')
 const {
   state: documents,
@@ -58,7 +58,7 @@ const rows = computed<CloudDocumentRow[]>(() =>
   documents.value.map((document) => ({
     id: document.id,
     name: document.name,
-    editedAt: formatCommentTime(document.updatedAt, now.value.getTime(), locale.value),
+    editedAt: dates.relative(document.updatedAt),
     editedBy: document.sharedBy
       ? t.value.homeSharedBy({ name: document.sharedBy.name })
       : undefined,

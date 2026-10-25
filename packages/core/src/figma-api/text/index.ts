@@ -1,19 +1,5 @@
 import { upperFirst } from 'es-toolkit/string'
 
-import {
-  MAX_LIST_INDENTATION,
-  paragraphIndexAt,
-  paragraphStyleAt,
-  paragraphStylesAfterEdit,
-  paragraphStylesInRange,
-  recordInstanceOverride,
-  sharedParagraphSpacing,
-  textParagraphRanges,
-  trimParagraphStyles,
-  withIndentation,
-  withListType,
-  withParagraphSpacing
-} from '@open-pencil/scene-graph'
 import type {
   SceneGraph,
   SceneNode,
@@ -21,6 +7,20 @@ import type {
   TextParagraphSpacingField,
   TextParagraphStyle
 } from '@open-pencil/scene-graph'
+import { recordInstanceOverride } from '@open-pencil/scene-graph/instances'
+import {
+  MAX_LIST_INDENTATION,
+  paragraphIndexAt,
+  paragraphStyleAt,
+  paragraphStylesAfterEdit,
+  paragraphStylesInRange,
+  sharedParagraphSpacing,
+  textParagraphRanges,
+  trimParagraphStyles,
+  withIndentation,
+  withListType,
+  withParagraphSpacing
+} from '@open-pencil/scene-graph/text'
 
 import { adjustRunsForDelete, getStyleAt, insertRunsWithStyle } from '#core/text/style-runs'
 

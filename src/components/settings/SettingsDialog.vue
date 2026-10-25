@@ -3,8 +3,10 @@ import { tryOnScopeDispose } from '@vueuse/core'
 import { AlertDialogCancel, DialogClose } from 'reka-ui'
 import { computed } from 'vue'
 
-import { useI18n, useViewportKind } from '@open-pencil/vue'
+import { useViewportKind } from '@open-pencil/vue/editor/viewport-kind'
+import { useI18n } from '@open-pencil/vue/i18n'
 
+import { CLOUD_INCLUDED } from '@/app/cloud/integration'
 import {
   settingsDialogOpen,
   registerSettingsNavigation,
@@ -12,8 +14,8 @@ import {
   type SettingsSection
 } from '@/app/settings/dialog'
 import { provideSettingsNavigation } from '@/app/settings/navigation/use'
+import { CloudSettingsSection } from '@/components/cloud/integration'
 import ChatSettingsSection from '@/components/settings/chat/ChatSettingsSection.vue'
-import CloudSettingsSection from '@/components/settings/cloud/CloudSettingsSection.vue'
 import DiagnosticsSettingsPanel from '@/components/settings/diagnostics/DiagnosticsSettingsPanel.vue'
 import GeneralSettingsPanel from '@/components/settings/general/GeneralSettingsPanel.vue'
 import SettingsPage from '@/components/settings/layout/SettingsPage.vue'
@@ -42,7 +44,7 @@ const { isMobile } = useViewportKind()
 const { settings, common } = useI18n()
 const navigation = provideSettingsNavigation()
 tryOnScopeDispose(registerSettingsNavigation(navigation.request))
-const { editing, confirming } = navigation
+const { editing, confirming, crumb } = navigation
 const sections = computed(
   () =>
     [
@@ -56,7 +58,7 @@ const sections = computed(
       { value: 'tools', label: settings.value.toolAccess },
       { value: 'media', label: settings.value.media },
       { value: 'storage', label: settings.value.storage },
-      { value: 'cloud', label: settings.value.cloud }
+      ...(CLOUD_INCLUDED ? [{ value: 'cloud' as const, label: settings.value.cloud }] : [])
     ] satisfies { value: SettingsSection; label: string }[]
 )
 function onSectionChange(section: string | number): void {
@@ -69,9 +71,12 @@ function onSectionChange(section: string | number): void {
 function onOpenChange(open: boolean): void {
   if (open) settingsDialogOpen.value = true
   else
-    navigation.request(() => {
-      settingsDialogOpen.value = false
-    })
+    navigation.request(
+      () => {
+        settingsDialogOpen.value = false
+      },
+      { closesWindow: true }
+    )
 }
 </script>
 
@@ -88,7 +93,31 @@ function onOpenChange(open: boolean): void {
       :heading="settings.title"
       :description="settings.description"
       :close-label="common.close"
-    />
+    >
+      <!-- An open editor turns the title into the path back to where it was opened from. -->
+      <template v-if="crumb" #title>
+        <span class="flex min-w-0 items-center gap-1.5" data-test-id="settings-breadcrumb">
+          <button
+            type="button"
+            class="cursor-pointer rounded-sm text-muted hover:text-surface focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:outline-none"
+            @click="navigation.back()"
+          >
+            {{ settings.title }}
+          </button>
+          <icon-lucide-chevron-right class="size-3.5 shrink-0 text-muted" aria-hidden="true" />
+          <button
+            type="button"
+            class="cursor-pointer rounded-sm text-muted hover:text-surface focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:outline-none"
+            data-test-id="settings-editor-back"
+            @click="navigation.back()"
+          >
+            {{ crumb.parent }}
+          </button>
+          <icon-lucide-chevron-right class="size-3.5 shrink-0 text-muted" aria-hidden="true" />
+          <span class="truncate" aria-current="page">{{ crumb.title }}</span>
+        </span>
+      </template>
+    </AppDialogHeader>
 
     <AppTabsRoot
       :model-value="settingsDialogSection"
@@ -145,7 +174,7 @@ function onOpenChange(open: boolean): void {
           <template #leading><icon-lucide-database class="size-3.5" /></template>
           {{ settings.storage }}
         </AppTabsTrigger>
-        <AppTabsTrigger value="cloud" data-test-id="settings-section-cloud">
+        <AppTabsTrigger v-if="CLOUD_INCLUDED" value="cloud" data-test-id="settings-section-cloud">
           <template #leading><icon-lucide-cloud class="size-3.5" /></template>
           {{ settings.cloud }}
         </AppTabsTrigger>
@@ -185,7 +214,7 @@ function onOpenChange(open: boolean): void {
       <AppTabsContent value="storage" as-child>
         <StorageSettingsPanel />
       </AppTabsContent>
-      <AppTabsContent value="cloud" as-child>
+      <AppTabsContent v-if="CLOUD_INCLUDED" value="cloud" as-child>
         <CloudSettingsSection />
       </AppTabsContent>
     </AppTabsRoot>
