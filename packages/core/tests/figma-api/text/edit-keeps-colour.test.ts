@@ -22,7 +22,7 @@ function redCharacters(text: ReturnType<typeof coloured>) {
     .map((segment) => segment.characters)
 }
 
-// What Figma's plugin API documents for insertCharacters, deleteCharacters and characters.
+// Recorded with the same scripts in Figma 126.
 describe('editing coloured text through the plugin API', () => {
   test('inserting before a coloured run moves the run with its characters', () => {
     const text = coloured('one two three', 4, 7)
@@ -102,20 +102,35 @@ describe('editing coloured text through the plugin API', () => {
     expect(redCharacters(first)).toEqual(['six seven'])
   })
 
+  // Messages recorded in Figma 126.
   test('an unknown useStyle is refused', () => {
     const text = coloured('one', 0, 1)
-    expect(() => text.insertCharacters(0, 'x', 'MIDDLE' as never)).toThrow('useStyle')
+    expect(() => text.insertCharacters(0, 'x', 'MIDDLE' as never)).toThrow(
+      'in insertCharacters: Property "useStyle" failed validation: Invalid option: expected one of "BEFORE"|"AFTER"'
+    )
   })
 
   test('insert and delete positions outside the text are refused and change nothing', () => {
     const text = coloured('one two three', 4, 7)
 
-    expect(() => text.insertCharacters(14, 'x')).toThrow('"start"')
-    expect(() => text.insertCharacters(-1, 'x')).toThrow('"start"')
-    expect(() => text.insertCharacters(1.5, 'x')).toThrow('"start"')
-    expect(() => text.deleteCharacters(-1, 3)).toThrow('"start"')
-    expect(() => text.deleteCharacters(0, 14)).toThrow('"end"')
-    expect(() => text.deleteCharacters(5, 3)).toThrow('not be less')
+    expect(() => text.insertCharacters(14, 'x')).toThrow(
+      'in insertCharacters: Cannot insert characters at index greater than the length of the text'
+    )
+    expect(() => text.insertCharacters(-1, 'x')).toThrow(
+      'in insertCharacters: Property "start" failed validation: Too small: expected number to be >=0'
+    )
+    expect(() => text.insertCharacters(1.5, 'x')).toThrow(
+      'in insertCharacters: Property "start" failed validation: Expected int, received number'
+    )
+    expect(() => text.deleteCharacters(-1, 3)).toThrow(
+      'in deleteCharacters: Property "start" failed validation: Too small: expected number to be >=0'
+    )
+    expect(() => text.deleteCharacters(0, 14)).toThrow(
+      'in deleteCharacters: Cannot delete characters at index greater than the length of the text'
+    )
+    expect(() => text.deleteCharacters(5, 3)).toThrow(
+      'in deleteCharacters: deleteCharacters must have (start <= end)'
+    )
 
     expect(text.characters).toBe('one two three')
     expect(redCharacters(text)).toEqual(['two'])

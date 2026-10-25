@@ -22,6 +22,7 @@ import {
   withParagraphSpacing
 } from '@open-pencil/scene-graph/text'
 
+import { invalid } from '#core/figma-api/accessors/text/messages'
 import { adjustRunsForDelete, getStyleAt, insertRunsWithStyle } from '#core/text/style-runs'
 
 import { assertTextRange } from './style'
@@ -91,7 +92,11 @@ export function insertCharacters(
 ): void {
   // Scripts are not type-checked, so the value is checked as Figma checks it.
   if (!INSERT_STYLE_SOURCES.has(useStyle)) {
-    throw new Error(`in insertCharacters: useStyle must be "BEFORE" or "AFTER"`)
+    throw invalid(
+      'insertCharacters',
+      'Invalid option: expected one of "BEFORE"|"AFTER"',
+      'useStyle'
+    )
   }
   assertEditPosition('insertCharacters', node, 'start', start)
   const text = node.text.slice(0, start) + characters + node.text.slice(start)
@@ -112,12 +117,22 @@ export function insertCharacters(
   recordInstanceOverride(graph, node.id, ['text', 'textParagraphs', 'styleRuns'])
 }
 
-/** A position an edit can use: an integer from 0 through the text length, the end included. */
-function assertEditPosition(method: string, node: SceneNode, name: string, value: number) {
-  if (!Number.isInteger(value) || value < 0 || value > node.text.length) {
+/**
+ * A position an edit can use: an integer from 0 through the text length, the end included,
+ * refused with Figma's messages.
+ */
+function assertEditPosition(
+  method: 'insertCharacters' | 'deleteCharacters',
+  node: SceneNode,
+  name: string,
+  value: number
+) {
+  if (!Number.isInteger(value)) throw invalid(method, 'Expected int, received number', name)
+  if (value < 0) throw invalid(method, 'Too small: expected number to be >=0', name)
+  if (value > node.text.length) {
+    const verb = method === 'insertCharacters' ? 'insert' : 'delete'
     throw new Error(
-      `in ${method}: Property "${name}" failed validation: Expected an integer from 0 to ` +
-        `${node.text.length}, received ${String(value)}`
+      `in ${method}: Cannot ${verb} characters at index greater than the length of the text`
     )
   }
 }
@@ -131,7 +146,7 @@ export function deleteCharacters(
   assertEditPosition('deleteCharacters', node, 'start', start)
   assertEditPosition('deleteCharacters', node, 'end', end)
   if (end < start) {
-    throw new Error(`in deleteCharacters: 'end' must not be less than 'start'`)
+    throw new Error('in deleteCharacters: deleteCharacters must have (start <= end)')
   }
   const text = node.text.slice(0, start) + node.text.slice(end)
   const textParagraphs = paragraphStylesAfterEdit(node.textParagraphs, node.text, start, end, '')
