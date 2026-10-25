@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'bun:test'
 
-import { FigmaAPI, SceneGraph } from '@open-pencil/core'
+import { createAPI } from '#core-tests/helpers/figma-api'
 
 const RED = [{ type: 'SOLID' as const, color: { r: 1, g: 0, b: 0 } }]
 
 function coloured(characters: string, start: number, end: number) {
-  const api = new FigmaAPI(new SceneGraph())
+  const api = createAPI()
   const text = api.createText()
   text.characters = characters
   text.setRangeFills(start, end, RED)
@@ -62,7 +62,8 @@ describe('editing coloured text through the plugin API', () => {
 
     expect(text.characters.length).toBe(13 + long.length)
     // Read back a few ranges: listing every segment of 200,000 characters is slow in itself.
-    const red = (start: number, end: number) => (text.getRangeFills(start, end) as typeof RED)[0]?.color.r
+    const red = (start: number, end: number) =>
+      (text.getRangeFills(start, end) as typeof RED)[0]?.color.r
     expect([red(4, 5), red(4 + long.length, 7 + long.length)]).toEqual([1, 1])
     // Before the run, the text keeps its own black.
     expect(red(0, 4)).toBe(0)
