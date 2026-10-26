@@ -1,4 +1,4 @@
-import { isEqual, isPlainObject } from 'es-toolkit'
+import { compact, isEqual, isPlainObject } from 'es-toolkit'
 
 import {
   findInstanceAncestor,
@@ -9,8 +9,8 @@ import {
   type SceneNode
 } from '@open-pencil/scene-graph'
 
-import { getOrCreatePropertyGuid, type SceneNodeToKiwiContext } from './context'
-import { slotContentAssignment } from './slots'
+import { componentPropAssignment } from './assignments'
+import type { SceneNodeToKiwiContext } from './context'
 
 /** Fields that identify a layer or link it to its source rather than describe how it looks. */
 const IDENTITY_FIELDS = new Set([
@@ -130,15 +130,12 @@ function slotFrames(graph: SceneGraph, instance: SceneNode): Map<string, SceneNo
   return frames
 }
 
-/** Whether a nested instance's slot holds something other than what the instance it copies shows. */
-function slotDiffersFromSource(
-  context: SceneNodeToKiwiContext,
+/** The layer a nested instance copies: its component's, or the one a swap left in its owner. */
+function nestedSource(
+  graph: SceneGraph,
   owner: SceneNode,
-  nested: SceneNode,
-  frame: SceneNode,
-  propertyId: string
-): boolean {
-  const graph = context.graph
+  nested: SceneNode
+): SceneNode | undefined {
   // A swap replaces the nested instance's component and keeps the one it copied in the owner.
   const sourceOwner = (nested.parentId && findInstanceAncestor(graph, nested.parentId)) || owner
   const linked = getInstanceOverride(
@@ -148,7 +145,17 @@ function slotDiffersFromSource(
     'sourceComponentId'
   )
   const sourceId = typeof linked === 'string' ? linked : nested.componentId
-  const source = sourceId ? graph.getNode(sourceId) : undefined
+  return sourceId ? graph.getNode(sourceId) : undefined
+}
+
+/** Whether a nested instance's slot holds something other than what the instance it copies shows. */
+function slotDiffersFromSource(
+  context: SceneNodeToKiwiContext,
+  source: SceneNode | undefined,
+  frame: SceneNode,
+  propertyId: string
+): boolean {
+  const graph = context.graph
   // A replacement component names its slot the same but gives it a property id of its own.
   const slotName = context.componentPropertyDefinitionsById.get(propertyId)?.name
   const match =
@@ -167,31 +174,34 @@ function slotDiffersFromSource(
 }
 
 /**
- * A copy of a component that holds an instance keeps that instance's slot content as its own
- * layers. Figma stores a copy's edits to them as slot content assigned to the nested instance,
- * through an override at its path; a copy that left the slot as it was stays without one.
+ * The component property values a copy gives an instance it holds, which Figma stores on an
+ * override at that instance's path. A copy keeps the nested instance's slot content as its own
+ * layers, and its text, boolean, and swap values on the instance; only those that differ from
+ * what the instance it copies shows are written, so a copy left as it was writes none.
  */
-export function nestedSlotAssignments(
+export function nestedPropertyAssignments(
   context: SceneNodeToKiwiContext,
   owner: SceneNode,
   nested: SceneNode,
   localIdCounter: { value: number }
 ) {
-  const assignments: NonNullable<ReturnType<typeof slotContentAssignment>>[] = []
+  const source = nestedSource(context.graph, owner, nested)
   const frames = slotFrames(context.graph, nested)
-  for (const propertyId of Object.keys(nested.componentPropertyAssignments)) {
-    const frame = frames.get(propertyId)
-    if (context.componentPropertyDefinitionsById.get(propertyId)?.type !== 'SLOT' || !frame)
-      continue
-    if (!slotDiffersFromSource(context, owner, nested, frame, propertyId)) continue
-    const assignment = slotContentAssignment(
-      context,
-      nested,
-      propertyId,
-      getOrCreatePropertyGuid(context, propertyId, localIdCounter),
-      localIdCounter
-    )
-    if (assignment) assignments.push(assignment)
-  }
-  return assignments
+  return compact(
+    Object.entries(nested.componentPropertyAssignments).map(([propertyId, value]) => {
+      const definition = context.componentPropertyDefinitionsById.get(propertyId)
+      if (!definition) return null
+      if (definition.type === 'SLOT') {
+        const frame = frames.get(propertyId)
+        if (!frame || !slotDiffersFromSource(context, source, frame, propertyId)) return null
+      } else {
+        const shown =
+          source?.type === 'INSTANCE'
+            ? (source.componentPropertyAssignments[propertyId] ?? definition.defaultValue)
+            : definition.defaultValue
+        if (value === shown) return null
+      }
+      return componentPropAssignment(context, nested, propertyId, value, localIdCounter)
+    })
+  )
 }

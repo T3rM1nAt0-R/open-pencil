@@ -28,7 +28,7 @@ import {
   type SceneNodeToKiwiContext
 } from './context'
 import { fillsOwnSizingAxis } from './fill-sizing'
-import { nestedSlotAssignments } from './nested-slot-claims'
+import { nestedPropertyAssignments } from './nested-assignments'
 import { exportedNode } from './resolved-bindings'
 
 function unscaledRootSize(instance: SceneNode, target: SceneNode): Vector {
@@ -261,7 +261,7 @@ export function serializeRuntimePropertyOverrides(
     if (node.type === 'INSTANCE' && node.id !== instance.id) {
       const resolved = resolveTarget(node, node.id)
       const assignments = resolved
-        ? nestedSlotAssignments(context, instance, node, localIdCounter)
+        ? nestedPropertyAssignments(context, instance, node, localIdCounter)
         : []
       if (resolved && assignments.length > 0)
         result.push({ guidPath: { guids: resolved.path }, componentPropAssignments: assignments })
