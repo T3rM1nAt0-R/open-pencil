@@ -6,9 +6,9 @@ import {
   isShapeWithTextType,
   type ShapeWithTextType
 } from '@open-pencil/scene-graph/shape-with-text'
-import { useCommonMessages, useShapeMessages } from '@open-pencil/vue'
+import { useCommonMessages, useShapeMessages } from '@open-pencil/vue/i18n'
 
-import { SHAPE_KIND_ICONS } from '@/app/editor/shape-icons'
+import { SHAPE_KIND_ICONS } from '@/components/icons/shapes'
 import AppPicker from '@/components/ui/select/AppPicker.vue'
 import type { AppPickerItem } from '@/components/ui/select/AppPicker.vue'
 

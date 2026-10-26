@@ -3,7 +3,10 @@ import { describe, expect, test } from 'bun:test'
 import { readModeConditions, readVariableToken } from '#fig/node-change/index'
 
 import type { NodeChange } from '@open-pencil/kiwi/fig/codec'
-import { OPEN_PENCIL_PLUGIN_DATA, OPEN_PENCIL_PLUGIN_ID } from '@open-pencil/scene-graph'
+import {
+  OPEN_PENCIL_PLUGIN_DATA,
+  OPEN_PENCIL_PLUGIN_ID
+} from '@open-pencil/scene-graph/plugin-data'
 
 function record(key: string, value: string): NodeChange {
   return { pluginData: [{ pluginID: OPEN_PENCIL_PLUGIN_ID, key, value }] }
@@ -73,7 +76,7 @@ describe('token plugin data', () => {
     const formula = {
       expression: 'FORMULA' as const,
       type: 'FLOAT' as const,
-      value: { operator: 'MULTIPLY' as const, operands: [{ aliasId: '1:2' }, 2] }
+      value: { operator: 'multiply' as const, operands: [{ aliasId: '1:2' }, 2] }
     }
     // A number now where no number was recorded was edited elsewhere: the expression goes.
     expect(

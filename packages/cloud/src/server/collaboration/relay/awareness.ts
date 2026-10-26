@@ -1,9 +1,14 @@
-import type { CollaborationPrincipal, DocumentPermission } from '#cloud/contract'
+import {
+  presenceName,
+  type CloudPresence,
+  type CollaborationPrincipal,
+  type DocumentPermission
+} from '#cloud/contract'
 import * as decoding from 'lib0/decoding'
 import * as encoding from 'lib0/encoding'
 import * as v from 'valibot'
 
-const AwarenessStateJSON = v.pipe(
+const awarenessStateSchema = v.pipe(
   v.string(),
   v.parseJson(),
   v.looseObject({ user: v.optional(v.looseObject({})) })
@@ -46,7 +51,7 @@ export type VerifiedPresence = {
   permission: DocumentPermission
 }
 
-function verifiedIdentity({ principal, permission }: VerifiedPresence) {
+function verifiedIdentity({ principal, permission }: VerifiedPresence): CloudPresence {
   return {
     kind: principal.kind,
     id: principal.kind === 'user' ? principal.userId : principal.guestId,
@@ -84,11 +89,12 @@ export function stampAwareness(
       forwarded.push(entry)
       continue
     }
-    const parsed = v.safeParse(AwarenessStateJSON, entry.state)
+    const parsed = v.safeParse(awarenessStateSchema, entry.state)
     if (!parsed.success) continue
     const state = {
       ...parsed.output,
-      user: { ...parsed.output.user, name: identity.name },
+      // The ticket's name, cut to what peers accept, so a long one cannot hide the member.
+      user: { ...parsed.output.user, name: presenceName(identity.name) },
       cloud: identity
     }
     claimed.push(entry.clientId)

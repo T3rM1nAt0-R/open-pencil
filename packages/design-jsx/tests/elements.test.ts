@@ -1,10 +1,16 @@
 import { describe, expect, test } from 'bun:test'
 
-import { DESIGN_JSX_ELEMENTS, elementSchema, elementTag } from '#design-jsx/elements'
+import {
+  DESIGN_JSX_ELEMENTS,
+  elementPropsByName,
+  elementSchema,
+  elementTag
+} from '#design-jsx/elements'
 import { createDesignJSXRenderer } from '#design-jsx/index'
-import { elementPropWarnings } from '#design-jsx/validation'
+import { elementPropWarnings } from '#design-jsx/schema'
 
-import { GENERATED_FRAME_TYPES, SceneGraph } from '@open-pencil/scene-graph'
+import { SceneGraph } from '@open-pencil/scene-graph'
+import { GENERATED_FRAME_TYPES } from '@open-pencil/scene-graph/generated'
 
 const renderer = createDesignJSXRenderer<never>({
   icon: () => Promise.resolve(null),
@@ -51,5 +57,16 @@ describe('design JSX elements', () => {
     for (const element of DESIGN_JSX_ELEMENTS) {
       for (const type of element.writes ?? []) expect(elementTag(type)).toBe(element.name)
     }
+  })
+
+  test("an editor checks each element's own props, as the renderer does", () => {
+    expect(elementPropsByName('Connector')?.has('from')).toBe(true)
+    expect(elementPropsByName('Shape')?.has('kind')).toBe(true)
+    expect(elementPropsByName('Sticky')?.has('author')).toBe(true)
+    expect(elementPropsByName('Frame')?.has('from')).toBe(false)
+    expect(elementPropsByName('div')?.has('bg')).toBe(true)
+    // An instance also sets its component's properties, and a local component is no element.
+    expect(elementPropsByName('Instance')).toBeNull()
+    expect(elementPropsByName('Card')).toBeNull()
   })
 })

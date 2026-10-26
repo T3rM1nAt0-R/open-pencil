@@ -9,7 +9,8 @@ import {
   selectionToJSX,
   selectionToJSXWithLayers
 } from '@open-pencil/design-jsx'
-import { connectorRouteEnds, connectorSublayers, SceneGraph } from '@open-pencil/scene-graph'
+import { SceneGraph } from '@open-pencil/scene-graph'
+import { connectorRouteEnds, connectorSublayers } from '@open-pencil/scene-graph/connectors'
 
 const FLOW = `
   <Frame name="Flow" w={800} h={400}>
@@ -216,6 +217,8 @@ return <Frame name="Flow" w={800} h={400}>
       color: { r: 1, g: 0, b: 0 }
     })
     expect(dashedLine?.dashPattern).toEqual([6, 4])
+    // The stroke draws with the dash too, or the line would stay solid on the canvas.
+    expect(dashedLine?.strokes[0]?.dashPattern).toEqual([6, 4])
     const jsx = sceneNodeToJSX(result.id, graph)
     expect(jsx).toContain('<Connector from="A" to="B" strokeWidth={8} />')
     expect(jsx).toContain('<Connector from="A" to="B" stroke="#FF0000" dashPattern={[6, 4]} />')

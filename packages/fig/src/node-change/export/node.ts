@@ -13,13 +13,12 @@ import type {
 } from '@open-pencil/scene-graph'
 import {
   DEFAULT_STROKE_MITER_LIMIT,
-  DEFAULT_STROKE_WEIGHT,
-  isGeneratedFrame,
-  OPEN_PENCIL_PLUGIN_DATA,
-  withPluginData
-} from '@open-pencil/scene-graph'
+  DEFAULT_STROKE_WEIGHT
+} from '@open-pencil/scene-graph/constants'
+import { isGeneratedFrame } from '@open-pencil/scene-graph/generated'
 import { layoutGridCount } from '@open-pencil/scene-graph/layout'
 import { siblingOrderKeys } from '@open-pencil/scene-graph/order-keys'
+import { OPEN_PENCIL_PLUGIN_DATA, withPluginData } from '@open-pencil/scene-graph/plugin-data'
 import type { GUID, Matrix, Vector } from '@open-pencil/scene-graph/primitives'
 
 /* eslint-disable max-lines */
@@ -137,6 +136,15 @@ function serializeVariableModes(
     return [{ variableSetID: { guid: collectionGuid }, variableModeID: modeGuid }]
   })
   return entries.length > 0 ? { entries } : undefined
+}
+
+function applyVariableModes(
+  context: SceneNodeToKiwiContext,
+  node: SceneNode,
+  record: KiwiNodeChange
+): void {
+  const modes = serializeVariableModes(node, context.varIdToGuid, context.modeIdToGuid)
+  if (modes) record.variableModeBySetMap = modes
 }
 
 const FIGMA_PAYLOAD_VARIABLE_MAP_FIELDS = new Set([
@@ -860,13 +868,6 @@ function applyNodeVisualProps(
   if (!node.autoRename) nc.autoRename = false
 }
 
-/** The width a shape with text was given, which FigJam's record has no field for. */
-function applyShapeUserWidthPluginData(node: SceneNode): void {
-  const width =
-    node.type === 'SHAPE_WITH_TEXT' && node.shapeUserWidth > 0 ? node.shapeUserWidth : undefined
-  node.pluginData = withPluginData(node.pluginData, OPEN_PENCIL_PLUGIN_DATA.shapeUserWidth, width)
-}
-
 /**
  * Import maps TEXT_PATH → TEXT. Re-emit Kiwi type 41 only while path fidelity
  * remains (materialized path data + baked glyphs). After an edit that cannot
@@ -945,6 +946,7 @@ export function overridableNodeFields(
   applyNodeStateProps(node, nc)
   applyNodeVisualProps({ ...context, fontDigestMap: undefined }, node, nc)
   context.serializeLayoutProps(node, nc)
+  applyVariableModes(context, node, nc)
   return nc
 }
 
@@ -1001,17 +1003,11 @@ export function sceneNodeToKiwiWithContext(
   context.serializeVariableBindings(node, nc, context.graph, context.varIdToGuid)
   mergeParameterBindings(nc)
   applyRawFigmaNodeFields(context, node, nc)
-  const variableModeBySetMap = serializeVariableModes(
-    node,
-    context.varIdToGuid,
-    context.modeIdToGuid
-  )
-  if (variableModeBySetMap) nc.variableModeBySetMap = variableModeBySetMap
+  applyVariableModes(context, node, nc)
 
   applyExportSettingsPluginData(node)
   applyLibrarySourcePluginData(node)
   serializeNodeStatus(node, nc)
-  applyShapeUserWidthPluginData(node)
   applyTextPathBoxPluginData(node, savedInFigmaBox(node))
   const pluginData = mergePluginData(node.pluginData)
   if (pluginData.length > 0) nc.pluginData = pluginData

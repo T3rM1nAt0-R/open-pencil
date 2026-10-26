@@ -2,8 +2,8 @@ import { expect, test, spyOn } from 'bun:test'
 
 import * as v from 'valibot'
 
+import { SceneGraph, type VariableFormulaNode, type VariableValue } from '@open-pencil/scene-graph'
 import {
-  SceneGraph,
   parseVariableFormula,
   formatVariableFormula,
   variableValueReferences,
@@ -11,10 +11,8 @@ import {
   variableFormulaSchema,
   collectionsBoundIn,
   formulaTokens,
-  type VariableFormulaNode,
-  type VariableValue
-} from '@open-pencil/scene-graph'
-import { createBatchVariableResolver } from '@open-pencil/scene-graph/variables'
+  createBatchVariableResolver
+} from '@open-pencil/scene-graph/variables'
 
 function setup(type: 'FLOAT' | 'BOOLEAN' = 'FLOAT') {
   const graph = new SceneGraph()
@@ -227,7 +225,7 @@ test('shared formula dependencies resolve once per evaluation and never cache ac
       expression: 'FORMULA',
       type: 'FLOAT',
       value: {
-        operator: 'ADDITION',
+        operator: 'add',
         operands: [{ aliasId: previous.id }, { aliasId: previous.id }]
       }
     }
@@ -263,11 +261,11 @@ test('100 consumers share one calculation per mode during a batch', () => {
 
 test('numeric schema and resolver reject invalid formula trees', () => {
   const values: VariableFormulaNode[] = [
-    { operator: 'ADDITION', operands: [true, 1] },
-    { operator: 'ADDITION', operands: [1] },
-    { operator: 'NOT', operands: [true] },
-    { operator: 'MULTIPLY', operands: [1, { operator: 'OR', operands: [false, true] }] },
-    { operator: 'DIVIDE', operands: [Infinity, 2] }
+    { operator: 'add', operands: [true, 1] },
+    { operator: 'add', operands: [1] },
+    { operator: 'not', operands: [true] },
+    { operator: 'multiply', operands: [1, { operator: 'or', operands: [false, true] }] },
+    { operator: 'divide', operands: [Infinity, 2] }
   ]
   const { graph, derived, mode } = setup()
   for (const value of values) {
@@ -282,10 +280,10 @@ test('bounded schema rejects deeply nested and cyclic input', () => {
   const value: VariableValue = { expression: 'FORMULA', type: 'FLOAT', value: 1 }
   if (!('expression' in value) || value.expression !== 'FORMULA')
     throw new Error('Expected formula')
-  for (let i = 0; i < 65; i++) value.value = { operator: 'NEGATE', operands: [value.value] }
+  for (let i = 0; i < 65; i++) value.value = { operator: 'negate', operands: [value.value] }
   expect(v.safeParse(variableFormulaSchema, value).success).toBe(false)
   const operands: VariableFormulaNode[] = [1]
-  const cyclic: VariableFormulaNode = { operator: 'NEGATE', operands }
+  const cyclic: VariableFormulaNode = { operator: 'negate', operands }
   operands[0] = cyclic
   expect(
     v.safeParse(variableFormulaSchema, { expression: 'FORMULA', type: 'FLOAT', value: cyclic })
@@ -328,8 +326,7 @@ test('collection discovery follows formulas and composed color operands transiti
 })
 
 test('the tokenizer reads half-typed formulas without failing, as an editor needs', () => {
-  const kinds = (source: string) =>
-    formulaTokens(source).map(({ kind, text }) => `${kind}:${text}`)
+  const kinds = (source: string) => formulaTokens(source).map(({ kind, text }) => `${kind}:${text}`)
   expect(kinds('{space/md} * 2 - base')).toEqual([
     'reference:{space/md}',
     'operator:*',

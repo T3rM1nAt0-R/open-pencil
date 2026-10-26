@@ -13,7 +13,7 @@ import {
   hasStoredBackground,
   setDefaultPageBackground
 } from '#core/figma-api/page-backgrounds'
-import { iconify } from '#core/icons'
+import { defaultIcons } from '#core/icons'
 import { releaseFigPopulationWorker } from '#core/kiwi/fig/population/client'
 import { releaseOriginalFigArchive } from '#core/kiwi/fig/session/original-archive'
 import { installTextMeasurer } from '#core/layout'
@@ -36,9 +36,12 @@ import { createColorSpaceActions } from './color-space'
 import { createComponentSyncScheduler } from './component-sync'
 import { createComponentActions } from './components'
 import { createConnectorDrawActions, createConnectorEndpointActions } from './connectors/draw'
+import { createConnectorLineActions } from './connectors/line'
 import { createConnectorRouting } from './connectors/routing'
 import { createConnectorStyleActions } from './connectors/style'
 import { createDesignTokenActions } from './design-tokens'
+import { createDocumentSettingsActions } from './document-settings'
+import { createFigCompressionActions } from './fig-compression'
 import { createGraphEventSubscription } from './graph-events'
 import { createGraphReadActions } from './graph-reads'
 import { createGuideActions } from './guides'
@@ -256,7 +259,7 @@ export function createEditor(options?: EditorOptions) {
     resolveFigmaClipboardImages: options?.resolveFigmaClipboardImages ?? null,
     getViewportSize: _getViewportSize,
     getUserName: () => options?.getUserName?.() ?? '',
-    icons: options?.icons ?? iconify,
+    icons: options?.icons ?? defaultIcons,
     getCk: () => _ck,
     getRenderer: () => _renderer,
     getRenderers: () => _renderers,
@@ -286,6 +289,7 @@ export function createEditor(options?: EditorOptions) {
   const components = createComponentActions(ctx)
   const clipboard = createClipboardActions(ctx)
   const colorSpace = createColorSpaceActions(ctx)
+  const documentSettings = createDocumentSettingsActions(ctx)
   const undoActions = createUndoActions(ctx)
   const text = createTextActions(ctx)
   const nodes = createNodeActions(ctx)
@@ -303,6 +307,7 @@ export function createEditor(options?: EditorOptions) {
   const shapesWithText = createShapeWithTextActions(ctx)
   const generatedText = createGeneratedTextActions(ctx)
   const statuses = createStatusActions(ctx)
+  const figCompression = createFigCompressionActions(ctx)
   createConnectorRouting(ctx)
   const connectorDrawing = createConnectorDrawActions(ctx)
   const connectorEndpoints = createConnectorEndpointActions(
@@ -310,6 +315,7 @@ export function createEditor(options?: EditorOptions) {
     nodes.beginNodePreview,
     clipboard.deleteNodes
   )
+  const connectorLines = createConnectorLineActions(ctx, nodes.beginNodePreview)
   const connectorStyles = createConnectorStyleActions(ctx)
   const lineEnds = createLineEndActions(ctx, nodes.beginNodePreview)
   const shaders = createShaderActions(ctx, nodes)
@@ -487,6 +493,7 @@ export function createEditor(options?: EditorOptions) {
     setStatusWorkflow: statuses.setStatusWorkflow,
     ...connectorDrawing,
     ...connectorEndpoints,
+    ...connectorLines,
     ...lineEnds,
     ...connectorStyles,
     ...shaders,
@@ -517,6 +524,10 @@ export function createEditor(options?: EditorOptions) {
     redoAction: () => text.runTextEditStep(undoBridge.redoAction),
 
     setDocumentColorSpace: colorSpace.setDocumentColorSpace,
+    updateEnabledLibraries: documentSettings.updateEnabledLibraries,
+    refreshDocumentSettings: documentSettings.refreshDocumentSettings,
+    figCompression: figCompression.figCompression,
+    setFigCompression: figCompression.setFigCompression,
 
     // Clipboard — bridge functions that need selectedNodes
     ...clipboardBridge,
@@ -539,4 +550,10 @@ export function createEditor(options?: EditorOptions) {
   return guardReadOnly(editor, () => state.readOnly)
 }
 
-export type Editor = ReturnType<typeof createEditor>
+/**
+ * The editor `createEditor` returns. An interface rather than an alias, so declarations that
+ * mention it, such as a Vue composable's inferred return type, name it instead of spelling out
+ * its members, some of whose types are internal to Core.
+ */
+// eslint-disable-next-line typescript/no-empty-object-type -- The interface is the point: an alias's members are spelled out in emitted declarations.
+export interface Editor extends ReturnType<typeof createEditor> {}

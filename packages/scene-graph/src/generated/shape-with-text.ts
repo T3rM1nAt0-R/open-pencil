@@ -3,13 +3,12 @@ import { FIGJAM_TYPEFACES, figJamTextSizeFields } from '../figjam/text'
 import type { SceneGraph } from '../index'
 import { shapeWithTextLabelBox } from '../shape-with-text/fit'
 import type { ShapeWithTextType } from '../shape-with-text/kinds'
+import { lineHeightPixels } from '../text/lengths'
 import type { Fill, SceneNode } from '../types'
 import type { GeneratedFrameKind } from './kind'
 
-/** FigJam's plugin API makes a shape with text 208 px square. */
-export const SHAPE_WITH_TEXT_SIZE = 208
-/** FigJam's shape tool places a shape 176 px square where it is clicked. */
-export const SHAPE_WITH_TEXT_TOOL_SIZE = 176
+/** FigJam makes a shape with text 176 px square, from its tool and from its plugin API. */
+export const SHAPE_WITH_TEXT_SIZE = 176
 /** FigJam rounds every corner of a shape by 6 px. */
 export const SHAPE_WITH_TEXT_CORNER_RADIUS = 6
 
@@ -72,19 +71,21 @@ export function shapeWithTextLabel(graph: SceneGraph, shape: SceneNode): SceneNo
 
 /**
  * A shape with text edits its label in place, turns and resizes freely, and, as in FigJam, takes
- * its name from its label until it is named. A width or height set on it by a resize, a field or
- * a script is the size it was given, which layout grows it from when its label needs more room.
+ * its name from its label until it is named. A height set on it by a resize, a field or a script
+ * is the height it was given, which layout grows it from when its label needs more room; once
+ * that height changes, FigJam keeps it and truncates the label instead.
  */
 export const SHAPE_WITH_TEXT_KIND: GeneratedFrameKind = {
   complete: (graph, frame) => shapeWithTextLabel(graph, frame) !== null,
   text: (graph, frame) => shapeWithTextLabel(graph, frame) ?? undefined,
   rotates: true,
   resizes: true,
+  strokesAndEffects: true,
   namedByText: true,
-  sized: ({ width, height }) => ({
-    ...(width !== undefined && { shapeUserWidth: width }),
-    ...(height !== undefined && { shapeUserHeight: height })
-  })
+  sized: ({ height }, shape) =>
+    height === undefined || height === shape.height
+      ? {}
+      : { shapeUserHeight: height, shapeTruncates: true }
 }
 
 /** Adds the label to a SHAPE_WITH_TEXT the caller created, styled as FigJam generates it. */
@@ -100,7 +101,7 @@ export function buildShapeWithTextLabel(
     x: box.x,
     y: box.y,
     width: box.width,
-    height: fields.lineHeight ?? undefined,
+    height: lineHeightPixels(fields.lineHeight ?? null, fields.fontSize ?? 0) ?? undefined,
     text: '',
     ...props
   })
@@ -123,7 +124,6 @@ export function createShapeWithText(
     shapeWithTextType: kind,
     width,
     height,
-    shapeUserWidth: props.shapeUserWidth ?? width,
     shapeUserHeight: props.shapeUserHeight ?? height,
     ...shapeWithTextFrameFields(kind, width, height)
   })

@@ -2,30 +2,34 @@ import * as v from 'valibot'
 
 import {
   collectionPluginDataNodeChange,
+  figmaFormulaFunction,
   parseGuidOrNull,
   mapUnsupportedExpressionReferences,
   unsupportedExpressionData,
   variableAlias,
-  variableMetadataNodeChange
+  variableMetadataNodeChange,
+  safeColor
 } from '@open-pencil/fig/node-change'
-import type { GUID, NodeChange, VariableDataEntry } from '@open-pencil/kiwi/fig/codec'
+import type { GUID } from '@open-pencil/kiwi/fig'
+import type { NodeChange, VariableDataEntry } from '@open-pencil/kiwi/fig/codec'
 import { guidToString, stringToGuid } from '@open-pencil/kiwi/fig/guid'
+import type {
+  SceneGraph,
+  SceneNode,
+  VariableFormulaNode,
+  VariableCollectionMode,
+  VariableValue
+} from '@open-pencil/scene-graph'
+import { fractionalPosition, orderKeyBetween } from '@open-pencil/scene-graph/order-keys'
 import {
   modesDefaultFirst,
   isUnsupportedVariableValue,
-  MAX_FORMULA_DEPTH,
-  formulaResultType,
+  foldFormula,
+  formulaValueType,
+  inferFormulaType,
   variableFormulaSchema,
-  variableColorExpressionSchema,
-  type SceneGraph,
-  type SceneNode,
-  type VariableFormulaNode,
-  type VariableCollectionMode,
-  type VariableValue
-} from '@open-pencil/scene-graph'
-import { fractionalPosition, orderKeyBetween } from '@open-pencil/scene-graph/order-keys'
-
-import { safeColor } from '#core/kiwi/fig/node-change/serialize'
+  variableColorExpressionSchema
+} from '@open-pencil/scene-graph/variables'
 
 /**
  * Identity allocation shared by the two writers. The document exporter and the clipboard
@@ -206,30 +210,27 @@ function variableValueToKiwi(
 function formulaToKiwi(
   graph: SceneGraph,
   node: VariableFormulaNode,
-  ids: Map<string, GUID>,
-  depth = 0
+  ids: Map<string, GUID>
 ): VariableDataEntry {
-  if (depth > MAX_FORMULA_DEPTH) throw new Error('Variable formula is too deeply nested')
-  if (typeof node === 'number') return variableValueToKiwi(graph, node, 'FLOAT', ids)
-  if (typeof node === 'boolean') return variableValueToKiwi(graph, node, 'BOOLEAN', ids)
-  if ('aliasId' in node) {
-    const type = graph.variables.get(node.aliasId)?.type
-    if (type !== 'FLOAT' && type !== 'BOOLEAN')
-      throw new Error('Formula references a missing variable')
-    return variableValueToKiwi(graph, node, type, ids)
+  const typeOf = (id: string) => graph.variables.get(id)?.type
+  const known = <T>(type: T | undefined) => {
+    if (!type) throw new Error('Formula references a missing variable')
+    return type
   }
-  return {
-    dataType: 'EXPRESSION',
-    resolvedDataType: formulaResultType(node.operator),
-    value: {
-      expressionValue: {
-        expressionFunction: node.operator,
-        expressionArguments: node.operands.map((operand) =>
-          formulaToKiwi(graph, operand, ids, depth + 1)
-        )
+  return foldFormula<VariableDataEntry>(node, {
+    literal: (value) => variableValueToKiwi(graph, value, formulaValueType(value), ids),
+    reference: (id) => variableValueToKiwi(graph, { aliasId: id }, known(typeOf(id)), ids),
+    operation: (operation, operands) => ({
+      dataType: 'EXPRESSION',
+      resolvedDataType: known(inferFormulaType(operation, typeOf)),
+      value: {
+        expressionValue: {
+          expressionFunction: figmaFormulaFunction(operation.operator),
+          expressionArguments: operands
+        }
       }
-    }
-  }
+    })
+  })
 }
 
 /**
