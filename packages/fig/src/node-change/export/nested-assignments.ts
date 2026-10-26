@@ -1,13 +1,10 @@
 import { compact, isEqual, isPlainObject } from 'es-toolkit'
 
-import {
-  findInstanceAncestor,
-  getInstanceOverride,
-  scaleNodeChanges,
-  slotPropertyId,
-  type SceneGraph,
-  type SceneNode
-} from '@open-pencil/scene-graph'
+import type { SceneGraph, SceneNode } from '@open-pencil/scene-graph'
+import { findInstanceAncestor } from '@open-pencil/scene-graph/instances'
+import { getInstanceOverride } from '@open-pencil/scene-graph/instances/overrides'
+import { scaleNodeChanges } from '@open-pencil/scene-graph/scaling'
+import { slotPropertyId } from '@open-pencil/scene-graph/slots'
 
 import { componentPropAssignment } from './assignments'
 import type { SceneNodeToKiwiContext } from './context'

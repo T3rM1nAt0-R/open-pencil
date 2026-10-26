@@ -2,20 +2,14 @@ import { beforeAll, describe, expect, test } from 'bun:test'
 
 import { expectDefined } from '#core-tests/helpers/assert'
 
-import {
-  exportFigFile,
-  initCodec,
-  parseFigFile,
-  type SceneGraph,
-  type SceneNode
-} from '@open-pencil/core'
+import { exportFigFile, parseFigFile } from '@open-pencil/core/io/formats/fig'
+import { initCodec } from '@open-pencil/kiwi/fig/codec'
+import type { SceneGraph, SceneNode } from '@open-pencil/scene-graph'
 import { createEditor } from '@open-pencil/core/editor'
 import { parseFigBuffer } from '@open-pencil/fig'
-import {
-  createComponentPropertyId,
-  rescaleNodeTree,
-  slotPropertyId
-} from '@open-pencil/scene-graph'
+import { createComponentPropertyId } from '@open-pencil/scene-graph/components'
+import { rescaleNodeTree } from '@open-pencil/scene-graph/scaling'
+import { slotPropertyId } from '@open-pencil/scene-graph/slots'
 
 import { releaseFigPopulationWorker } from '#core/kiwi/fig/population/client'
 
