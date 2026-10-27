@@ -1,6 +1,6 @@
 import type { Router } from 'vue-router'
 
-import { homeLocation, type HomeLocation } from '@/app/home/location'
+import { homeLocation, whenHomeMayChange, type HomeLocation } from '@/app/home/location'
 import { activeStorageProviderID, storagePreferencesComplete } from '@/app/integrations/storage'
 
 function showHome(router: Router): void {
@@ -12,14 +12,16 @@ function showHome(router: Router): void {
 
 /** Shows Home at one of its places, in a new tab when a document is open. */
 export function openHomeLocation(router: Router, location: HomeLocation): void {
-  homeLocation.value = location
-  showHome(router)
+  whenHomeMayChange(() => {
+    homeLocation.value = location
+    showHome(router)
+  })
 }
 
-/** Home on the storage bucket when one is set up, else at the place the person browsed last. */
+/** Home on the storage bucket when one is set up, else where the person browsed last (never Settings). */
 export function browseFiles(router: Router): void {
-  if (storagePreferencesComplete(activeStorageProviderID.value)) {
-    homeLocation.value = { kind: 'storage' }
-  }
-  showHome(router)
+  const bucketReady = storagePreferencesComplete(activeStorageProviderID.value)
+  const last = homeLocation.value
+  const fallback: HomeLocation = last.kind === 'settings' ? { kind: 'recent' } : last
+  openHomeLocation(router, bucketReady ? { kind: 'storage' } : fallback)
 }
