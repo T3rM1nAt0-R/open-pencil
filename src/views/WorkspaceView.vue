@@ -42,6 +42,8 @@ import {
   type Tab
 } from '@/app/tabs'
 import { syncTabAddress } from '@/app/tabs/address'
+import { lastSession } from '@/app/tabs/open/last-session'
+import { recordOpenDocuments, reopenLastSession, startupOpenChoice } from '@/app/tabs/open/startup'
 import { isTauri } from '@/app/tauri/env'
 import { offerUsageStatsPrompt, startSharing } from '@/app/telemetry'
 import ColorSpaceBanner from '@/components/canvas/ColorSpaceBanner.vue'
@@ -96,7 +98,10 @@ watch(
 const opensCloudLink = ['documentId', 'shareId', 'invitationId'].some(
   (param) => typeof route.params[param] === 'string'
 )
-const { collaboration } = useI18n()
+// The start screen chosen in Settings; a bare start only, never a link, the demo or a test run.
+const startupOpen = route.path === '/' && pinHome && !opensCloudLink ? startupOpenChoice() : null
+const reopensLastSession = startupOpen === 'reopen' && !!lastSession.value?.documents.length
+const { collaboration, settings } = useI18n()
 const joinRoomFromInput = useJoinRoom()
 
 /**
@@ -112,7 +117,9 @@ function openFirstTab(): Tab {
     // A link that fails leaves the person on Home, not in an empty design.
     if (pinHome) return createHomeTab()
   }
-  return showHomeFirst || opensCloudLink ? createHomeTab() : createTab()
+  if (startupOpen === 'new') return createTab()
+  if (startupOpen === 'home') return createHomeTab()
+  return showHomeFirst || opensCloudLink || reopensLastSession ? createHomeTab() : createTab()
 }
 
 // Block-scoped so the view does not keep the first tab's store after that tab closes.
@@ -251,6 +258,10 @@ async function bindAssociatedFileOpen(): Promise<void> {
   await drainPendingOpens()
 }
 
+// Recording waits for the reopen so a half-restored start does not overwrite the list.
+const sessionRestored = ref(false)
+recordOpenDocuments(() => sessionRestored.value)
+
 let stopWebMCP: (() => void) | undefined
 
 onMounted(async () => {
@@ -283,6 +294,24 @@ onMounted(async () => {
       console.error('[Web link]', error)
     }
   }
+
+  // A link or file opened at launch shows just that design, so only a bare start reopens.
+  if (
+    createdInitialTab &&
+    reopensLastSession &&
+    tabCount() === 1 &&
+    activeTab.value?.kind === 'home'
+  ) {
+    try {
+      await reopenLastSession({
+        sharedFile: collaboration.value.sharedFile,
+        reopenIncomplete: settings.value.startupReopenIncomplete
+      })
+    } catch (error) {
+      console.error('[Startup]', error)
+    }
+  }
+  sessionRestored.value = true
 })
 
 onUnmounted(() => {

@@ -114,6 +114,8 @@ export interface StorageAdapter {
   ): Promise<StoragePutResult>
   deleteDocument(id: string): Promise<void>
   getDocumentMetadata?(id: string): Promise<StorageDocumentMetadata | null>
+  /** Whether the design itself is stored, whatever its metadata says. */
+  documentExists?(id: string): Promise<boolean>
   getUsage(): Promise<StorageUsage>
   getThumbnail?(id: string): Promise<Uint8Array | null>
   libraryObjects?: LibraryObjectStore
