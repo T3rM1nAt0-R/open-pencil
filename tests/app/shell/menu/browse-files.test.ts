@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test'
 
 import { createMemoryHistory, createRouter } from 'vue-router'
 
-import { homeLocation, type HomeLocation } from '@/app/home/location'
+import { homeLocation, setHomeLeaveGuard, type HomeLocation } from '@/app/home/location'
 import {
   activeStorageProviderID,
   storageProviderRegistry,
@@ -47,6 +47,7 @@ afterEach(() => {
   }
   homeLocation.value = { kind: 'recent' }
   settingsDialogOpen.value = false
+  setHomeLeaveGuard(null)
 })
 
 describe('browsing files from the File menu', () => {
@@ -93,5 +94,28 @@ describe('browsing files from the File menu', () => {
     expect(shownLocation()).toEqual({ kind: 'storage' })
     expect(router.currentRoute.value.path).toBe('/')
     expect(settingsDialogOpen.value).toBe(false)
+  })
+
+  test('never lands on Settings when browsing files', async () => {
+    homeLocation.value = { kind: 'settings' }
+
+    browseFiles(router)
+    await settled()
+
+    expect(shownLocation()).toEqual({ kind: 'recent' })
+  })
+
+  test('waits for the shown Home page to agree before leaving it', async () => {
+    homeLocation.value = { kind: 'settings' }
+    const held: (() => void)[] = []
+    setHomeLeaveGuard((next) => held.push(next))
+
+    browseFiles(router)
+    await settled()
+    expect(shownLocation()).toEqual({ kind: 'settings' })
+
+    held[0]?.()
+    await settled()
+    expect(shownLocation()).toEqual({ kind: 'recent' })
   })
 })

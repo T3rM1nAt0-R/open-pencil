@@ -8,6 +8,8 @@ const homeLocationSchema = v.variant('kind', [
   v.object({ kind: v.literal('recent') }),
   v.object({ kind: v.literal('storage') }),
   v.object({ kind: v.literal('shared') }),
+  /** Settings, shown in the place of the documents. */
+  v.object({ kind: v.literal('settings') }),
   /** A workspace of the server Home shows. */
   v.object({ kind: v.literal('workspace'), id: v.string() })
 ])
@@ -36,3 +38,18 @@ export const homeLocation = computed<HomeLocation>({
 
 /** Whether the person picked a place on Home, rather than Home showing its default. */
 export const homeLocationChosen = computed(() => v.is(homeLocationSchema, stored.value))
+
+type LeaveGuard = (proceed: () => void) => void
+
+let leaveGuard: LeaveGuard | null = null
+
+/** Lets the shown Home page ask before it is left, for edits that are not saved yet. */
+export function setHomeLeaveGuard(guard: LeaveGuard | null): void {
+  leaveGuard = guard
+}
+
+/** Runs a change of Home's place after the shown page agrees to be left. */
+export function whenHomeMayChange(action: () => void): void {
+  if (leaveGuard) leaveGuard(action)
+  else action()
+}
