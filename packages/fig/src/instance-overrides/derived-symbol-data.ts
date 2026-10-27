@@ -17,11 +17,11 @@ export function applyDerivedEntry(target: InstanceOccurrence, entry: DerivedSymb
   const { fillGeometry, strokeGeometry, vectorData } = entry
   if (fillGeometry) {
     props.fillGeometry = structuredClone(fillGeometry)
-    if (target.inheritedOutlineScale) target.inheritedOutlineScale.fill = 1
+    if (target.inheritedOutlineScale) target.inheritedOutlineScale.fill = { x: 1, y: 1 }
   }
   if (strokeGeometry) {
     props.strokeGeometry = structuredClone(strokeGeometry)
-    if (target.inheritedOutlineScale) target.inheritedOutlineScale.stroke = 1
+    if (target.inheritedOutlineScale) target.inheritedOutlineScale.stroke = { x: 1, y: 1 }
   }
   if (vectorData) props.vectorData = structuredClone(vectorData)
 }

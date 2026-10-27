@@ -87,14 +87,14 @@ function scaleInheritedOutlines(
 ): void {
   const scale = occurrence.inheritedOutlineScale
   if (!scale) return
-  if (scale.fill !== 1 && converted.fillGeometry) {
-    converted.fillGeometry = scaleGeometryPaths(converted.fillGeometry, scale.fill, scale.fill)
+  if (converted.fillGeometry) {
+    converted.fillGeometry = scaleGeometryPaths(converted.fillGeometry, scale.fill.x, scale.fill.y)
   }
-  if (scale.stroke !== 1 && converted.strokeGeometry) {
+  if (converted.strokeGeometry) {
     converted.strokeGeometry = scaleGeometryPaths(
       converted.strokeGeometry,
-      scale.stroke,
-      scale.stroke
+      scale.stroke.x,
+      scale.stroke.y
     )
   }
 }

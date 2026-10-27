@@ -4,6 +4,7 @@ import { LAYOUT_DISTANCE_FIELDS } from '../fields'
 import { occurrences } from '../occurrence/path'
 import type { InstanceOccurrence } from '../occurrence/types'
 import { uniformScaleOf } from '../types'
+import { growInheritedOutlineScale } from './outline'
 import { scaleTextLayout } from './text'
 
 // Distances only: sizing modes, grow factors, and alignment are dimensionless.
@@ -79,13 +80,7 @@ export function applyInstanceLayoutScale(root: InstanceOccurrence, source: NodeC
     }
     // Outlines saved with the component are at its size; they follow the instance's scale
     // unless the saved derived ones, applied after this, replace them.
-    if (props.type === 'VECTOR') {
-      const inherited = node.inheritedOutlineScale ?? { fill: 1, stroke: 1 }
-      node.inheritedOutlineScale = {
-        fill: inherited.fill * factor,
-        stroke: inherited.stroke * factor
-      }
-    }
+    if (props.type === 'VECTOR') growInheritedOutlineScale(node, factor, factor)
     if (props.size) props.size = { x: props.size.x * factor, y: props.size.y * factor }
     if (props.transform)
       props.transform = {
