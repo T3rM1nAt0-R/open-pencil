@@ -37,7 +37,7 @@ import {
   componentPropAssignment,
   componentPropertyValue,
   componentPropertyVariableValue
-} from './assignments'
+} from './assignments/values'
 import {
   applyColorVariableBinding,
   createFillPaints,

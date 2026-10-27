@@ -5,8 +5,8 @@ import {
   getOrCreatePropertyGuid,
   parseGuidOrNull,
   type SceneNodeToKiwiContext
-} from './context'
-import { slotContentAssignment } from './slots'
+} from '../context'
+import { slotContentAssignment } from '../slots'
 
 export function componentPropertyValue(
   type: string,

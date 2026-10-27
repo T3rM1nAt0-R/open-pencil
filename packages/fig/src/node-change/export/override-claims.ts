@@ -13,6 +13,7 @@ import { ownsSlotContent } from '@open-pencil/scene-graph/slots'
 
 import { instanceExportAddress } from '../instance/geometry'
 import { mergeVariableConsumptionMaps, overrideVariableBindingEntry } from '../variable/bindings'
+import { nestedPropertyAssignments } from './assignments/nested'
 import {
   createFillPaints,
   createStrokePaints,
@@ -25,7 +26,6 @@ import {
   type SceneNodeToKiwiContext
 } from './context'
 import { fillsOwnSizingAxis } from './fill-sizing'
-import { nestedPropertyAssignments } from './nested-assignments'
 import { exportedNode } from './resolved-bindings'
 
 function unscaledRootSize(instance: SceneNode, target: SceneNode): Vector {

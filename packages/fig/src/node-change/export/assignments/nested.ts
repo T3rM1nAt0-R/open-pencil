@@ -2,12 +2,12 @@ import { compact, isEqual, isPlainObject } from 'es-toolkit'
 
 import type { SceneGraph, SceneNode } from '@open-pencil/scene-graph'
 import { findInstanceAncestor } from '@open-pencil/scene-graph/instances'
-import { getInstanceOverride } from '@open-pencil/scene-graph/instances/overrides'
+import { copiedComponentLayerId } from '@open-pencil/scene-graph/instances/overrides'
 import { scaleNodeChanges } from '@open-pencil/scene-graph/scaling'
-import { slotPropertyId } from '@open-pencil/scene-graph/slots'
+import { instanceSlotFrames, slotPropertyId } from '@open-pencil/scene-graph/slots'
 
-import { componentPropAssignment } from './assignments'
-import type { SceneNodeToKiwiContext } from './context'
+import type { SceneNodeToKiwiContext } from '../context'
+import { componentPropAssignment } from './values'
 
 /** Fields that identify a layer or link it to its source rather than describe how it looks. */
 const IDENTITY_FIELDS = new Set([
@@ -113,18 +113,14 @@ function sameLayer(
   )
 }
 
-/** The slot frames directly in an instance, by slot property, without entering nested ones. */
+/** An instance's slot frames, by slot property. */
 function slotFrames(graph: SceneGraph, instance: SceneNode): Map<string, SceneNode> {
-  const frames = new Map<string, SceneNode>()
-  const visit = (node: SceneNode): void => {
-    for (const child of graph.getChildren(node.id)) {
-      const propertyId = slotPropertyId(child)
-      if (propertyId) frames.set(propertyId, child)
-      else if (child.type !== 'INSTANCE') visit(child)
-    }
-  }
-  visit(instance)
-  return frames
+  return new Map(
+    instanceSlotFrames(graph, instance).flatMap((frame) => {
+      const propertyId = slotPropertyId(frame)
+      return propertyId ? [[propertyId, frame] as const] : []
+    })
+  )
 }
 
 /** The layer a nested instance copies: its component's, or the one a swap left in its owner. */
@@ -135,13 +131,7 @@ function nestedSource(
 ): SceneNode | undefined {
   // A swap replaces the nested instance's component and keeps the one it copied in the owner.
   const sourceOwner = (nested.parentId && findInstanceAncestor(graph, nested.parentId)) || owner
-  const linked = getInstanceOverride(
-    sourceOwner.instanceOverrides,
-    sourceOwner.id,
-    nested.id,
-    'sourceComponentId'
-  )
-  const sourceId = typeof linked === 'string' ? linked : nested.componentId
+  const sourceId = copiedComponentLayerId(sourceOwner.instanceOverrides, sourceOwner.id, nested)
   return sourceId ? graph.getNode(sourceId) : undefined
 }
 
