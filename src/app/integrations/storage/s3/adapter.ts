@@ -243,6 +243,11 @@ export function createS3StorageAdapter(runtime: StorageProviderRuntime): S3Stora
       return parsed.authoritative ? parsed.metadata : null
     },
 
+    async documentExists(id) {
+      const config = await resolveConfig(runtime)
+      return headObject(config, documentFigKey(id))
+    },
+
     async deleteDocument(id) {
       const config = await resolveConfig(runtime)
       const results = await Promise.allSettled([
