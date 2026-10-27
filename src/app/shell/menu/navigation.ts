@@ -1,6 +1,7 @@
 import type { Router } from 'vue-router'
 
 import { homeLocation, type HomeLocation } from '@/app/home/location'
+import { activeStorageProviderID, storagePreferencesComplete } from '@/app/integrations/storage'
 
 function showHome(router: Router): void {
   void router
@@ -15,7 +16,10 @@ export function openHomeLocation(router: Router, location: HomeLocation): void {
   showHome(router)
 }
 
-/** Home at the place the person browsed last: a Cloud workspace, the bucket, or Recent. */
+/** Home on the storage bucket when one is set up, else at the place the person browsed last. */
 export function browseFiles(router: Router): void {
+  if (storagePreferencesComplete(activeStorageProviderID.value)) {
+    homeLocation.value = { kind: 'storage' }
+  }
   showHome(router)
 }
