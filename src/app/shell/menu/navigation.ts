@@ -2,6 +2,7 @@ import type { Router } from 'vue-router'
 
 import { homeLocation, whenHomeMayChange, type HomeLocation } from '@/app/home/location'
 import { activeStorageProviderID, storagePreferencesComplete } from '@/app/integrations/storage'
+import { afterSettingsDialogCloses } from '@/app/settings/dialog'
 
 function showHome(router: Router): void {
   void router
@@ -12,9 +13,11 @@ function showHome(router: Router): void {
 
 /** Shows Home at one of its places, in a new tab when a document is open. */
 export function openHomeLocation(router: Router, location: HomeLocation): void {
-  whenHomeMayChange(() => {
-    homeLocation.value = location
-    showHome(router)
+  afterSettingsDialogCloses(() => {
+    whenHomeMayChange(() => {
+      homeLocation.value = location
+      showHome(router)
+    })
   })
 }
 

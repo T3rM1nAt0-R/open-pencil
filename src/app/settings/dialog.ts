@@ -19,7 +19,7 @@ export const settingsDialogSection = ref<SettingsSection>('general')
 /** The section Settings shows on the Home tab, apart from the one in the window. */
 export const homeSettingsSection = ref<SettingsSection>('general')
 
-type SettingsNavigationRequest = (action: () => void) => void
+type SettingsNavigationRequest = (action: () => void, options?: { closesWindow?: boolean }) => void
 let requestNavigation: SettingsNavigationRequest | null = null
 
 export function registerSettingsNavigation(request: SettingsNavigationRequest) {
@@ -27,6 +27,21 @@ export function registerSettingsNavigation(request: SettingsNavigationRequest) {
   return () => {
     if (requestNavigation === request) requestNavigation = null
   }
+}
+
+/** Runs an action once the Settings window, if it is open, agrees to close: unsaved edits ask first. */
+export function afterSettingsDialogCloses(action: () => void): void {
+  if (!settingsDialogOpen.value || !requestNavigation) {
+    action()
+    return
+  }
+  requestNavigation(
+    () => {
+      settingsDialogOpen.value = false
+      action()
+    },
+    { closesWindow: true }
+  )
 }
 
 export function openSettingsDialog(section?: SettingsSection): void {
