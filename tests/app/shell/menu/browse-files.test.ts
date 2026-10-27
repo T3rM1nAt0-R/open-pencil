@@ -26,7 +26,11 @@ function shownLocation(): HomeLocation {
 
 /** Lets the navigation browsing starts, and the tab switch that follows it, finish. */
 async function settled(): Promise<void> {
-  for (let turn = 0; turn < 4; turn++) await new Promise((resolve) => setTimeout(resolve, 0))
+  for (let turn = 0; turn < 4; turn++) {
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0)
+    })
+  }
 }
 
 function setUpBucket(): void {
