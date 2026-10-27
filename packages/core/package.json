@@ -163,6 +163,12 @@
       "types": "./dist/layout.d.ts",
       "import": "./dist/layout.js",
       "default": "./dist/layout.js"
+    },
+    "./node/fs": {
+      "bun": "./src/node/fs.ts",
+      "types": "./dist/node/fs.d.ts",
+      "import": "./dist/node/fs.js",
+      "default": "./dist/node/fs.js"
     }
   },
   "publishConfig": {
@@ -183,6 +189,7 @@
     "@open-pencil/drawio": "workspace:*",
     "@open-pencil/fig": "workspace:*",
     "@open-pencil/kiwi": "workspace:*",
+    "@open-pencil/mermaid": "workspace:*",
     "@open-pencil/pen": "workspace:*",
     "@open-pencil/scene-graph": "workspace:*",
     "@tauri-apps/api": "^2.12.1",
@@ -193,9 +200,12 @@
     "culori": "^4.0.2",
     "destr": "^2.0.5",
     "diff": "^8.0.4",
+    "elkjs": "^0.12.0",
+    "entities": "^8.0.0",
     "es-toolkit": "^1.52.0",
     "fflate": "^0.8.3",
     "fontoxpath": "^3.34.0",
+    "happy-dom": "^20.14.6",
     "harfbuzzjs": "1.6.4",
     "js-base64": "^3.9.3",
     "jsep": "^1.4.0",
