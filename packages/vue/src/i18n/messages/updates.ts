@@ -8,6 +8,7 @@ export const updatesMessageDefaults = {
   checking: 'Checking for updates…',
   available: params('OpenPencil {version} is available'),
   currentVersion: params('You have version {version}.'),
+  settingsKept: 'The update installs over this app and keeps your settings and storage profiles.',
   whatsNew: 'What’s new',
   noNotes: 'This release has no release notes.',
   fullReleaseNotes: 'Full release notes',

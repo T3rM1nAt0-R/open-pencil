@@ -4,6 +4,7 @@
   "checking": "Sprawdzanie aktualizacji…",
   "available": "Dostępny jest OpenPencil {version}",
   "currentVersion": "Masz wersję {version}.",
+  "settingsKept": "Aktualizacja instaluje się nad tą aplikacją i zachowuje Twoje ustawienia oraz profile przechowywania.",
   "whatsNew": "Co nowego",
   "noNotes": "To wydanie nie ma informacji o wydaniu.",
   "fullReleaseNotes": "Pełne informacje o wydaniu",
