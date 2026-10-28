@@ -37,6 +37,7 @@ import {
 import { appPreferences } from '@/app/settings/preferences/store'
 import { createSharedEditorMenuActions } from '@/app/shell/menu/actions/editor'
 import { createSelectionMenuActions } from '@/app/shell/menu/actions/selection'
+import { unmetMenuIdList } from '@/app/shell/menu/context'
 import { menuFeatureAvailable } from '@/app/shell/menu/features'
 import { browseFiles } from '@/app/shell/menu/navigation'
 import { createSaveMenuActions } from '@/app/shell/menu/save-actions'
@@ -285,7 +286,10 @@ export function useAppMenu() {
     }
   }
 
+  const unmetIds = computed(() => new Set(unmetMenuIdList.value))
+
   function disabled(item: AppMenuActionItem): boolean | undefined {
+    if (unmetIds.value.has(item.id)) return true
     switch (item.id) {
       case 'view-split-right':
       case 'view-split-down':
@@ -320,7 +324,8 @@ export function useAppMenu() {
 
     if (entry.id === 'selection.moveToPage') {
       if (otherPages.value.length === 0) return null
-      const disabled = !commands['selection.moveToPage'].enabled.value
+      const disabled =
+        !commands['selection.moveToPage'].enabled.value || unmetIds.value.has(entry.id)
       return {
         label: menuLabel(entry),
         disabled,
@@ -333,8 +338,10 @@ export function useAppMenu() {
     }
 
     if (entry.command) {
+      const commandItem = commandMenuItem(entry.command, appMenuShortcutLabel(entry.id))
       return {
-        ...commandMenuItem(entry.command, appMenuShortcutLabel(entry.id)),
+        ...commandItem,
+        disabled: commandItem.disabled || unmetIds.value.has(entry.id),
         menuId: entry.id,
         palette: resolvePalette(entry),
         paletteShortcut: entry.shortcut

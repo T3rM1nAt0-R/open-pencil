@@ -1,0 +1,1 @@
+- Menu items that need an open document or a selection, such as Save, Export Selection, and the Edit, Object, Text, and Arrange actions, are greyed out until they apply, in the desktop menu and the in-app menu alike, as in Figma.

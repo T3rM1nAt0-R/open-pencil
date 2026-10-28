@@ -37,6 +37,14 @@ struct MenuEntry {
 pub struct NativeMenuInputs {
     pub recent_files: Vec<String>,
     pub features: Vec<String>,
+    /// Items that cannot act yet, such as Save with no document open (`set_native_menu_disabled`).
+    pub disabled: Vec<String>,
+}
+
+impl NativeMenuInputs {
+    fn enabled(&self, id: Option<&str>) -> bool {
+        id.is_none_or(|id| !self.disabled.iter().any(|disabled| disabled == id))
+    }
 }
 
 pub struct NativeMenuState(pub Mutex<NativeMenuInputs>);
@@ -97,11 +105,16 @@ fn platform_entries<'a>(items: &'a [MenuEntry], features: &[String]) -> Vec<&'a 
 
 fn build_submenu<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
+    id: Option<&str>,
     label: &str,
     items: &[MenuEntry],
     build: &MenuBuild,
 ) -> tauri::Result<Submenu<R>> {
-    let mut builder = SubmenuBuilder::new(app, label);
+    let mut builder = match id {
+        Some(id) => SubmenuBuilder::with_id(app, id, label),
+        None => SubmenuBuilder::new(app, label),
+    }
+    .enabled(build.inputs.enabled(id));
 
     for entry in platform_entries(items, &build.inputs.features) {
         if entry.r#type.as_deref() == Some("separator") {
@@ -116,7 +129,7 @@ fn build_submenu<R: tauri::Runtime>(
             continue;
         }
         if !entry.sub.is_empty() {
-            let submenu = build_submenu(app, label, &entry.sub, build)?;
+            let submenu = build_submenu(app, entry.id.as_deref(), label, &entry.sub, build)?;
             builder = builder.item(&submenu);
             continue;
         }
@@ -147,7 +160,9 @@ fn build_submenu<R: tauri::Runtime>(
                 .as_ref()
                 .and_then(|id| build.checked.get(id).copied())
                 .unwrap_or(true);
-            let mut item = CheckMenuItemBuilder::new(label).checked(checked);
+            let mut item = CheckMenuItemBuilder::new(label)
+                .checked(checked)
+                .enabled(build.inputs.enabled(entry.id.as_deref()));
             if let Some(id) = &entry.id {
                 item = item.id(id);
             }
@@ -158,7 +173,8 @@ fn build_submenu<R: tauri::Runtime>(
             continue;
         }
 
-        let mut item = MenuItemBuilder::new(label);
+        let mut item =
+            MenuItemBuilder::new(label).enabled(build.inputs.enabled(entry.id.as_deref()));
         if let Some(id) = &entry.id {
             item = item.id(id);
         }
@@ -222,7 +238,7 @@ fn build_schema_menus<R: tauri::Runtime>(
     let groups: Vec<MenuGroup> = serde_json::from_str(include_str!("../../generated/menu.json"))?;
     groups
         .iter()
-        .map(|group| build_submenu(app, &group.label, &group.items, build))
+        .map(|group| build_submenu(app, None, &group.label, &group.items, build))
         .collect()
 }
 
@@ -381,10 +397,72 @@ pub fn update_app_menu<R: tauri::Runtime>(
     install_app_menu(app, &inputs).map_err(|error| error.to_string())
 }
 
+/// Applies the disabled ids to the menu already installed, so a selection change does not
+/// rebuild it. The predefined Copy, Cut and Paste items cannot be disabled and stay on.
+fn apply_disabled<R: tauri::Runtime>(items: Vec<MenuItemKind<R>>, disabled: &[String]) {
+    for item in items {
+        let enabled = !disabled.contains(&item.id().0);
+        match &item {
+            MenuItemKind::MenuItem(item) => {
+                let _ = item.set_enabled(enabled);
+            }
+            MenuItemKind::Check(item) => {
+                let _ = item.set_enabled(enabled);
+            }
+            MenuItemKind::Submenu(submenu) => {
+                // The recent files submenu is enabled by whether it has files.
+                if submenu.id().0 != "open-recent" {
+                    let _ = submenu.set_enabled(enabled);
+                }
+                if let Ok(children) = submenu.items() {
+                    apply_disabled(children, disabled);
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Greys out the items that need an open document or a selection, and enables the rest.
+#[tauri::command]
+pub fn set_native_menu_disabled<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    ids: Vec<String>,
+) -> Result<(), String> {
+    let state = tauri::Manager::state::<NativeMenuState>(&app);
+    let mut inputs = state
+        .0
+        .lock()
+        .map_err(|_| "Menu state is unavailable".to_string())?;
+    inputs.disabled = ids;
+    if let Some(items) = app.menu().and_then(|menu| menu.items().ok()) {
+        apply_disabled(items, &inputs.disabled);
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub fn set_native_menu_features<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
     features: Vec<String>,
 ) -> Result<(), String> {
     update_app_menu(&app, |inputs| inputs.features = features)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_the_listed_items_are_disabled() {
+        let inputs = NativeMenuInputs {
+            disabled: vec!["save".into(), "export-png".into()],
+            ..Default::default()
+        };
+
+        assert!(!inputs.enabled(Some("save")));
+        assert!(!inputs.enabled(Some("export-png")));
+        assert!(inputs.enabled(Some("open")));
+        assert!(inputs.enabled(None));
+    }
 }
