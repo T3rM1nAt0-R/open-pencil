@@ -113,6 +113,13 @@
         "id": "settings",
         "label": "Settings…",
         "accelerator": "CmdOrCtrl+,"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "exit",
+        "label": "Exit"
       }
     ]
   },

@@ -138,7 +138,10 @@ export const APP_MENU_SCHEMA = [
       { id: 'next-tab', label: 'Select Next Tab', accelerator: 'Ctrl+Tab' },
       // Windows, Linux, and the browser menu; macOS shows it in the application menu instead.
       { type: 'separator' },
-      { ...SETTINGS_MENU_ITEM, handler: 'shell' }
+      { ...SETTINGS_MENU_ITEM, handler: 'shell' },
+      // Windows and Linux only; macOS quits from the application menu (`APP_MENU_APP_ITEMS`).
+      { type: 'separator', target: 'native' },
+      { id: 'exit', label: 'Exit', target: 'native', handler: 'shell' }
     ]
   },
   {

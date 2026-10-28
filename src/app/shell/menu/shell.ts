@@ -78,7 +78,8 @@ export function useShellMenu() {
     'theme-dark': () => setTheme('dark'),
     'theme-auto': () => setTheme('auto'),
     'check-updates': () => void checkForAppUpdate({ messages: updates }),
-    quit: () => void requestAppExit()
+    quit: () => void requestAppExit(),
+    exit: () => void requestAppExit()
   }
 
   useNativeMenuEvents((id) => actions[id]?.())
