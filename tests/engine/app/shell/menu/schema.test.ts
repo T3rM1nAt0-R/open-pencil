@@ -52,6 +52,7 @@ describe('APP_MENU_SCHEMA', () => {
       'browse-files',
       'open-tour',
       'settings',
+      'exit',
       'view-design-issues',
       'theme-light',
       'theme-dark',

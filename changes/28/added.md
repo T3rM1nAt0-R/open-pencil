@@ -1,0 +1,1 @@
+- The desktop app on Windows and Linux has **File → Exit**, at the bottom of the File menu; it quits like closing the window, asking about unsaved changes first. macOS keeps Quit in the application menu.

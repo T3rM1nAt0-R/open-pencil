@@ -73,12 +73,15 @@ fn app_menu_file() -> tauri::Result<AppMenuFile> {
     ))?)
 }
 
-/// The macOS application menu holds Settings…, so the schema's copy is left out there, along
-/// with a separator it would leave at the end of its menu.
+/// The macOS application menu holds Settings… and Quit, so the schema's copies (Settings…, Exit)
+/// are left out there, along with a separator they would leave at the end of their menu.
 fn platform_entries<'a>(items: &'a [MenuEntry], features: &[String]) -> Vec<&'a MenuEntry> {
     let mut entries: Vec<&MenuEntry> = items
         .iter()
-        .filter(|entry| !(cfg!(target_os = "macos") && entry.id.as_deref() == Some("settings")))
+        .filter(|entry| {
+            !(cfg!(target_os = "macos")
+                && matches!(entry.id.as_deref(), Some("settings" | "exit")))
+        })
         .filter(|entry| {
             entry
                 .feature
@@ -387,4 +390,45 @@ pub fn set_native_menu_features<R: tauri::Runtime>(
     features: Vec<String>,
 ) -> Result<(), String> {
     update_app_menu(&app, |inputs| inputs.features = features)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn file_menu_tail() -> Vec<MenuEntry> {
+        serde_json::from_str(
+            r#"[
+                { "id": "save", "label": "Save" },
+                { "type": "separator" },
+                { "id": "settings", "label": "Settings…" },
+                { "type": "separator" },
+                { "id": "exit", "label": "Exit" }
+            ]"#,
+        )
+        .expect("valid menu entries")
+    }
+
+    fn ids(entries: &[&MenuEntry]) -> Vec<String> {
+        entries
+            .iter()
+            .map(|entry| entry.id.clone().unwrap_or_else(|| "-".into()))
+            .collect()
+    }
+
+    #[test]
+    #[cfg(not(target_os = "macos"))]
+    fn file_menu_ends_with_exit_off_macos() {
+        let items = file_menu_tail();
+        let entries = platform_entries(&items, &[]);
+        assert_eq!(ids(&entries), ["save", "-", "settings", "-", "exit"]);
+    }
+
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn macos_leaves_settings_and_exit_to_the_application_menu() {
+        let items = file_menu_tail();
+        let entries = platform_entries(&items, &[]);
+        assert_eq!(ids(&entries), ["save"]);
+    }
 }
