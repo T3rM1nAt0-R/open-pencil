@@ -4,6 +4,7 @@
   "checking": "正在检查更新…",
   "available": "OpenPencil {version} 现已推出",
   "currentVersion": "你当前的版本是 {version}。",
+  "settingsKept": "更新会直接安装到此应用上，并保留你的设置和存储配置文件。",
   "whatsNew": "新功能",
   "noNotes": "此版本没有发行说明。",
   "fullReleaseNotes": "完整发行说明",
