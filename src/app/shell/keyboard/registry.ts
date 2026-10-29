@@ -1,16 +1,22 @@
-import { tinykeys } from 'tinykeys'
+import { useEventListener } from '@vueuse/core'
+import { createKeybindingsHandler } from 'tinykeys'
 import type { KeyBindingMap } from 'tinykeys'
-import { onScopeDispose } from 'vue'
 
-import { editorCommandMetadata } from '@open-pencil/vue'
-import type { EditorCommandId } from '@open-pencil/vue'
+import { isCanvasTextInput } from '@open-pencil/vue/canvas/text-edit'
+import { editorCommandMetadata, type EditorCommandId } from '@open-pencil/vue/editor/commands'
 
+import { isCloudBinding, openVersionDialog } from '@/app/cloud/integration'
 import { useComments } from '@/app/comments/use'
+import {
+  copySelectionProperties,
+  pasteClipboardProperties
+} from '@/app/editor/clipboard/properties'
 import { requestRenameSelection } from '@/app/editor/selection/rename-dialog'
 import { TOOL_SHORTCUTS } from '@/app/editor/session'
 import { openSettingsDialog } from '@/app/settings/dialog'
 import { setSnappingPreference } from '@/app/settings/preferences/apply'
 import { isButtonActivation, isEditing } from '@/app/shell/keyboard/focus'
+import { shortcutEvent } from '@/app/shell/keyboard/layout'
 import { bindSpaceHandTool } from '@/app/shell/keyboard/space-tool'
 import type {
   KeyboardShortcutOptions,
@@ -109,6 +115,16 @@ function hasOpenDismissableLayer(allowPickers = false) {
 }
 
 /**
+ * While text is edited its input handles the keys, undo and redo among them. Focus can leave it
+ * for a panel field while the edit stays open, as after a typed font size; undo and redo then
+ * run on the editor's history, which records the text edit's steps, rather than go nowhere.
+ */
+function editingTextHandles(options: KeyboardShortcutOptions, history: boolean) {
+  if (!options.store.state.editingTextId) return false
+  return !history || isCanvasTextInput(document.activeElement)
+}
+
+/**
  * Other shortcuts wait for open popovers to close, but undo and redo work while a fill, stroke,
  * or colour picker is open, as in Figma; a text field in it keeps its own undo.
  */
@@ -123,7 +139,7 @@ function shouldIgnoreShortcut(
     originatedInOverlay(event, history) ||
     isEditing(event) ||
     options.inputFocused.value ||
-    !!options.store.state.editingTextId ||
+    editingTextHandles(options, history) ||
     !!options.store.state.numberFieldFocused
   )
 }
@@ -164,8 +180,21 @@ export function registerKeyboardShortcuts(options: KeyboardShortcutOptions) {
       'selection.toggleVisibility',
       'selection.toggleLock',
       'selection.flipHorizontal',
-      'selection.flipVertical'
+      'selection.flipVertical',
+      'selection.tidyUp',
+      'selection.distributeHorizontal',
+      'selection.distributeVertical'
     ),
+    {
+      id: 'copy-properties',
+      keys: '$mod+Alt+KeyC',
+      run: ({ store }) => void copySelectionProperties(store)
+    },
+    {
+      id: 'paste-properties',
+      keys: '$mod+Alt+KeyV',
+      run: ({ store }) => void pasteClipboardProperties(store)
+    },
     {
       id: 'export-selection-png',
       keys: appMenuTinykeysShortcut('export-selection') ?? '$mod+Shift+KeyE',
@@ -175,6 +204,13 @@ export function registerKeyboardShortcuts(options: KeyboardShortcutOptions) {
       id: 'save-as',
       keys: appMenuTinykeysShortcut('save-as') ?? '$mod+Shift+KeyS',
       run: ({ store }) => void store.saveFigFileAs()
+    },
+    {
+      id: 'save-version',
+      keys: appMenuTinykeysShortcut('save-version') ?? '$mod+Alt+KeyS',
+      run: ({ store }) => {
+        if (isCloudBinding(store.getStorageBinding())) openVersionDialog(store)
+      }
     },
     ...commandShortcuts('selection.ungroup', 'edit.redo'),
     {
@@ -258,7 +294,24 @@ export function registerKeyboardShortcuts(options: KeyboardShortcutOptions) {
       keys: appMenuTinykeysShortcut('close') ?? '$mod+KeyW',
       run: ({ closeActiveTab }) => closeActiveTab()
     },
-    { id: 'new-tab', keys: ['$mod+KeyN', '$mod+KeyT'], run: ({ createTab }) => createTab() },
+    {
+      id: 'new-design',
+      keys: appMenuTinykeysShortcut('new') ?? '$mod+KeyN',
+      run: ({ createTab }) => createTab()
+    },
+    { id: 'show-home', keys: '$mod+KeyT', run: ({ showHome }) => showHome() },
+    {
+      id: 'next-tab',
+      keys: 'Control+Tab',
+      run: ({ switchAdjacentTab }) => switchAdjacentTab(1),
+      global: true
+    },
+    {
+      id: 'previous-tab',
+      keys: 'Control+Shift+Tab',
+      run: ({ switchAdjacentTab }) => switchAdjacentTab(-1),
+      global: true
+    },
     {
       id: 'rename-selection',
       keys: appMenuTinykeysShortcut('selection.rename') ?? '$mod+KeyR',
@@ -335,8 +388,7 @@ export function registerKeyboardShortcuts(options: KeyboardShortcutOptions) {
     })
   }
 
-  const unsubscribeEditor = tinykeys(
-    window,
+  const editorHandler = createKeybindingsHandler(
     Object.fromEntries(
       Object.entries(bindings).map(([keys, handler]) => [
         keys,
@@ -346,14 +398,14 @@ export function registerKeyboardShortcuts(options: KeyboardShortcutOptions) {
           handler(event)
         }
       ])
-    ),
-    { capture: true }
+    )
   )
+  const globalHandler = createKeybindingsHandler(globalBindings)
 
-  const unsubscribeGlobal = tinykeys(window, globalBindings, { capture: true })
-
-  onScopeDispose(() => {
-    unsubscribeEditor()
-    unsubscribeGlobal()
+  useEventListener(window, 'keydown', (event) => editorHandler(shortcutEvent(event)), {
+    capture: true
+  })
+  useEventListener(window, 'keydown', (event) => globalHandler(shortcutEvent(event)), {
+    capture: true
   })
 }
