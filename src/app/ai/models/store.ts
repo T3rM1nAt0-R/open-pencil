@@ -392,9 +392,7 @@ export function createModelProfileDraft(profileId?: string): AIModelProfileDraft
   return newProfileDraft(designConnection ?? aiModelSettings.value.connections[0])
 }
 
-export function saveModelProfileDraft(draft: AIModelProfileDraft): AIModelProfile {
-  const provider = AI_PROVIDERS.find((definition) => definition.id === draft.providerID)
-  const effectiveModel = draft.customModelID.trim() || draft.modelID.trim()
+function assertDraftSavable(draft: AIModelProfileDraft, effectiveModel: string): void {
   if (!draft.name.trim()) throw new Error('Model name is required')
   // Agents choose their own model, and Pi falls back to its own default model.
   if (
@@ -419,6 +417,26 @@ export function saveModelProfileDraft(draft: AIModelProfileDraft): AIModelProfil
       )
     }
   }
+}
+
+function syncVisionAssignment(profile: AIModelProfile): void {
+  const { assignments } = aiModelSettings.value
+  if (
+    assignments.vision === null &&
+    assignments.design === profile.id &&
+    profile.capabilities.includes('vision')
+  ) {
+    assignments.vision = 'design'
+  }
+  if (assignments.vision === profile.id && !profile.capabilities.includes('vision')) {
+    assignments.vision = null
+  }
+}
+
+export function saveModelProfileDraft(draft: AIModelProfileDraft): AIModelProfile {
+  const provider = AI_PROVIDERS.find((definition) => definition.id === draft.providerID)
+  const effectiveModel = draft.customModelID.trim() || draft.modelID.trim()
+  assertDraftSavable(draft, effectiveModel)
   const connection = connectionForDraft(draft)
   const profile: AIModelProfile = {
     id: draft.profileId ?? createModelId(),
@@ -435,19 +453,7 @@ export function saveModelProfileDraft(draft: AIModelProfileDraft): AIModelProfil
   const index = aiModelSettings.value.models.findIndex((model) => model.id === profile.id)
   if (index === -1) aiModelSettings.value.models.push(profile)
   else aiModelSettings.value.models[index] = profile
-  if (
-    aiModelSettings.value.assignments.vision === null &&
-    aiModelSettings.value.assignments.design === profile.id &&
-    profile.capabilities.includes('vision')
-  ) {
-    aiModelSettings.value.assignments.vision = 'design'
-  }
-  if (
-    aiModelSettings.value.assignments.vision === profile.id &&
-    !profile.capabilities.includes('vision')
-  ) {
-    aiModelSettings.value.assignments.vision = null
-  }
+  syncVisionAssignment(profile)
   draft.baseline = storedFingerprint(profile.id) ?? undefined
   return profile
 }
