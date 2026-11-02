@@ -9,6 +9,7 @@ import { useI18n } from '@open-pencil/vue/i18n'
 import { CLOUD_INCLUDED } from '@/app/cloud/integration'
 import { registerSettingsNavigation, type SettingsSection } from '@/app/settings/dialog'
 import { provideSettingsNavigation } from '@/app/settings/navigation/use'
+import { toast } from '@/app/shell/ui'
 import { CloudSettingsSection } from '@/components/cloud/integration'
 import ChatSettingsSection from '@/components/settings/chat/ChatSettingsSection.vue'
 import DiagnosticsSettingsPanel from '@/components/settings/diagnostics/DiagnosticsSettingsPanel.vue'
@@ -38,7 +39,9 @@ const section = defineModel<SettingsSection>('section', { required: true })
 
 const { isMobile } = useViewportKind()
 const { settings } = useI18n()
-const navigation = provideSettingsNavigation()
+const navigation = provideSettingsNavigation({
+  onBusy: () => toast.info(settings.value.saveInProgress)
+})
 if (answerNavigation) tryOnScopeDispose(registerSettingsNavigation(navigation.request))
 const { editing, confirming, crumb } = navigation
 const sections = computed(

@@ -354,6 +354,13 @@ function draftForProfile(
   }
 }
 
+/** What a stored model looks like as a draft, to compare with the one a draft was taken from. */
+function storedFingerprint(profileId: string): string | null {
+  const profile = modelProfile(profileId)
+  const connection = profile ? modelConnection(profile.connectionId) : null
+  return profile && connection ? JSON.stringify(draftForProfile(profile, connection)) : null
+}
+
 function newProfileDraft(connection: AIModelConnection | null): AIModelProfileDraft {
   const providerID = connection?.providerID ?? DEFAULT_AI_PROVIDER
   const provider = AI_PROVIDERS.find((definition) => definition.id === providerID)
@@ -377,7 +384,10 @@ function newProfileDraft(connection: AIModelConnection | null): AIModelProfileDr
 export function createModelProfileDraft(profileId?: string): AIModelProfileDraft {
   const profile = profileId ? modelProfile(profileId) : null
   const profileConnection = profile ? modelConnection(profile.connectionId) : null
-  if (profile && profileConnection) return draftForProfile(profile, profileConnection)
+  if (profile && profileConnection) {
+    const draft = draftForProfile(profile, profileConnection)
+    return { ...draft, baseline: JSON.stringify(draft) }
+  }
   const designConnection = resolveAIModelRole('design')?.connection ?? null
   return newProfileDraft(designConnection ?? aiModelSettings.value.connections[0])
 }
@@ -399,6 +409,15 @@ export function saveModelProfileDraft(draft: AIModelProfileDraft): AIModelProfil
     !draft.capabilities.includes('tools')
   ) {
     throw new Error('The Design model must support tools')
+  }
+  if (draft.profileId && draft.baseline !== undefined) {
+    // The Home tab and the Settings window can each hold an editor for the same model.
+    const stored = storedFingerprint(draft.profileId)
+    if (stored !== null && stored !== draft.baseline) {
+      throw new Error(
+        'This model was changed in another Settings editor. Close this one and open it again to see the changes.'
+      )
+    }
   }
   const connection = connectionForDraft(draft)
   const profile: AIModelProfile = {
@@ -429,6 +448,7 @@ export function saveModelProfileDraft(draft: AIModelProfileDraft): AIModelProfil
   ) {
     aiModelSettings.value.assignments.vision = null
   }
+  draft.baseline = storedFingerprint(profile.id) ?? undefined
   return profile
 }
 

@@ -67,6 +67,7 @@
   "customizeToolbar": "Personalizar barra de herramientas…",
   "discardChanges": "¿Descartar los cambios?",
   "discardChangesDescription": "Se perderán los cambios sin guardar.",
+  "saveInProgress": "Los ajustes se están guardando. Vuelve a intentarlo cuando termine de guardarse.",
   "keepEditing": "Seguir editando",
   "discard": "Descartar",
   "edit": "Editar",

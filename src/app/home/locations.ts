@@ -31,9 +31,19 @@ function fromView(location: HomeLocationView): HomeLocation {
 
 /** Home shows Settings in place of the documents, at the section asked for. */
 export function showHomeSettings(section: SettingsSection): void {
+  if (homeLocation.value.kind === 'settings' && homeSettingsSection.value === section) return
   whenHomeMayChange(() => {
     homeSettingsSection.value = section
     homeLocation.value = { kind: 'settings' }
+  })
+}
+
+/** Moves Home to a place, asking the shown page first unless that place is already shown. */
+export function selectHomeLocation(next: HomeLocationView): void {
+  const current = toView(homeLocation.value)
+  if (current.kind === next.kind && current.id === next.id) return
+  whenHomeMayChange(() => {
+    homeLocation.value = fromView(next)
   })
 }
 
@@ -74,11 +84,7 @@ export function useHomeLocations() {
     workspace,
     serverId: cloud.serverId,
     active: computed(() => toView(location.value)),
-    select(next: HomeLocationView) {
-      whenHomeMayChange(() => {
-        homeLocation.value = fromView(next)
-      })
-    },
+    select: selectHomeLocation,
     connect: cloud.connect,
     openAccount: cloud.openAccount,
     newWorkspace: cloud.newWorkspace,

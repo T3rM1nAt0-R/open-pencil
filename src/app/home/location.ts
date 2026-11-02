@@ -53,3 +53,10 @@ export function whenHomeMayChange(action: () => void): void {
   if (leaveGuard) leaveGuard(action)
   else action()
 }
+
+/** Home shows a Cloud workspace, once the shown page agrees to be left. */
+export function showHomeWorkspace(id: string): void {
+  whenHomeMayChange(() => {
+    homeLocation.value = { kind: 'workspace', id }
+  })
+}

@@ -87,6 +87,7 @@ export const settingsMessageDefaults = {
   partialSaveWarning: 'Some changes may already be saved. Review the settings and try again.',
   discardChanges: 'Discard changes?',
   discardChangesDescription: 'Your unsaved changes will be lost.',
+  saveInProgress: 'Settings are being saved. Try again once the save finishes.',
   keepEditing: 'Keep editing',
   discard: 'Discard',
   storage: 'Storage',

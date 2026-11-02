@@ -67,6 +67,7 @@
   "customizeToolbar": "Dostosuj pasek narzędzi…",
   "discardChanges": "Odrzucić zmiany?",
   "discardChangesDescription": "Niezapisane zmiany zostaną utracone.",
+  "saveInProgress": "Ustawienia są właśnie zapisywane. Spróbuj ponownie po zakończeniu zapisu.",
   "keepEditing": "Kontynuuj edycję",
   "discard": "Odrzuć",
   "edit": "Edytuj",

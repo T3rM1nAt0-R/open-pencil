@@ -3,7 +3,7 @@ import { computed, ref, shallowRef } from 'vue'
 import { CloudAPIError } from '@open-pencil/cloud/client'
 import type { WorkspaceMembers, WorkspaceRole } from '@open-pencil/cloud/contract'
 
-import { homeLocation } from '@/app/home/location'
+import { showHomeWorkspace } from '@/app/home/location'
 
 import { findCloudServer, showCloudServerOnHome } from '../servers/store'
 import { cloudAPIClient, cloudConnection, refreshCloudConnection } from '../sessions/connection'
@@ -60,7 +60,7 @@ export async function createWorkspace(name: string): Promise<void> {
     const workspace = await target.client.createWorkspace(name)
     await refreshCloudConnection(target.server)
     showCloudServerOnHome(target.server.id)
-    homeLocation.value = { kind: 'workspace', id: workspace.id }
+    showHomeWorkspace(workspace.id)
     newWorkspaceOpen.value = false
   } catch (error) {
     newWorkspaceFailure.value = failureOf(error)

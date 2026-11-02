@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 
-import { homeLocation, setHomeLeaveGuard, type HomeLocation } from '@/app/home/location'
-import { showHomeSettings } from '@/app/home/locations'
+import {
+  homeLocation,
+  setHomeLeaveGuard,
+  showHomeWorkspace,
+  type HomeLocation
+} from '@/app/home/location'
+import { selectHomeLocation, showHomeSettings } from '@/app/home/locations'
 import { homeSettingsSection, type SettingsSection } from '@/app/settings/dialog'
 
 /** Read through a function, as the guard changes it after the test set it. */
@@ -38,5 +43,54 @@ describe('Settings as a place on Home', () => {
 
     held[0]?.()
     expect(shownSection()).toBe('cloud')
+  })
+
+  test('does not ask again when Settings already shows the section', () => {
+    homeLocation.value = { kind: 'settings' }
+    homeSettingsSection.value = 'storage'
+    const asked: (() => void)[] = []
+    setHomeLeaveGuard((proceed) => asked.push(proceed))
+
+    showHomeSettings('storage')
+
+    expect(asked).toHaveLength(0)
+    expect(shownSection()).toBe('storage')
+  })
+})
+
+describe('choosing a place on Home', () => {
+  test('asks the shown page before moving to another place', () => {
+    homeLocation.value = { kind: 'settings' }
+    const held: (() => void)[] = []
+    setHomeLeaveGuard((proceed) => held.push(proceed))
+
+    selectHomeLocation({ kind: 'storage', id: 'storage' })
+    expect(shownLocation()).toEqual({ kind: 'settings' })
+
+    held[0]?.()
+    expect(shownLocation()).toEqual({ kind: 'storage' })
+  })
+
+  test('does not ask when the place is already shown', () => {
+    homeLocation.value = { kind: 'settings' }
+    const asked: (() => void)[] = []
+    setHomeLeaveGuard((proceed) => asked.push(proceed))
+
+    selectHomeLocation({ kind: 'settings', id: 'settings' })
+
+    expect(asked).toHaveLength(0)
+    expect(shownLocation()).toEqual({ kind: 'settings' })
+  })
+
+  test('shows a new workspace only once the shown page agrees to be left', () => {
+    homeLocation.value = { kind: 'settings' }
+    const held: (() => void)[] = []
+    setHomeLeaveGuard((proceed) => held.push(proceed))
+
+    showHomeWorkspace('workspace-1')
+    expect(shownLocation()).toEqual({ kind: 'settings' })
+
+    held[0]?.()
+    expect(shownLocation()).toEqual({ kind: 'workspace', id: 'workspace-1' })
   })
 })
