@@ -56,4 +56,6 @@ test('a saved design that cannot reopen leaves the Home tab in front', async () 
   const home = getTabsSnapshot().filter((tab) => tab.kind === 'home')
   expect(home).toHaveLength(1)
   expect(getActiveStore()).toBe(home[0]?.store)
+  // The person is told why their designs are not back.
+  expect(toast.toasts.value.map((entry) => entry.message)).toContain('Some designs could not open')
 })

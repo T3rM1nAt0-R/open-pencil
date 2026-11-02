@@ -86,7 +86,6 @@ export const lastSession = useLocalStorage<LastSession | null>(LAST_SESSION_STOR
 })
 
 export type LastSessionOpeners = {
-  activeProviderId: string
   openPath(path: string): Promise<void>
   joinRoom(roomId: string): boolean
   /**
@@ -100,12 +99,15 @@ export type LastSessionOpeners = {
   openStorageDocument(document: StorageDocument, location: StorageLocation): Promise<void>
   activeTabId(): string
   focus(tabId: string): void
+  /** Brings the Home tab to the front. */
+  showHome(): void
 }
 
 /**
  * A stored design's metadata for reopening it: null only when the design itself is gone, and
  * undefined when the provider cannot tell. A design whose .meta.json is missing or unreadable
- * is still there, so it reopens without metadata rather than being skipped as deleted.
+ * is still there, so it reopens without metadata rather than being skipped as deleted; and a
+ * .meta.json left behind by a design whose figure is gone does not bring it back.
  */
 export async function storedDocumentMetadata(
   adapter: Pick<StorageAdapter, 'getDocumentMetadata' | 'documentExists'>,
@@ -113,7 +115,13 @@ export async function storedDocumentMetadata(
 ): Promise<StorageDocumentMetadata | null | undefined> {
   if (!adapter.getDocumentMetadata) return undefined
   const metadata = await adapter.getDocumentMetadata(documentId)
-  if (metadata !== null || !adapter.documentExists) return metadata
+  if (!adapter.documentExists) return metadata
+  if (metadata) {
+    // Only a confirmed absence skips the design: a store that refuses the existence check
+    // (for example a bucket that allows GET but not HEAD) must not hide designs that open.
+    const exists = await adapter.documentExists(documentId).catch(() => true)
+    return exists ? metadata : null
+  }
   return (await adapter.documentExists(documentId)) ? undefined : null
 }
 
@@ -124,13 +132,14 @@ export async function restoreLastSession(
 ): Promise<boolean> {
   let allOpened = true
   const openedTabs = new Map<number, string>()
+  let lastOpened = ''
   for (const [index, document] of session.documents.entries()) {
     try {
       if (document.kind === 'local') {
         await openers.openPath(document.path)
       } else if (document.kind === 'room') {
         if (!openers.joinRoom(document.roomId)) throw new Error('Not a room ID')
-      } else if (document.providerId === openers.activeProviderId) {
+      } else {
         const location = storageLocationOf(document)
         const metadata = await openers.storageMetadata(document.documentId, location)
         // A design deleted from storage must not come back from a cached local copy.
@@ -144,17 +153,19 @@ export async function restoreLastSession(
             : { id: document.documentId, name: document.name, updatedAt: '' },
           location
         )
-      } else {
-        allOpened = false
-        continue
       }
-      openedTabs.set(index, openers.activeTabId())
+      lastOpened = openers.activeTabId()
+      openedTabs.set(index, lastOpened)
     } catch (error) {
       console.warn('[Startup] Could not reopen a design', error)
       allOpened = false
     }
   }
-  const activeTab = openedTabs.get(session.active)
-  if (activeTab) openers.focus(activeTab)
+  // A file or link opened while this ran is in front of the last restored design; it stays there.
+  if (openedTabs.size > 0 && openers.activeTabId() === lastOpened) {
+    const activeTab = openedTabs.get(session.active)
+    if (activeTab) openers.focus(activeTab)
+    else if (session.active === -1) openers.showHome()
+  }
   return allOpened && openedTabs.size > 0
 }

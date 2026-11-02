@@ -2,7 +2,7 @@ import { useEventListener } from '@vueuse/core'
 import { watch } from 'vue'
 
 import { joinRoom, roomForStore } from '@/app/collab/rooms'
-import { activeStorageProviderID, createStorageAdapter } from '@/app/integrations/storage'
+import { createStorageAdapter } from '@/app/integrations/storage'
 import { appPreferences, type StartupOpen } from '@/app/settings/preferences/store'
 import { openFileFromPath } from '@/app/shell/menu/files'
 import { toast } from '@/app/shell/ui'
@@ -35,7 +35,6 @@ export async function reopenLastSession(messages: {
   const session = lastSession.value
   if (!session?.documents.length) return
   const allOpened = await restoreLastSession(session, {
-    activeProviderId: activeStorageProviderID.value,
     async openPath(path) {
       if (!IS_TAURI) throw new Error('Files open by path only in the desktop app')
       await openFileFromPath(path)
@@ -47,7 +46,8 @@ export async function reopenLastSession(messages: {
       await openStorageDocumentInNewTab(document, location)
     },
     activeTabId: getActiveTabId,
-    focus: switchTab
+    focus: switchTab,
+    showHome: showNewTab
   })
   if (!allOpened) {
     toast.info(messages.reopenIncomplete)
@@ -56,7 +56,8 @@ export async function reopenLastSession(messages: {
 }
 
 /** Keeps the list of open designs current so the next start can reopen them. */
-export function recordOpenDocuments(ready: () => boolean): void {
+/** Returns a function that records the open designs right away. */
+export function recordOpenDocuments(ready: () => boolean): () => void {
   const record = () => {
     if (!ready()) return
     const tabs = getTabsSnapshot().map((tab) => {
@@ -67,4 +68,5 @@ export function recordOpenDocuments(ready: () => boolean): void {
   }
   watch(allTabs, record)
   useEventListener(window, 'pagehide', record)
+  return record
 }

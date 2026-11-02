@@ -59,7 +59,6 @@ describe('last session', () => {
     const storageLocations: StorageLocation[] = []
     let current = ''
     const openers = {
-      activeProviderId: 's3',
       async openPath(path: string) {
         if (path === '/missing.fig') throw new Error('missing')
         current = path
@@ -71,7 +70,9 @@ describe('last session', () => {
         opened.push(roomId)
         return true
       },
-      async storageMetadata(documentId: string) {
+      async storageMetadata(documentId: string, location: StorageLocation) {
+        // A provider that is not set up on this device cannot say what it holds.
+        if (location.providerId === 'offline') throw new Error('Provider not set up')
         if (documentId === 'deleted') return null
         return documentId === 'd1' ? { name: 'D1 renamed', updatedAt: '2026-10-13' } : undefined
       },
@@ -82,7 +83,8 @@ describe('last session', () => {
         storageOpens.push(document)
       },
       activeTabId: () => current,
-      focus: (id: string) => void focused.push(id)
+      focus: (id: string) => void focused.push(id),
+      showHome: () => void focused.push('home')
     }
     const ok = await restoreLastSession(
       {
@@ -119,7 +121,7 @@ describe('last session', () => {
       {
         documents: [
           { kind: 'local', path: '/missing.fig' },
-          { kind: 'storage', providerId: 'other', documentId: 'd2', name: 'D2' },
+          { kind: 'storage', providerId: 'offline', documentId: 'd2', name: 'D2' },
           { kind: 'room', roomId: 'bad' },
           { kind: 'storage', providerId: 's3', documentId: 'deleted', name: 'Gone' }
         ],
@@ -129,6 +131,59 @@ describe('last session', () => {
     )
     expect(partial).toBe(false)
     expect(opened).not.toContain('deleted')
+  })
+
+  test('reopens a design from a provider other than the active one', async () => {
+    const opened: string[] = []
+    const ok = await restoreLastSession(
+      {
+        documents: [{ kind: 'storage', providerId: 'drive', documentId: 'd9', name: 'D9' }],
+        active: 0
+      },
+      {
+        openPath: async () => undefined,
+        joinRoom: () => true,
+        storageMetadata: async () => undefined,
+        openStorageDocument: async (document) => void opened.push(document.id),
+        activeTabId: () => 'tab',
+        focus: () => undefined,
+        showHome: () => undefined
+      }
+    )
+    expect(ok).toBe(true)
+    expect(opened).toEqual(['d9'])
+  })
+
+  test('puts Home in front when Home was in front, and yields to a newer open', async () => {
+    const events: string[] = []
+    let current = ''
+    const openers = {
+      openPath: async (path: string) => {
+        current = path
+      },
+      joinRoom: () => true,
+      storageMetadata: async () => undefined,
+      openStorageDocument: async () => undefined,
+      activeTabId: () => current,
+      focus: (id: string) => void events.push(`focus ${id}`),
+      showHome: () => void events.push('home')
+    }
+    const session = { documents: [{ kind: 'local' as const, path: '/a.fig' }], active: -1 }
+    expect(await restoreLastSession(session, openers)).toBe(true)
+    expect(events).toEqual(['home'])
+
+    // A file opened while the restore ran stays in front.
+    events.length = 0
+    let reads = 0
+    const interrupted = {
+      ...openers,
+      // The first read is the restored design; after that a link's design is in front.
+      activeTabId: () => (reads++ === 0 ? '/a.fig' : 'opened-by-link')
+    }
+    await restoreLastSession(session, interrupted)
+    reads = 0
+    await restoreLastSession({ ...session, active: 0 }, interrupted)
+    expect(events).toEqual([])
   })
 })
 
@@ -161,5 +216,26 @@ describe('stored design metadata on reopen', () => {
 
   test('a provider without metadata cannot tell', async () => {
     expect(await storedDocumentMetadata({}, 'plan')).toBeUndefined()
+  })
+})
+
+describe('stored design that is gone but still has metadata', () => {
+  test('is skipped rather than reopened from a cached copy', async () => {
+    const adapter = {
+      getDocumentMetadata: async () => ({ name: 'Plan', updatedAt: '2026-10-15T00:00:00.000Z' }),
+      documentExists: async () => false
+    }
+    expect(await storedDocumentMetadata(adapter, 'plan')).toBeNull()
+  })
+
+  test('reopens with its metadata when the check cannot be made', async () => {
+    const metadata = { name: 'Plan', updatedAt: '2026-10-15T00:00:00.000Z' }
+    const adapter = {
+      getDocumentMetadata: async () => metadata,
+      documentExists: async () => {
+        throw new Error('HEAD blocked')
+      }
+    }
+    expect(await storedDocumentMetadata(adapter, 'plan')).toEqual(metadata)
   })
 })

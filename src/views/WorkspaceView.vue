@@ -260,7 +260,7 @@ async function bindAssociatedFileOpen(): Promise<void> {
 
 // Recording waits for the reopen so a half-restored start does not overwrite the list.
 const sessionRestored = ref(false)
-recordOpenDocuments(() => sessionRestored.value)
+const recordOpenDocumentsNow = recordOpenDocuments(() => sessionRestored.value)
 
 let stopWebMCP: (() => void) | undefined
 
@@ -312,6 +312,8 @@ onMounted(async () => {
     }
   }
   sessionRestored.value = true
+  // The tabs changed while recording was off, so the list is written once now.
+  recordOpenDocumentsNow()
 })
 
 onUnmounted(() => {
