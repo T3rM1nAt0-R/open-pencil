@@ -1,0 +1,1 @@
+- File › Browse Files opens Home on the storage bucket once one is set up, and waits for an open Settings window to agree to close first.

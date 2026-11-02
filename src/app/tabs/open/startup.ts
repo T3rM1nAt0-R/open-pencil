@@ -55,8 +55,10 @@ export async function reopenLastSession(messages: {
   }
 }
 
-/** Keeps the list of open designs current so the next start can reopen them. */
-/** Returns a function that records the open designs right away. */
+/**
+ * Keeps the list of open designs current so the next start can reopen them, and returns a
+ * function that records them right away.
+ */
 export function recordOpenDocuments(ready: () => boolean): () => void {
   const record = () => {
     if (!ready()) return

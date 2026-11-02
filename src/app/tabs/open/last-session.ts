@@ -38,7 +38,7 @@ export type LastSession = v.InferOutput<typeof lastSessionSchema>
 /** What a tab needs to expose to be reopened on the next start. */
 export type SessionTab = {
   id: string
-  kind: 'home' | 'document'
+  kind: 'home' | 'new-file' | 'document'
   /** The room this tab joined, if any; such a tab reopens by rejoining the room. */
   roomId?: string | null
   store: {

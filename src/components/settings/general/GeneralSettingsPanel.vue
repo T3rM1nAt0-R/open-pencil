@@ -1,27 +1,29 @@
 <script setup lang="ts">
+import { isEqual } from 'es-toolkit'
 import { computed } from 'vue'
 
 import { type Locale, useI18n } from '@open-pencil/vue/i18n'
 
 import { recoveryEnabled, setRecoveryEnabled } from '@/app/document/recovery/preferences'
+import { DEFAULT_RECENT_FILES_LIMIT } from '@/app/recent-files/limit'
 import { recentFilesAvailable, recentFilesLimit } from '@/app/recent-files/preferences'
 import { RECENT_FILES_LIMIT_MIN, RECENT_FILES_LIMIT_MAX } from '@/app/recent-files/schema'
-import { setSnappingPreference } from '@/app/settings/preferences/apply'
 import {
   appPreferences,
   updateStartupOpen,
-  updateZoomSpeed,
-  ZOOM_SPEEDS,
-  type ZoomSpeed
+  DEFAULT_APP_PREFERENCES,
+  updateAccentPreference
 } from '@/app/settings/preferences/store'
+import { DEFAULT_THEME } from '@/app/settings/theme'
+import { DEFAULT_ACCENT } from '@/app/shell/accent/palette'
 import { animationPreference } from '@/app/shell/motion'
 import { useAppTheme } from '@/app/shell/theme'
 import { startupOpenChoice } from '@/app/tabs/open/startup'
 import CredentialSettingsSection from '@/components/settings/credentials/CredentialSettingsSection.vue'
 import AccentColorPicker from '@/components/settings/general/AccentColorPicker.vue'
 import CollaborationNameSection from '@/components/settings/general/CollaborationNameSection.vue'
-import RenderingSettingsSection from '@/components/settings/general/RenderingSettingsSection.vue'
 import SettingsGroup from '@/components/settings/layout/SettingsGroup.vue'
+import SettingsResetButton from '@/components/settings/layout/SettingsResetButton.vue'
 import SettingsRow from '@/components/settings/layout/SettingsRow.vue'
 import SettingsSection from '@/components/settings/layout/SettingsSection.vue'
 import PresetNumberField from '@/components/ui/input/PresetNumberField.vue'
@@ -49,6 +51,12 @@ const languageOptions = availableLocales.map((value) => ({
   label: localeLabels[value]
 }))
 
+const defaultAnimations = DEFAULT_APP_PREFERENCES.appearance.animations
+const defaultRecovery = DEFAULT_APP_PREFERENCES.recovery.enabled
+const accentModified = computed(
+  () => !isEqual(appPreferences.value.appearance.accent, DEFAULT_ACCENT)
+)
+
 const preserveUnsavedWork = computed({
   get: () => recoveryEnabled.value,
   set: setRecoveryEnabled
@@ -58,34 +66,6 @@ const startupOpen = computed({
   get: startupOpenChoice,
   set: updateStartupOpen
 })
-
-const snapToGeometry = computed({
-  get: () => appPreferences.value.editing.snapping.geometry,
-  set: (enabled: boolean) => setSnappingPreference('geometry', enabled)
-})
-
-const snapToObjects = computed({
-  get: () => appPreferences.value.editing.snapping.objects,
-  set: (enabled: boolean) => setSnappingPreference('objects', enabled)
-})
-
-const snapToPixelGrid = computed({
-  get: () => appPreferences.value.editing.snapping.pixelGrid,
-  set: (enabled: boolean) => setSnappingPreference('pixelGrid', enabled)
-})
-
-const zoomSpeed = computed<ZoomSpeed>({
-  get: () => appPreferences.value.navigation.zoomSpeed,
-  set: updateZoomSpeed
-})
-
-const zoomSpeedOptions = computed(() => {
-  const format = new Intl.NumberFormat(locale.value)
-  return ZOOM_SPEEDS.map((value) => {
-    const speed = `${format.format(value)}×`
-    return { value, label: value === 1 ? settings.value.zoomSpeedDefault({ speed }) : speed }
-  })
-})
 </script>
 
 <template>
@@ -94,8 +74,7 @@ const zoomSpeedOptions = computed(() => {
       <template #title>{{ menu.language }}</template>
       <template #description>{{ settings.languageDescription }}</template>
       <SettingsGroup>
-        <label class="flex items-center justify-between gap-4 px-3 py-2.5">
-          <span class="text-xs text-surface">{{ menu.language }}</span>
+        <SettingsRow as="label" :label="menu.language">
           <AppSelect
             v-model="language"
             :label="menu.language"
@@ -103,15 +82,19 @@ const zoomSpeedOptions = computed(() => {
             :ui="selectUI"
             data-test-id="settings-language"
           />
-        </label>
+        </SettingsRow>
       </SettingsGroup>
     </SettingsSection>
 
     <SettingsSection>
       <template #title>{{ settings.appearance }}</template>
       <SettingsGroup>
-        <label class="flex items-center justify-between gap-4 px-3 py-2.5">
-          <span class="text-xs text-surface">{{ menu.theme }}</span>
+        <SettingsRow
+          as="label"
+          :label="menu.theme"
+          :modified="theme !== DEFAULT_THEME"
+          @reset="theme = DEFAULT_THEME"
+        >
           <AppSelect
             v-model="theme"
             :label="menu.theme"
@@ -122,13 +105,23 @@ const zoomSpeedOptions = computed(() => {
             ]"
             :ui="selectUI"
           />
-        </label>
+        </SettingsRow>
         <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-3 py-2.5">
-          <span class="text-xs text-surface">{{ settings.accentColor }}</span>
-          <AccentColorPicker />
+          <span class="text-xs font-medium text-surface">{{ settings.accentColor }}</span>
+          <span class="flex items-center gap-1">
+            <SettingsResetButton
+              v-if="accentModified"
+              @reset="updateAccentPreference({ ...DEFAULT_ACCENT })"
+            />
+            <AccentColorPicker />
+          </span>
         </div>
-        <label class="flex items-center justify-between gap-4 px-3 py-2.5">
-          <span class="text-xs text-surface">{{ settings.animations }}</span>
+        <SettingsRow
+          as="label"
+          :label="settings.animations"
+          :modified="animationPreference !== defaultAnimations"
+          @reset="animationPreference = defaultAnimations"
+        >
           <AppSelect
             v-model="animationPreference"
             :label="settings.animations"
@@ -138,7 +131,7 @@ const zoomSpeedOptions = computed(() => {
             ]"
             :ui="selectUI"
           />
-        </label>
+        </SettingsRow>
       </SettingsGroup>
     </SettingsSection>
 
@@ -173,71 +166,13 @@ const zoomSpeedOptions = computed(() => {
           as="label"
           :label="recovery.preserveUnsavedWork"
           :description="recovery.preserveUnsavedWorkDescription"
+          :modified="preserveUnsavedWork !== defaultRecovery"
+          @reset="preserveUnsavedWork = defaultRecovery"
         >
           <AppSwitch
             v-model="preserveUnsavedWork"
             :label="recovery.preserveUnsavedWork"
             data-test-id="settings-recovery-enabled"
-          />
-        </SettingsRow>
-      </SettingsGroup>
-    </SettingsSection>
-
-    <SettingsSection>
-      <template #title>{{ settings.editing }}</template>
-      <template #description>{{ settings.snappingDescription }}</template>
-
-      <SettingsGroup>
-        <SettingsRow
-          as="label"
-          :label="settings.snapToGeometry"
-          :description="settings.snapToGeometryDescription"
-        >
-          <AppSwitch
-            v-model="snapToGeometry"
-            :label="settings.snapToGeometry"
-            data-test-id="settings-snap-geometry"
-          />
-        </SettingsRow>
-        <SettingsRow
-          as="label"
-          :label="settings.snapToObjects"
-          :description="settings.snapToObjectsDescription"
-        >
-          <AppSwitch
-            v-model="snapToObjects"
-            :label="settings.snapToObjects"
-            data-test-id="settings-snap-objects"
-          />
-        </SettingsRow>
-        <SettingsRow
-          as="label"
-          :label="settings.snapToPixelGrid"
-          :description="settings.snapToPixelGridDescription"
-        >
-          <AppSwitch
-            v-model="snapToPixelGrid"
-            :label="settings.snapToPixelGrid"
-            data-test-id="settings-snap-pixel-grid"
-          />
-        </SettingsRow>
-      </SettingsGroup>
-
-      <p class="text-[11px] text-muted">{{ settings.temporaryDisableSnappingHint }}</p>
-    </SettingsSection>
-
-    <SettingsSection>
-      <template #title>{{ settings.navigation }}</template>
-      <template #description>{{ settings.navigationDescription }}</template>
-
-      <SettingsGroup>
-        <SettingsRow :label="settings.zoomSpeed" :description="settings.zoomSpeedDescription">
-          <AppSelect
-            v-model="zoomSpeed"
-            :label="settings.zoomSpeed"
-            :options="zoomSpeedOptions"
-            :ui="selectUI"
-            data-test-id="settings-zoom-speed"
           />
         </SettingsRow>
       </SettingsGroup>
@@ -250,6 +185,8 @@ const zoomSpeedOptions = computed(() => {
         <SettingsRow
           :label="settings.recentFilesLimit"
           class="max-sm:flex-col max-sm:items-stretch"
+          :modified="recentFilesLimit !== DEFAULT_RECENT_FILES_LIMIT"
+          @reset="recentFilesLimit = DEFAULT_RECENT_FILES_LIMIT"
         >
           <PresetNumberField
             v-model:number="recentFilesLimit"
@@ -265,6 +202,5 @@ const zoomSpeedOptions = computed(() => {
     </SettingsSection>
 
     <CredentialSettingsSection />
-    <RenderingSettingsSection />
   </section>
 </template>
