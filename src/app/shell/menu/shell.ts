@@ -31,27 +31,19 @@ export const SHELL_MENU_IDS = new Set([
   'quit'
 ])
 
-export function useShellMenu() {
-  if (!isTauri()) return
+interface ShellMenuDependencies {
+  setTheme: ReturnType<typeof useAppTheme>['setTheme']
+  updates: ReturnType<typeof useI18n>['updates']
+  exitApp: () => Promise<void>
+}
 
-  void syncNativeSnappingMenu(appPreferences.value.editing.snapping).catch((error: unknown) => {
-    console.error('[Menu] Failed to synchronize native snapping preferences:', error)
-  })
-  void syncNativeDesignIssuesMenu(appPreferences.value.designCheck.showOnCanvas).catch(
-    (error: unknown) => {
-      console.error('[Menu] Failed to synchronize the native design issues menu:', error)
-    }
-  )
-
-  void syncNativeCommentsMenu(appPreferences.value.comments.showOnCanvas).catch(
-    (error: unknown) => {
-      console.error('[Menu] Failed to synchronize the native comments menu:', error)
-    }
-  )
-
-  const { setTheme } = useAppTheme()
-  const { updates } = useI18n()
-  const actions: Partial<Record<string, () => void>> = {
+/** What each shell-handled native menu item does, with its collaborators passed in. */
+export function createShellMenuActions({
+  setTheme,
+  updates,
+  exitApp
+}: ShellMenuDependencies): Partial<Record<string, () => void>> {
+  return {
     'open-tour': () => {
       openTour().catch((error: unknown) => console.error('[Tour] Could not open the tour:', error))
     },
@@ -75,9 +67,36 @@ export function useShellMenu() {
     'theme-dark': () => setTheme('dark'),
     'theme-auto': () => setTheme('auto'),
     'check-updates': () => void checkForAppUpdate({ messages: updates }),
-    quit: () => void requestAppExit(),
-    exit: () => void requestAppExit()
+    quit: () => void exitApp(),
+    exit: () => void exitApp()
   }
+}
+
+export function useShellMenu() {
+  if (!isTauri()) return
+
+  void syncNativeSnappingMenu(appPreferences.value.editing.snapping).catch((error: unknown) => {
+    console.error('[Menu] Failed to synchronize native snapping preferences:', error)
+  })
+  void syncNativeDesignIssuesMenu(appPreferences.value.designCheck.showOnCanvas).catch(
+    (error: unknown) => {
+      console.error('[Menu] Failed to synchronize the native design issues menu:', error)
+    }
+  )
+
+  void syncNativeCommentsMenu(appPreferences.value.comments.showOnCanvas).catch(
+    (error: unknown) => {
+      console.error('[Menu] Failed to synchronize the native comments menu:', error)
+    }
+  )
+
+  const { setTheme } = useAppTheme()
+  const { updates } = useI18n()
+  const actions = createShellMenuActions({
+    setTheme,
+    updates,
+    exitApp: requestAppExit
+  })
 
   useNativeMenuEvents((id) => actions[id]?.())
 }

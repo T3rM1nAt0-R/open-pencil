@@ -79,8 +79,7 @@ fn platform_entries<'a>(items: &'a [MenuEntry], features: &[String]) -> Vec<&'a 
     let mut entries: Vec<&MenuEntry> = items
         .iter()
         .filter(|entry| {
-            !(cfg!(target_os = "macos")
-                && matches!(entry.id.as_deref(), Some("settings" | "exit")))
+            !(cfg!(target_os = "macos") && matches!(entry.id.as_deref(), Some("settings" | "exit")))
         })
         .filter(|entry| {
             entry
@@ -418,10 +417,18 @@ mod tests {
 
     #[test]
     #[cfg(not(target_os = "macos"))]
-    fn file_menu_ends_with_exit_off_macos() {
-        let items = file_menu_tail();
-        let entries = platform_entries(&items, &[]);
-        assert_eq!(ids(&entries), ["save", "-", "settings", "-", "exit"]);
+    fn generated_file_menu_ends_with_exit_off_macos() {
+        let groups: Vec<MenuGroup> =
+            serde_json::from_str(include_str!("../../generated/menu.json"))
+                .expect("valid generated menu");
+        let file = groups
+            .iter()
+            .find(|group| group.label == "File")
+            .expect("File menu");
+        let entries = platform_entries(&file.items, &[]);
+        let tail = ids(&entries);
+
+        assert_eq!(tail[tail.len() - 3..], ["settings", "-", "exit"]);
     }
 
     #[test]
