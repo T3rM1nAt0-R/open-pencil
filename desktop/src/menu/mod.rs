@@ -47,6 +47,24 @@ impl NativeMenuInputs {
     }
 }
 
+#[cfg(test)]
+mod disabled_tests {
+    use super::*;
+
+    #[test]
+    fn only_the_listed_items_are_disabled() {
+        let inputs = NativeMenuInputs {
+            disabled: vec!["save".into(), "export-png".into()],
+            ..Default::default()
+        };
+
+        assert!(!inputs.enabled(Some("save")));
+        assert!(!inputs.enabled(Some("export-png")));
+        assert!(inputs.enabled(Some("open")));
+        assert!(inputs.enabled(None));
+    }
+}
+
 pub struct NativeMenuState(pub Mutex<NativeMenuInputs>);
 
 /// What one build reads: the inputs, and the check states the menu being replaced had.
@@ -447,22 +465,4 @@ pub fn set_native_menu_features<R: tauri::Runtime>(
     features: Vec<String>,
 ) -> Result<(), String> {
     update_app_menu(&app, |inputs| inputs.features = features)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn only_the_listed_items_are_disabled() {
-        let inputs = NativeMenuInputs {
-            disabled: vec!["save".into(), "export-png".into()],
-            ..Default::default()
-        };
-
-        assert!(!inputs.enabled(Some("save")));
-        assert!(!inputs.enabled(Some("export-png")));
-        assert!(inputs.enabled(Some("open")));
-        assert!(inputs.enabled(None));
-    }
 }
