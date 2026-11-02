@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { computed, watch } from 'vue'
 
 import { useEditorStore } from '@/app/editor/active-store'
-import { menuItemStates, type AppMenuContext } from '@/app/shell/menu/needs'
+import { unmetMenuIds, type AppMenuContext } from '@/app/shell/menu/needs'
 import { APP_MENU_SCHEMA } from '@/app/shell/menu/schema'
 import { activeTab } from '@/app/tabs'
 import { isTauri } from '@/app/tauri/env'
@@ -15,16 +15,16 @@ const menuContext = computed<AppMenuContext>(() => ({
   hasSelection: store.state.selectedIds.size > 0
 }))
 
-/** The menu items the active tab cannot use yet: left out without a document, else greyed out. */
-export const menuStates = computed(() => menuItemStates(APP_MENU_SCHEMA, menuContext.value))
+/** The ids of the menu items that cannot act on the active tab yet. */
+export const unmetMenuIdList = computed(() => unmetMenuIds(APP_MENU_SCHEMA, menuContext.value))
 
-/** Applies the same states to the desktop menu, which the in-app menu follows by itself. */
+/** Greys out the same items in the desktop menu, which the in-app menu does by itself. */
 export function watchNativeMenuDisabled(): () => void {
   return watch(
-    menuStates,
-    ({ hidden, disabled }) => {
+    unmetMenuIdList,
+    (ids) => {
       if (!isTauri()) return
-      invoke('set_native_menu_item_states', { hidden, disabled }).catch((error: unknown) => {
+      invoke('set_native_menu_disabled', { ids }).catch((error: unknown) => {
         console.warn('[Menu] Failed to update the native menu', error)
       })
     },

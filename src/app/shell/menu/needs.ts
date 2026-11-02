@@ -56,36 +56,25 @@ function needMet(need: AppMenuNeed | undefined, context: AppMenuContext): boolea
   return true
 }
 
-/** Item ids by what the menu does with them: `hidden` ones are left out, `disabled` ones greyed. */
-export interface AppMenuItemStates {
-  hidden: string[]
-  disabled: string[]
-}
-
-function collectStates(
+function unmetEntries(
   entries: readonly AppMenuEntry[],
   inherited: AppMenuNeed | undefined,
-  context: AppMenuContext,
-  states: AppMenuItemStates
-): void {
-  for (const entry of entries) {
-    if (entry.type === 'separator') continue
+  context: AppMenuContext
+): string[] {
+  return entries.flatMap((entry) => {
+    if (entry.type === 'separator') return []
     const need = entry.needs ?? ITEM_NEEDS[entry.id] ?? inherited
-    if (!needMet(need, context)) {
-      // Without a document nothing can act, so the item goes; with one, a missing selection only
-      // greys it, so the menus do not jump about as the selection changes.
-      ;(context.hasDocument ? states.disabled : states.hidden).push(entry.id)
-    }
-    collectStates(entry.sub ?? [], need, context, states)
-  }
+    return [
+      ...(needMet(need, context) ? [] : [entry.id]),
+      ...unmetEntries(entry.sub ?? [], need, context)
+    ]
+  })
 }
 
-/** Which items the native menu and the in-app menu leave out or grey out for this context. */
-export function menuItemStates(
+/** The ids of the items that cannot act yet, for the native menu and the in-app menu alike. */
+export function unmetMenuIds(
   schema: readonly AppMenuGroupSchema[],
   context: AppMenuContext
-): AppMenuItemStates {
-  const states: AppMenuItemStates = { hidden: [], disabled: [] }
-  for (const group of schema) collectStates(group.items, group.needs, context, states)
-  return states
+): string[] {
+  return schema.flatMap((group) => unmetEntries(group.items, group.needs, context))
 }
