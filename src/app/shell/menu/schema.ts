@@ -36,7 +36,8 @@ export type AppMenuHandler = 'editor' | 'shell'
 
 /**
  * What an item needs before it can do anything: an open document, or a selection in one.
- * Items that need nothing stay enabled, and children inherit their parent's need (`./needs`).
+ * Items that need nothing stay enabled; children inherit their parent's need, and `./needs`
+ * holds the need of each item.
  */
 export type AppMenuNeed = 'document' | 'selection'
 
@@ -101,9 +102,9 @@ export const APP_MENU_SCHEMA = [
         palette: { keywords: ['log', 'report', 'bug', 'problem', 'troubleshoot'] }
       },
       { type: 'separator' },
-      { id: 'save', needs: 'document', label: 'Save', shortcut: 'MOD+S' },
-      { id: 'save-as', needs: 'document', label: 'Save As…', shortcut: 'MOD+SHIFT+S' },
-      { id: 'save-to', needs: 'document', label: 'Save To…' },
+      { id: 'save', label: 'Save', shortcut: 'MOD+S' },
+      { id: 'save-as', label: 'Save As…', shortcut: 'MOD+SHIFT+S' },
+      { id: 'save-to', label: 'Save To…' },
       {
         id: 'save-version',
         label: 'Save to Version History…',
@@ -114,7 +115,6 @@ export const APP_MENU_SCHEMA = [
       { type: 'separator' },
       {
         id: 'export-selection',
-        needs: 'selection',
         label: 'Export Selection',
         palette: { icon: 'download' },
         shortcut: 'MOD+SHIFT+E',
@@ -163,49 +163,38 @@ export const APP_MENU_SCHEMA = [
     items: [
       {
         id: 'edit.undo',
-        needs: 'document',
         label: 'Undo',
         command: 'edit.undo'
       },
       {
         id: 'edit.redo',
-        needs: 'document',
         label: 'Redo',
         command: 'edit.redo'
       },
       { type: 'separator' },
-      { id: 'copy', needs: 'selection', label: 'Copy', shortcut: 'MOD+C' },
-      { id: 'cut', needs: 'selection', label: 'Cut', shortcut: 'MOD+X' },
-      { id: 'paste', needs: 'document', label: 'Paste', shortcut: 'MOD+V' },
-      {
-        id: 'paste-to-replace',
-        needs: 'selection',
-        label: 'Paste to replace',
-        shortcut: 'MOD+SHIFT+R'
-      },
+      { id: 'copy', label: 'Copy', shortcut: 'MOD+C' },
+      { id: 'cut', label: 'Cut', shortcut: 'MOD+X' },
+      { id: 'paste', label: 'Paste', shortcut: 'MOD+V' },
+      { id: 'paste-to-replace', label: 'Paste to replace', shortcut: 'MOD+SHIFT+R' },
       {
         id: 'selection.duplicate',
-        needs: 'selection',
         label: 'Duplicate',
         command: 'selection.duplicate'
       },
       {
         id: 'selection.delete',
-        needs: 'selection',
         label: 'Delete',
         command: 'selection.delete'
       },
-      { id: 'selection.rename', needs: 'selection', label: 'Rename Selection…', shortcut: 'MOD+R' },
+      { id: 'selection.rename', label: 'Rename Selection…', shortcut: 'MOD+R' },
       { type: 'separator' },
       {
         id: 'selection.selectAll',
-        needs: 'document',
         label: 'Select All',
         command: 'selection.selectAll'
       },
       {
         id: 'selection.selectInverse',
-        needs: 'document',
         label: 'Select Inverse',
         command: 'selection.selectInverse'
       }
@@ -217,51 +206,36 @@ export const APP_MENU_SCHEMA = [
     items: [
       {
         id: 'view.zoom100',
-        needs: 'document',
         label: 'Zoom to 100%',
         command: 'view.zoom100'
       },
       {
         id: 'view.zoomFit',
-        needs: 'document',
         label: 'Zoom to Fit',
         command: 'view.zoomFit'
       },
       {
         id: 'view.zoomSelection',
-        needs: 'selection',
         label: 'Zoom to Selection',
         command: 'view.zoomSelection'
       },
-      { id: 'zoom-in', needs: 'document', label: 'Zoom In', shortcut: 'MOD+=' },
-      { id: 'zoom-out', needs: 'document', label: 'Zoom Out', shortcut: 'MOD+-' },
+      { id: 'zoom-in', label: 'Zoom In', shortcut: 'MOD+=' },
+      { id: 'zoom-out', label: 'Zoom Out', shortcut: 'MOD+-' },
       { type: 'separator' },
       {
         id: 'view.zoomPreviousFrame',
-        needs: 'document',
         label: 'Zoom to Previous Frame',
         command: 'view.zoomPreviousFrame'
       },
-      {
-        id: 'view.zoomNextFrame',
-        needs: 'document',
-        label: 'Zoom to Next Frame',
-        command: 'view.zoomNextFrame'
-      },
-      {
-        id: 'view.previousPage',
-        needs: 'document',
-        label: 'Previous Page',
-        command: 'view.previousPage'
-      },
-      { id: 'view.nextPage', needs: 'document', label: 'Next Page', command: 'view.nextPage' },
+      { id: 'view.zoomNextFrame', label: 'Zoom to Next Frame', command: 'view.zoomNextFrame' },
+      { id: 'view.previousPage', label: 'Previous Page', command: 'view.previousPage' },
+      { id: 'view.nextPage', label: 'Next Page', command: 'view.nextPage' },
       { type: 'separator' },
-      { id: 'view-split-right', needs: 'document', label: 'Split Right' },
-      { id: 'view-split-down', needs: 'document', label: 'Split Down' },
+      { id: 'view-split-right', label: 'Split Right' },
+      { id: 'view-split-down', label: 'Split Down' },
       { type: 'separator' },
       {
         id: 'variables',
-        needs: 'document',
         label: 'Variables…',
         palette: {
           icon: 'variables',
@@ -269,36 +243,17 @@ export const APP_MENU_SCHEMA = [
         }
       },
       { type: 'separator' },
-      {
-        id: 'view-rulers',
-        needs: 'document',
-        label: 'Rulers',
-        checkbox: true,
-        shortcut: 'SHIFT+R'
-      },
+      { id: 'view-rulers', label: 'Rulers', checkbox: true, shortcut: 'SHIFT+R' },
       // Figma's View › Pixel grid, shown once zoomed in far enough.
-      {
-        id: 'view-pixel-grid',
-        needs: 'document',
-        label: 'Pixel Grid',
-        checkbox: true,
-        shortcut: "SHIFT+'"
-      },
+      { id: 'view-pixel-grid', label: 'Pixel Grid', checkbox: true, shortcut: "SHIFT+'" },
       {
         id: 'view-multiplayer-cursors',
-        needs: 'document',
         label: 'Multiplayer Cursors',
         checkbox: true,
         shortcut: 'ALT+MOD+\\'
       },
       { id: 'view-design-issues', label: 'Design Issues', checkbox: true, handler: 'shell' },
-      {
-        id: 'view-comments',
-        needs: 'document',
-        label: 'Comments',
-        checkbox: true,
-        shortcut: 'SHIFT+C'
-      },
+      { id: 'view-comments', label: 'Comments', checkbox: true, shortcut: 'SHIFT+C' },
       { type: 'separator' },
       {
         id: 'theme',
@@ -337,8 +292,8 @@ export const APP_MENU_SCHEMA = [
         ]
       },
       { type: 'separator' },
-      { id: 'toggle-ui', needs: 'document', label: 'Toggle UI', shortcut: 'MOD+\\' },
-      { id: 'toggle-preview', needs: 'document', label: 'Preview', shortcut: 'MOD+ALT+↩' },
+      { id: 'toggle-ui', label: 'Toggle UI', shortcut: 'MOD+\\' },
+      { id: 'toggle-preview', label: 'Preview', shortcut: 'MOD+ALT+↩' },
       { type: 'separator' },
       { id: 'profiler', label: 'Profiler', checkbox: true, target: 'browser' },
       {
@@ -372,7 +327,6 @@ export const APP_MENU_SCHEMA = [
       { type: 'separator' },
       {
         id: 'insert-icon',
-        needs: 'document',
         label: 'Insert Icon…',
         palette: { keywords: ['iconify', 'symbol', 'glyph', 'lucide'] }
       },
@@ -509,9 +463,9 @@ export const APP_MENU_SCHEMA = [
     needs: 'selection',
     paletteIcon: 'type',
     items: [
-      { id: 'text.bold', needs: 'selection', label: 'Bold', shortcut: 'MOD+B' },
-      { id: 'text.italic', needs: 'selection', label: 'Italic', shortcut: 'MOD+I' },
-      { id: 'text.underline', needs: 'selection', label: 'Underline', shortcut: 'MOD+U' }
+      { id: 'text.bold', label: 'Bold', shortcut: 'MOD+B' },
+      { id: 'text.italic', label: 'Italic', shortcut: 'MOD+I' },
+      { id: 'text.underline', label: 'Underline', shortcut: 'MOD+U' }
     ]
   },
   {

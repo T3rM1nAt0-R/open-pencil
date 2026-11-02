@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core'
 import { computed, watch } from 'vue'
 
 import { useEditorStore } from '@/app/editor/active-store'
@@ -23,11 +24,9 @@ export function watchNativeMenuDisabled(): () => void {
     unmetMenuIdList,
     (ids) => {
       if (!isTauri()) return
-      void import('@tauri-apps/api/core')
-        .then(({ invoke }) => invoke('set_native_menu_disabled', { ids }))
-        .catch((error: unknown) => {
-          console.warn('[Menu] Failed to update the native menu', error)
-        })
+      invoke('set_native_menu_disabled', { ids }).catch((error: unknown) => {
+        console.warn('[Menu] Failed to update the native menu', error)
+      })
     },
     { immediate: true }
   )
