@@ -37,7 +37,10 @@ struct MenuEntry {
 pub struct NativeMenuInputs {
     pub recent_files: Vec<String>,
     pub features: Vec<String>,
-    /// Items that cannot act yet, such as Save with no document open (`set_native_menu_disabled`).
+    /// Items left out because they cannot act at all yet, such as Save with no document open
+    /// (`set_native_menu_item_states`).
+    pub hidden: Vec<String>,
+    /// Items shown greyed out, such as Copy with nothing selected.
     pub disabled: Vec<String>,
 }
 
@@ -48,7 +51,7 @@ impl NativeMenuInputs {
 }
 
 #[cfg(test)]
-mod disabled_tests {
+mod item_state_tests {
     use super::*;
 
     #[test]
@@ -62,6 +65,44 @@ mod disabled_tests {
         assert!(!inputs.enabled(Some("export-png")));
         assert!(inputs.enabled(Some("open")));
         assert!(inputs.enabled(None));
+    }
+
+    #[test]
+    fn hidden_items_take_their_separators_with_them() {
+        let items: Vec<MenuEntry> = serde_json::from_str(
+            r#"[
+                { "id": "save", "label": "Save" },
+                { "type": "separator" },
+                { "id": "copy", "label": "Copy" },
+                { "type": "separator" },
+                { "id": "open", "label": "Open" },
+                { "type": "separator" },
+                { "id": "paste", "label": "Paste" }
+            ]"#,
+        )
+        .expect("valid menu entries");
+        let inputs = NativeMenuInputs {
+            hidden: vec!["save".into(), "copy".into(), "paste".into()],
+            ..Default::default()
+        };
+
+        let entries = platform_entries(&items, &inputs);
+        let ids: Vec<_> = entries.iter().map(|entry| entry.id.as_deref()).collect();
+
+        assert_eq!(ids, [Some("open")]);
+    }
+
+    #[test]
+    fn a_group_with_every_item_hidden_is_empty() {
+        let items: Vec<MenuEntry> =
+            serde_json::from_str(r#"[{ "id": "copy", "label": "Copy" }, { "type": "separator" }]"#)
+                .expect("valid menu entries");
+        let inputs = NativeMenuInputs {
+            hidden: vec!["copy".into()],
+            ..Default::default()
+        };
+
+        assert!(platform_entries(&items, &inputs).is_empty());
     }
 }
 
@@ -101,21 +142,33 @@ fn app_menu_file() -> tauri::Result<AppMenuFile> {
 
 /// The macOS application menu holds Settings…, so the schema's copy is left out there, along
 /// with a separator it would leave at the end of its menu.
-fn platform_entries<'a>(items: &'a [MenuEntry], features: &[String]) -> Vec<&'a MenuEntry> {
-    let mut entries: Vec<&MenuEntry> = items
+fn platform_entries<'a>(items: &'a [MenuEntry], inputs: &NativeMenuInputs) -> Vec<&'a MenuEntry> {
+    let features = &inputs.features;
+    let is_separator = |entry: &MenuEntry| entry.r#type.as_deref() == Some("separator");
+    let mut entries: Vec<&MenuEntry> = Vec::new();
+    for entry in items
         .iter()
         .filter(|entry| !(cfg!(target_os = "macos") && entry.id.as_deref() == Some("settings")))
+        .filter(|entry| {
+            entry
+                .id
+                .as_ref()
+                .is_none_or(|id| !inputs.hidden.contains(id))
+        })
         .filter(|entry| {
             entry
                 .feature
                 .as_ref()
                 .is_none_or(|feature| features.contains(feature))
         })
-        .collect();
-    while entries
-        .last()
-        .is_some_and(|entry| entry.r#type.as_deref() == Some("separator"))
     {
+        // Leaving items out must not leave a separator first or doubled.
+        if is_separator(entry) && entries.last().is_none_or(|last| is_separator(last)) {
+            continue;
+        }
+        entries.push(entry);
+    }
+    while entries.last().is_some_and(|entry| is_separator(entry)) {
         entries.pop();
     }
     entries
@@ -134,7 +187,7 @@ fn build_submenu<R: tauri::Runtime>(
     }
     .enabled(build.inputs.enabled(id));
 
-    for entry in platform_entries(items, &build.inputs.features) {
+    for entry in platform_entries(items, build.inputs) {
         if entry.r#type.as_deref() == Some("separator") {
             builder = builder.separator();
             continue;
@@ -256,6 +309,8 @@ fn build_schema_menus<R: tauri::Runtime>(
     let groups: Vec<MenuGroup> = serde_json::from_str(include_str!("../../generated/menu.json"))?;
     groups
         .iter()
+        // A group whose items are all left out has nothing to open.
+        .filter(|group| !platform_entries(&group.items, build.inputs).is_empty())
         .map(|group| build_submenu(app, None, &group.label, &group.items, build))
         .collect()
 }
@@ -441,18 +496,25 @@ fn apply_disabled<R: tauri::Runtime>(items: Vec<MenuItemKind<R>>, disabled: &[St
     }
 }
 
-/// Greys out the items that need an open document or a selection, and enables the rest.
+/// Leaves out the items that need an open document and greys out those that need a selection.
+/// Changing what is left out rebuilds the menu; greying items out only flips the installed ones.
 #[tauri::command]
-pub fn set_native_menu_disabled<R: tauri::Runtime>(
+pub fn set_native_menu_item_states<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    ids: Vec<String>,
+    hidden: Vec<String>,
+    disabled: Vec<String>,
 ) -> Result<(), String> {
     let state = tauri::Manager::state::<NativeMenuState>(&app);
     let mut inputs = state
         .0
         .lock()
         .map_err(|_| "Menu state is unavailable".to_string())?;
-    inputs.disabled = ids;
+    let rebuild = inputs.hidden != hidden;
+    inputs.hidden = hidden;
+    inputs.disabled = disabled;
+    if rebuild {
+        return install_app_menu(&app, &inputs).map_err(|error| error.to_string());
+    }
     if let Some(items) = app.menu().and_then(|menu| menu.items().ok()) {
         apply_disabled(items, &inputs.disabled);
     }
