@@ -26,7 +26,9 @@ describe('unmetMenuIds', () => {
   test('greys out what needs a selection until one exists', () => {
     const unmet = unmetMenuIds(APP_MENU_SCHEMA, DOCUMENT)
 
-    expect(unmet).toEqual(expect.arrayContaining(['copy', 'selection.delete', 'text.bold']))
+    expect(unmet).toEqual(
+      expect.arrayContaining(['copy', 'selection.delete', 'text.bold', 'selection.group'])
+    )
     expect(unmet).not.toContain('save')
     expect(unmet).not.toContain('zoom-in')
   })
