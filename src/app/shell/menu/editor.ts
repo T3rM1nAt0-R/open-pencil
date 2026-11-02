@@ -5,6 +5,7 @@ import { clearRecentFiles, forgetRecentFile, recentLocalFileAt } from '@/app/rec
 import { runFocusedCommand } from '@/app/shell/commands/focused'
 import { createSharedEditorMenuActions } from '@/app/shell/menu/actions/editor'
 import { createSelectionMenuActions } from '@/app/shell/menu/actions/selection'
+import { watchNativeMenuDisabled } from '@/app/shell/menu/context'
 import { watchNativeMenuFeatures } from '@/app/shell/menu/features'
 import { openFileDialog, openFileFromPath } from '@/app/shell/menu/files'
 import { useNativeMenuEvents } from '@/app/shell/menu/native-events'
@@ -33,6 +34,7 @@ export function useEditorMenu() {
 
   watchRecentFilesMenu()
   watchNativeMenuFeatures()
+  watchNativeMenuDisabled()
 
   const { setTheme } = useAppTheme()
   const { runCommand } = useEditorCommands()

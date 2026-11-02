@@ -34,6 +34,13 @@ export interface AppMenuPaletteMetadata {
 
 export type AppMenuHandler = 'editor' | 'shell'
 
+/**
+ * What an item needs before it can do anything: an open document, or a selection in one.
+ * Items that need nothing stay enabled; children inherit their parent's need, and `./needs`
+ * holds the need of each item.
+ */
+export type AppMenuNeed = 'document' | 'selection'
+
 /** A feature an item waits for: it shows only while the feature is available (`./features`). */
 /** Items shown only for a document backed by a file on disk. */
 export type AppMenuFeature = 'local-file' | 'cloud-document'
@@ -49,6 +56,7 @@ export interface AppMenuActionItem {
   target?: AppMenuTarget
   handler?: AppMenuHandler
   feature?: AppMenuFeature
+  needs?: AppMenuNeed
   palette?: AppMenuPaletteMetadata
   sub?: AppMenuEntry[]
 }
@@ -64,6 +72,8 @@ export interface AppMenuGroupSchema {
   label: string
   target?: AppMenuTarget
   paletteIcon?: AppMenuIcon
+  /** Applies to every item of the group that names no need of its own. */
+  needs?: AppMenuNeed
   items: AppMenuEntry[]
 }
 
@@ -296,6 +306,7 @@ export const APP_MENU_SCHEMA = [
   },
   {
     label: 'Object',
+    needs: 'selection',
     paletteIcon: 'layers',
     items: [
       {
@@ -449,6 +460,7 @@ export const APP_MENU_SCHEMA = [
   },
   {
     label: 'Text',
+    needs: 'selection',
     paletteIcon: 'type',
     items: [
       { id: 'text.bold', label: 'Bold', shortcut: 'MOD+B' },
@@ -458,6 +470,7 @@ export const APP_MENU_SCHEMA = [
   },
   {
     label: 'Arrange',
+    needs: 'selection',
     paletteIcon: 'layers',
     items: [
       {
