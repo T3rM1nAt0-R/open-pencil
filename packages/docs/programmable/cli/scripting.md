@@ -132,6 +132,16 @@ openpencil eval design.fig -w -c '
 
 Names the component does not have fail with an error that lists the ones it has.
 
+`openpencil.setTextMarkdown(text, markdown)` sets a text layer's text from Markdown, styled over the layer's own style as FigJam styles Markdown typed into a text: `#` and `##` headings bold at 2.5× and 1.5× its size, deeper ones bold at its size, `**bold**`, `*italic*`, `~~strike~~`, `` `code` `` in Roboto Mono, links, lists, and quotes. Load the fonts it uses first, as for `characters`; an unloaded one fails with the font to load. Over MCP, `set_text` takes `markdown: true` for the same.
+
+```sh
+openpencil eval design.fig -w -c '
+  const text = figma.currentPage.findOne((n) => n.type === "TEXT" && n.name === "Notes")
+  await figma.loadFontAsync({ family: "Inter", style: "Bold" })
+  openpencil.setTextMarkdown(text, "## Next\n- **Ship** the beta\n- Write the post")
+'
+```
+
 Comments people leave with the Comment tool are part of the document, so scripts and agents can read the feedback on a file, act on it, and answer:
 
 ```sh
@@ -246,7 +256,8 @@ Common node properties are readable/writable through the proxy, including:
 - `figma.util.rgb(color)`, `figma.util.rgba(color, alphaOverride?)`, and `figma.util.solidPaint(color, overrides?)` read a hex or CSS color string (`rgb()`, `hsl()`, `lab()`, `oklab()`, `oklch()`, `color(display-p3 …)`, or a name), clipped to sRGB, or an `{ r, g, b, a? }` object with channels from 0 to 1; `solidPaint` takes its color and opacity from `color` and its other properties from `overrides`, such as an existing paint
 - `figma.createImage(data)` takes a PNG, JPEG, or GIF up to 4096 pixels a side and gives Figma's `Image`: its `hash`, `getBytesAsync()`, and `getSizeAsync()`; `figma.getImageByHash(hash)` gives a stored image back
 - `figma.createImageAsync(url)` loads an `http(s)://` URL or a data URI. The desktop app fetches through its native proxy, as Figma fetches through its servers; in the browser, the image's host must allow cross-origin requests
-- `figma.loadFontAsync(fontName)` loads the font so text measures and draws with it; a family named without a style loads every style it has. OpenPencil does not gate text edits on it
+- `figma.loadFontAsync(fontName)` loads the font so text measures and draws with it; a family named without a style loads every style it has, and a variable family its named styles too. A font that cannot load rejects with Figma's `The font "Family Style" could not be loaded`
+- As in Figma, an edit that lays text out again throws `Cannot write to node with unloaded font` until every font the text uses is loaded: `characters`, `insertCharacters`, `deleteCharacters`, `fontSize`, spacing, case, decoration, alignment, `textAutoResize`, truncation, and the matching `setRange…` methods. A new `fontName` has to be loaded too, but it replaces the text's own, so text in a missing font can take a loaded one. Paints, links, size, and transforms need no font
 - `figma.getFontFamilyVariationAxes(family)` lists a variable family's axis tags, or `null` for a static one; unlike Figma, the family has to be loaded first
 - A font set with `variationSettings` and no style, through `fontName` or `setRangeFontName`, takes the nearest named style, and an axis the family lacks throws Figma's error
 - `figma.listAvailableFontsAsync()` returns host-provided fonts when available
