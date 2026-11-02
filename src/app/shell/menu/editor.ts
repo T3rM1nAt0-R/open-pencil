@@ -14,7 +14,7 @@ import { createSaveMenuActions } from '@/app/shell/menu/save-actions'
 import { APP_MENU_SCHEMA, type AppMenuEntry } from '@/app/shell/menu/schema'
 import { SHELL_MENU_IDS } from '@/app/shell/menu/shell'
 import { useAppTheme } from '@/app/shell/theme'
-import { createTab, closeTab, activeTab, switchAdjacentTab } from '@/app/tabs'
+import { createTab, closeTab, activeTab, openNewFileTab, switchAdjacentTab } from '@/app/tabs'
 import { isTauri } from '@/app/tauri/env'
 
 function commandMenuIds(entries: readonly AppMenuEntry[]): EditorCommandId[] {
@@ -41,6 +41,7 @@ export function useEditorMenu() {
 
   const actions: Partial<Record<string, () => void>> = {
     new: () => createTab(),
+    'new-tab': () => openNewFileTab(),
     open: () => void openFileDialog(),
     close: () => {
       if (activeTab.value) void closeTab(activeTab.value.id)
