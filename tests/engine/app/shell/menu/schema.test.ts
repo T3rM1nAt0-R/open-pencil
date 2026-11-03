@@ -52,6 +52,7 @@ describe('APP_MENU_SCHEMA', () => {
       'open-tour',
       'diagnostics',
       'settings',
+      'exit',
       'view-design-issues',
       'theme-light',
       'theme-dark',

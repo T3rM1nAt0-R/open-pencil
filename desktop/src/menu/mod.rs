@@ -109,13 +109,15 @@ fn is_separator(entry: &MenuEntry) -> bool {
 }
 
 /// The entries a menu shows. Items whose feature is off are left out, as is the schema's
-/// Settings… on macOS, where the application menu holds it, along with the separators they
+/// Settings… and Exit on macOS, where the application menu holds Settings… and Quit, along with the separators they
 /// would leave at either end of the menu or next to each other.
 fn platform_entries<'a>(items: &'a [MenuEntry], features: &[String]) -> Vec<&'a MenuEntry> {
     let mut entries: Vec<&MenuEntry> = Vec::new();
     for entry in items
         .iter()
-        .filter(|entry| !(cfg!(target_os = "macos") && entry.id.as_deref() == Some("settings")))
+        .filter(|entry| {
+            !(cfg!(target_os = "macos") && matches!(entry.id.as_deref(), Some("settings" | "exit")))
+        })
         .filter(|entry| {
             entry
                 .feature
@@ -608,5 +610,29 @@ mod tests {
             native_accelerator(&entry("view.zoomNextFrame", "N")),
             Some("N")
         );
+    }
+
+    #[test]
+    #[cfg(not(target_os = "macos"))]
+    fn generated_file_menu_ends_with_exit_off_macos() {
+        let file = groups()
+            .into_iter()
+            .find(|group| group.label == "File")
+            .expect("File menu");
+        let tail = shown(&file, &["document".to_string()]);
+
+        assert_eq!(tail[tail.len() - 3..], ["settings", "---", "exit"]);
+    }
+
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn macos_leaves_settings_and_exit_to_the_application_menu() {
+        let file = groups()
+            .into_iter()
+            .find(|group| group.label == "File")
+            .expect("File menu");
+        let ids = shown(&file, &["document".to_string()]);
+        assert!(!ids.contains(&"settings".to_string()) && !ids.contains(&"exit".to_string()));
+        assert_ne!(ids.last().map(String::as_str), Some("---"));
     }
 }
