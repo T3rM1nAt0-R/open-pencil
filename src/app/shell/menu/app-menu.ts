@@ -35,7 +35,7 @@ import {
 import { appPreferences } from '@/app/settings/preferences/store'
 import { createSharedEditorMenuActions } from '@/app/shell/menu/actions/editor'
 import { createSelectionMenuActions } from '@/app/shell/menu/actions/selection'
-import { unmetMenuIdList } from '@/app/shell/menu/context'
+import { visibleMenuEntries } from '@/app/shell/menu/entry'
 import { menuFeatureAvailable } from '@/app/shell/menu/features'
 import { createSaveMenuActions } from '@/app/shell/menu/save-actions'
 import type {
@@ -46,6 +46,7 @@ import type {
   AppMenuIcon
 } from '@/app/shell/menu/schema'
 import { APP_MENU_SCHEMA } from '@/app/shell/menu/schema'
+import { menuItemNeedsSelection } from '@/app/shell/menu/selection'
 import { appMenuShortcutLabel } from '@/app/shell/menu/shortcut'
 import { openFileDialog } from '@/app/shell/menu/use'
 import { useAppTheme } from '@/app/shell/theme'
@@ -279,10 +280,8 @@ export function useAppMenu() {
     }
   }
 
-  const unmetIds = computed(() => new Set(unmetMenuIdList.value))
-
   function disabled(item: AppMenuActionItem): boolean | undefined {
-    if (unmetIds.value.has(item.id)) return true
+    if (menuItemNeedsSelection(item.id) && store.state.selectedIds.size === 0) return true
     switch (item.id) {
       case 'view-split-right':
       case 'view-split-down':
@@ -317,8 +316,7 @@ export function useAppMenu() {
 
     if (entry.id === 'selection.moveToPage') {
       if (otherPages.value.length === 0) return null
-      const disabled =
-        !commands['selection.moveToPage'].enabled.value || unmetIds.value.has(entry.id)
+      const disabled = !commands['selection.moveToPage'].enabled.value
       return {
         label: menuLabel(entry),
         disabled,
@@ -331,10 +329,8 @@ export function useAppMenu() {
     }
 
     if (entry.command) {
-      const commandItem = commandMenuItem(entry.command, appMenuShortcutLabel(entry.id))
       return {
-        ...commandItem,
-        disabled: commandItem.disabled || unmetIds.value.has(entry.id),
+        ...commandMenuItem(entry.command, appMenuShortcutLabel(entry.id)),
         menuId: entry.id,
         palette: resolvePalette(entry),
         paletteShortcut: entry.shortcut
@@ -351,7 +347,7 @@ export function useAppMenu() {
       disabled: disabled(entry),
       checked: checked(entry),
       onCheckedChange: onCheckedChange(entry),
-      sub: entry.sub?.map(buildEntry).filter((item): item is MenuEntry => item !== null)
+      sub: entry.sub ? visibleMenuEntries(entry.sub.map(buildEntry)) : undefined
     }
   }
 
@@ -365,7 +361,7 @@ export function useAppMenu() {
     return {
       label: groupLabel(group),
       paletteIcon: group.paletteIcon ? APP_MENU_ICONS[group.paletteIcon] : undefined,
-      items: group.items.map(buildEntry).filter((item): item is MenuEntry => item !== null)
+      items: visibleMenuEntries(group.items.map(buildEntry))
     }
   }
 

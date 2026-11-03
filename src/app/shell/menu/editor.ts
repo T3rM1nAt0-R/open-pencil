@@ -1,17 +1,24 @@
-import { useEditorCommands, type EditorCommandId } from '@open-pencil/vue/editor/commands'
+import { invoke } from '@tauri-apps/api/core'
+import { computed, watch } from 'vue'
+
+import {
+  useEditorCommands,
+  type EditorCommand,
+  type EditorCommandId
+} from '@open-pencil/vue/editor/commands'
 
 import { useEditorStore } from '@/app/editor/active-store'
 import { clearRecentFiles, forgetRecentFile, recentLocalFileAt } from '@/app/recent-files'
 import { runFocusedCommand } from '@/app/shell/commands/focused'
 import { createSharedEditorMenuActions } from '@/app/shell/menu/actions/editor'
 import { createSelectionMenuActions } from '@/app/shell/menu/actions/selection'
-import { watchNativeMenuDisabled } from '@/app/shell/menu/context'
 import { watchNativeMenuFeatures } from '@/app/shell/menu/features'
 import { openFileDialog, openFileFromPath } from '@/app/shell/menu/files'
 import { useNativeMenuEvents } from '@/app/shell/menu/native-events'
 import { OPEN_RECENT_EVENT_PREFIX, watchRecentFilesMenu } from '@/app/shell/menu/recent-files'
 import { createSaveMenuActions } from '@/app/shell/menu/save-actions'
 import { APP_MENU_SCHEMA, type AppMenuEntry } from '@/app/shell/menu/schema'
+import { selectionMenuIdsDisabled } from '@/app/shell/menu/selection'
 import { SHELL_MENU_IDS } from '@/app/shell/menu/shell'
 import { useAppTheme } from '@/app/shell/theme'
 import { createTab, closeTab, activeTab, openNewFileTab, switchAdjacentTab } from '@/app/tabs'
@@ -29,15 +36,43 @@ const COMMAND_MENU_IDS = new Set<EditorCommandId>(
   APP_MENU_SCHEMA.flatMap((group) => commandMenuIds(group.items))
 )
 
+/**
+ * Greys out the desktop menu's command items while their command is unavailable, such as Group
+ * with nothing selected, as the browser menu does, and the other items that act on a selection
+ * while nothing is selected. Item ids are their command ids. On macOS and Windows the native
+ * Copy, Cut, and Paste items are the system's and cannot be greyed out.
+ */
+function watchNativeMenuDisabled(commands: Record<EditorCommandId, EditorCommand>) {
+  // A joined key, so the watcher fires when the set changes rather than on every recompute.
+  const disabled = computed(() =>
+    [
+      ...[...COMMAND_MENU_IDS].filter((id) => !commands[id].enabled.value),
+      ...selectionMenuIdsDisabled(store.state.selectedIds.size > 0)
+    ]
+      .sort()
+      .join('\n')
+  )
+  watch(
+    disabled,
+    (key) => {
+      const ids = key ? key.split('\n') : []
+      invoke('set_native_menu_disabled', { ids }).catch((error: unknown) => {
+        console.warn('[Menu] Failed to update the native menu', error)
+      })
+    },
+    { immediate: true }
+  )
+}
+
 export function useEditorMenu() {
   if (!isTauri()) return
 
   watchRecentFilesMenu()
   watchNativeMenuFeatures()
-  watchNativeMenuDisabled()
 
   const { setTheme } = useAppTheme()
-  const { runCommand } = useEditorCommands()
+  const { commands, runCommand } = useEditorCommands()
+  watchNativeMenuDisabled(commands)
 
   const actions: Partial<Record<string, () => void>> = {
     new: () => createTab(),
