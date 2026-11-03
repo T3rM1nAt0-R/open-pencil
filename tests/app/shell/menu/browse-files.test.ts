@@ -78,8 +78,10 @@ describe('browsing files from the File menu', () => {
     homeLocation.value = { kind: 'recent' }
     await router.push('/elsewhere')
     settingsDialogOpen.value = true
-    const held: (() => void)[] = []
-    const unregister = registerSettingsNavigation((action) => held.push(action))
+    const held: { action: () => void; options?: { closesWindow?: boolean } }[] = []
+    const unregister = registerSettingsNavigation((action, options) =>
+      held.push({ action, options })
+    )
 
     browseFiles(router)
     await settled()
@@ -87,7 +89,8 @@ describe('browsing files from the File menu', () => {
     expect(router.currentRoute.value.path).toBe('/elsewhere')
     expect(settingsDialogOpen.value).toBe(true)
 
-    held[0]?.()
+    expect(held[0]?.options).toEqual({ closesWindow: true })
+    held[0]?.action()
     await settled()
     unregister()
     expect(shownLocation()).toEqual({ kind: 'storage' })
