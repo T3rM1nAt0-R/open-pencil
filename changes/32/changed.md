@@ -1,0 +1,1 @@
+- The desktop Software Update window now says that an update installs over the app and keeps your settings and storage profiles.

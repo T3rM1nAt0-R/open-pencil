@@ -93,6 +93,7 @@ function openNotesLink(event: MouseEvent) {
         <template v-else>
           <h1 :class="ui.title">{{ t.available({ version: release.version }) }}</h1>
           <p :class="ui.subtitle">{{ t.currentVersion({ version: release.currentVersion }) }}</p>
+          <p data-slot="update-settings-note" :class="ui.subtitle">{{ t.settingsKept }}</p>
         </template>
 
         <div :class="ui.notesHeader">
