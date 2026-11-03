@@ -113,16 +113,17 @@ export async function storedDocumentMetadata(
   adapter: Pick<StorageAdapter, 'getDocumentMetadata' | 'documentExists'>,
   documentId: string
 ): Promise<StorageDocumentMetadata | null | undefined> {
-  if (!adapter.getDocumentMetadata) return undefined
+  // Only a confirmed absence skips the design: a store that refuses the existence check (for
+  // example a bucket that allows GET but not HEAD) must not hide designs that open.
+  const stillThere = (): Promise<boolean> =>
+    adapter.documentExists
+      ? adapter.documentExists(documentId).catch(() => true)
+      : Promise.resolve(true)
+  if (!adapter.getDocumentMetadata) return (await stillThere()) ? undefined : null
   const metadata = await adapter.getDocumentMetadata(documentId)
   if (!adapter.documentExists) return metadata
-  if (metadata) {
-    // Only a confirmed absence skips the design: a store that refuses the existence check
-    // (for example a bucket that allows GET but not HEAD) must not hide designs that open.
-    const exists = await adapter.documentExists(documentId).catch(() => true)
-    return exists ? metadata : null
-  }
-  return (await adapter.documentExists(documentId)) ? undefined : null
+  if (metadata) return (await stillThere()) ? metadata : null
+  return (await stillThere()) ? undefined : null
 }
 
 /** Reopens every document in order; false when any of them could not open. */
