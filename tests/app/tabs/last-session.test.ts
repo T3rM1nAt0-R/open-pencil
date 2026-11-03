@@ -217,6 +217,29 @@ describe('stored design metadata on reopen', () => {
   test('a provider without metadata cannot tell', async () => {
     expect(await storedDocumentMetadata({}, 'plan')).toBeUndefined()
   })
+
+  test('a provider that can only check existence skips a design that is gone', async () => {
+    const adapter = { documentExists: async () => false }
+    expect(await storedDocumentMetadata(adapter, 'plan')).toBeNull()
+  })
+
+  test('a provider that can only check existence reopens a design that is there', async () => {
+    const adapter = { documentExists: async () => true }
+    expect(await storedDocumentMetadata(adapter, 'plan')).toBeUndefined()
+  })
+
+  test('a refused existence check does not hide a design that has no metadata', async () => {
+    const refused = async () => {
+      throw new Error('HEAD blocked')
+    }
+    expect(await storedDocumentMetadata({ documentExists: refused }, 'plan')).toBeUndefined()
+    expect(
+      await storedDocumentMetadata(
+        { getDocumentMetadata: async () => null, documentExists: refused },
+        'plan'
+      )
+    ).toBeUndefined()
+  })
 })
 
 describe('stored design that is gone but still has metadata', () => {
