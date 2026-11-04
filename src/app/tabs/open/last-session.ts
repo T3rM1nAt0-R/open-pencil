@@ -26,11 +26,14 @@ const sessionDocumentSchema = v.variant('kind', [
   v.object({ kind: v.literal('room'), roomId: v.string() })
 ])
 
-const lastSessionSchema = v.object({
-  documents: v.array(sessionDocumentSchema),
-  /** Index into `documents` of the tab that was in front, or -1. */
-  active: v.number()
-})
+const lastSessionSchema = v.pipe(
+  v.object({
+    documents: v.array(sessionDocumentSchema),
+    /** Index into `documents` of the tab that was in front, or -1. */
+    active: v.pipe(v.number(), v.integer(), v.minValue(-1))
+  }),
+  v.check((session) => session.active < session.documents.length)
+)
 
 export type LastSessionDocument = v.InferOutput<typeof sessionDocumentSchema>
 export type LastSession = v.InferOutput<typeof lastSessionSchema>
@@ -126,11 +129,14 @@ export async function storedDocumentMetadata(
   return (await stillThere()) ? undefined : null
 }
 
-/** Reopens every document in order; false when any of them could not open. */
+/** How much of a saved session reopened: every design, only some of them, or none. */
+export type RestoreOutcome = 'all' | 'some' | 'none'
+
+/** Reopens every document in order and says how many of them could open. */
 export async function restoreLastSession(
   session: LastSession,
   openers: LastSessionOpeners
-): Promise<boolean> {
+): Promise<RestoreOutcome> {
   let allOpened = true
   const openedTabs = new Map<number, string>()
   let lastOpened = ''
@@ -168,5 +174,6 @@ export async function restoreLastSession(
     if (activeTab) openers.focus(activeTab)
     else if (session.active === -1) openers.showHome()
   }
-  return allOpened && openedTabs.size > 0
+  if (openedTabs.size === 0) return 'none'
+  return allOpened ? 'all' : 'some'
 }

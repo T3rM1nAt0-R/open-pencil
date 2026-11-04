@@ -161,8 +161,7 @@ const interfaceScaleOptions = computed(() => {
       <template #title>{{ settings.startup }}</template>
       <template #description>{{ settings.startupDescription }}</template>
       <SettingsGroup>
-        <label class="flex items-center justify-between gap-4 px-3 py-2.5">
-          <span class="text-xs text-surface">{{ settings.startup }}</span>
+        <SettingsRow as="label" :label="settings.startup">
           <AppSelect
             v-model="startupOpen"
             :label="settings.startup"
@@ -174,7 +173,7 @@ const interfaceScaleOptions = computed(() => {
             :ui="selectUI"
             data-test-id="settings-startup-open"
           />
-        </label>
+        </SettingsRow>
       </SettingsGroup>
     </SettingsSection>
 

@@ -52,6 +52,18 @@ describe('last session', () => {
     expect(parseLastSession('not json')).toBeNull()
   })
 
+  test('rejects an active index that points at no design', () => {
+    const documents = [{ kind: 'local', path: '/a.fig' }]
+    for (const active of [0.5, -7, 1, 99]) {
+      expect(parseLastSession(JSON.stringify({ documents, active }))).toBeNull()
+    }
+    for (const active of [-1, 0]) {
+      expect(parseLastSession(JSON.stringify({ documents, active }))).not.toBeNull()
+    }
+    expect(parseLastSession('{"documents":[],"active":-1}')).not.toBeNull()
+    expect(parseLastSession('{"documents":[],"active":0}')).toBeNull()
+  })
+
   test('reopens every design, focuses the last active one, and reports failures', async () => {
     const opened: string[] = []
     const focused: string[] = []
@@ -104,7 +116,7 @@ describe('last session', () => {
       },
       openers
     )
-    expect(ok).toBe(true)
+    expect(ok).toBe('all')
     // The design reopens from its own account and workspace, not the default ones.
     expect(storageLocations).toEqual([{ providerId: 's3', profileId: 'work', containerId: 'team' }])
     expect(opened).toEqual(['/a.fig', 'd1', 'room-1'])
@@ -129,7 +141,7 @@ describe('last session', () => {
       },
       openers
     )
-    expect(partial).toBe(false)
+    expect(partial).toBe('none')
     expect(opened).not.toContain('deleted')
   })
 
@@ -150,7 +162,7 @@ describe('last session', () => {
         showHome: () => undefined
       }
     )
-    expect(ok).toBe(true)
+    expect(ok).toBe('all')
     expect(opened).toEqual(['d9'])
   })
 
@@ -169,7 +181,7 @@ describe('last session', () => {
       showHome: () => void events.push('home')
     }
     const session = { documents: [{ kind: 'local' as const, path: '/a.fig' }], active: -1 }
-    expect(await restoreLastSession(session, openers)).toBe(true)
+    expect(await restoreLastSession(session, openers)).toBe('all')
     expect(events).toEqual(['home'])
 
     // A file opened while the restore ran stays in front.
@@ -260,5 +272,35 @@ describe('stored design that is gone but still has metadata', () => {
       }
     }
     expect(await storedDocumentMetadata(adapter, 'plan')).toEqual(metadata)
+  })
+})
+
+describe('restore outcome', () => {
+  test('says some when only part of the session reopened', async () => {
+    let current = ''
+    const openers = {
+      openPath: async (path: string) => {
+        if (path === '/missing.fig') throw new Error('gone')
+        current = path
+      },
+      joinRoom: () => true,
+      storageMetadata: async () => undefined,
+      openStorageDocument: async () => undefined,
+      activeTabId: () => current,
+      focus: () => undefined,
+      showHome: () => undefined
+    }
+    const session = {
+      documents: [
+        { kind: 'local' as const, path: '/a.fig' },
+        { kind: 'local' as const, path: '/missing.fig' }
+      ],
+      active: 0
+    }
+
+    expect(await restoreLastSession(session, openers)).toBe('some')
+    expect(
+      await restoreLastSession({ documents: [session.documents[1]], active: 0 }, openers)
+    ).toBe('none')
   })
 })
