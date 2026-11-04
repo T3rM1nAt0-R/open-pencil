@@ -1,5 +1,5 @@
 import { useEventListener } from '@vueuse/core'
-import { watch } from 'vue'
+import { computed, watch } from 'vue'
 
 import { joinRoom, roomForStore } from '@/app/collab/rooms'
 import { createStorageAdapter } from '@/app/integrations/storage'
@@ -34,7 +34,7 @@ export async function reopenLastSession(messages: {
 }): Promise<void> {
   const session = lastSession.value
   if (!session?.documents.length) return
-  const allOpened = await restoreLastSession(session, {
+  const outcome = await restoreLastSession(session, {
     async openPath(path) {
       if (!IS_TAURI) throw new Error('Files open by path only in the desktop app')
       await openFileFromPath(path)
@@ -49,10 +49,10 @@ export async function reopenLastSession(messages: {
     focus: switchTab,
     showHome: showNewTab
   })
-  if (!allOpened) {
-    toast.info(messages.reopenIncomplete)
-    showNewTab()
-  }
+  if (outcome === 'all') return
+  toast.info(messages.reopenIncomplete)
+  // Home waits only when nothing came back; a design that reopened stays in front.
+  if (outcome === 'none') showNewTab()
 }
 
 /**
@@ -68,7 +68,14 @@ export function recordOpenDocuments(ready: () => boolean): () => void {
     })
     lastSession.value = describeOpenTabs(tabs, getActiveTabId())
   }
-  watch(allTabs, record)
+  // Saving a design to a file or to storage changes where it lives without touching the tab list.
+  const sources = computed(() =>
+    getTabsSnapshot().map((tab) => [
+      tab.store.getSourceIdentity().path,
+      tab.store.getStorageBinding()?.documentId
+    ])
+  )
+  watch([allTabs, sources], record)
   useEventListener(window, 'pagehide', record)
   return record
 }

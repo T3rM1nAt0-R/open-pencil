@@ -102,3 +102,15 @@ test('settings shortcut preserves the last visited section', async ({ page }) =>
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+,' : 'Control+,')
   await expect(page.getByTestId('settings-media-panel')).toBeVisible()
 })
+
+test('the startup setting is one settings row like the others in General', async ({ page }) => {
+  await page.goto('/?test')
+  await new CanvasHelper(page).waitForInit()
+
+  await page.getByTestId('app-settings-trigger').click()
+  await page.getByTestId('settings-section-general').click()
+
+  const startup = page.getByTestId('settings-startup-open')
+  await expect(startup).toBeVisible()
+  await expect(page.locator('[data-slot="settings-row"]').filter({ has: startup })).toHaveCount(1)
+})
