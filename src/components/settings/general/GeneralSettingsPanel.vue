@@ -10,6 +10,7 @@ import { recentFilesAvailable, recentFilesLimit } from '@/app/recent-files/prefe
 import { RECENT_FILES_LIMIT_MIN, RECENT_FILES_LIMIT_MAX } from '@/app/recent-files/schema'
 import {
   appPreferences,
+  updateStartupOpen,
   DEFAULT_APP_PREFERENCES,
   INTERFACE_SCALES,
   updateAccentPreference
@@ -19,6 +20,7 @@ import { DEFAULT_ACCENT } from '@/app/shell/accent/palette'
 import { interfaceScalePreference } from '@/app/shell/interface-scale'
 import { animationPreference } from '@/app/shell/motion'
 import { useAppTheme } from '@/app/shell/theme'
+import { startupOpenChoice } from '@/app/tabs/open/startup'
 import CredentialSettingsSection from '@/components/settings/credentials/CredentialSettingsSection.vue'
 import AccentColorPicker from '@/components/settings/general/AccentColorPicker.vue'
 import CollaborationNameSection from '@/components/settings/general/CollaborationNameSection.vue'
@@ -60,6 +62,12 @@ const preserveUnsavedWork = computed({
   get: () => recoveryEnabled.value,
   set: setRecoveryEnabled
 })
+
+const startupOpen = computed({
+  get: startupOpenChoice,
+  set: updateStartupOpen
+})
+
 const defaultInterfaceScale = DEFAULT_APP_PREFERENCES.appearance.interfaceScale
 const interfaceScaleOptions = computed(() => {
   const format = new Intl.NumberFormat(locale.value, { style: 'percent' })
@@ -148,6 +156,26 @@ const interfaceScaleOptions = computed(() => {
     </SettingsSection>
 
     <CollaborationNameSection />
+
+    <SettingsSection>
+      <template #title>{{ settings.startup }}</template>
+      <template #description>{{ settings.startupDescription }}</template>
+      <SettingsGroup>
+        <SettingsRow as="label" :label="settings.startup">
+          <AppSelect
+            v-model="startupOpen"
+            :label="settings.startup"
+            :options="[
+              { value: 'reopen', label: settings.startupReopen },
+              { value: 'home', label: settings.startupHome },
+              { value: 'new', label: settings.startupNew }
+            ]"
+            :ui="selectUI"
+            data-test-id="settings-startup-open"
+          />
+        </SettingsRow>
+      </SettingsGroup>
+    </SettingsSection>
 
     <SettingsSection>
       <template #title>{{ recovery.settingsTitle }}</template>

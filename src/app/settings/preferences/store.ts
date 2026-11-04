@@ -75,6 +75,10 @@ export interface SharingPreferences {
 export const AI_SETUP_STATES = ['pending', 'done'] as const
 export type AISetupState = (typeof AI_SETUP_STATES)[number]
 
+/** What the app shows when it starts; `null` keeps the platform's own default. */
+export const STARTUP_OPENS = ['reopen', 'home', 'new'] as const
+export type StartupOpen = (typeof STARTUP_OPENS)[number]
+
 /** Which events send a system notification while OpenPencil is out of view. */
 export interface NotificationPreferences {
   /** An agent waits on a permission request. */
@@ -106,6 +110,9 @@ export interface AppPreferences {
   recovery: {
     enabled: boolean
   }
+  startup: {
+    open: StartupOpen | null
+  }
   editing: {
     snapping: SnappingPreferences
   }
@@ -135,6 +142,7 @@ export const DEFAULT_APP_PREFERENCES: Readonly<AppPreferences> = {
   files: { recentLimit: DEFAULT_RECENT_FILES_LIMIT },
   version: 1,
   recovery: { enabled: true },
+  startup: { open: null },
   editing: {
     snapping: { ...DEFAULT_SNAPPING_PREFERENCES }
   },
@@ -190,6 +198,9 @@ const appPreferencesSchema = section({
   }),
   version: v.fallback(v.literal(1), 1),
   recovery: section({ enabled: v.fallback(v.boolean(), defaults.recovery.enabled) }),
+  startup: section({
+    open: v.fallback(v.nullable(v.picklist(STARTUP_OPENS)), defaults.startup.open)
+  }),
   editing: section({
     snapping: section({
       geometry: v.fallback(v.boolean(), snapping.geometry),
@@ -273,6 +284,10 @@ export function updateRecoveryEnabled(enabled: boolean): void {
   const preferences = structuredClone(appPreferences.value)
   preferences.recovery.enabled = enabled
   appPreferences.value = preferences
+}
+
+export function updateStartupOpen(open: StartupOpen): void {
+  appPreferences.value = { ...appPreferences.value, startup: { open } }
 }
 
 export function updateAISetupState(aiSetup: AISetupState): void {
