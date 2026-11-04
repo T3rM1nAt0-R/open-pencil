@@ -73,6 +73,8 @@ export type AIModelProfileDraft = {
   thinkingLevel: ThinkingLevel
   harnessPermissionMode: HarnessPermissionMode
   capabilities: AIModelCapability[]
+  /** The stored model this draft was taken from, to notice a change made in another editor. */
+  baseline?: string
 }
 
 export type ResolvedAIModelRole = {

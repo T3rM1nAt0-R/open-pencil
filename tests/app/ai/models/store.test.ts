@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test'
 
-import { parseAIModelSettings } from '@/app/ai/models/store'
+import {
+  aiModelSettings,
+  createModelProfileDraft,
+  parseAIModelSettings,
+  saveModelProfileDraft
+} from '@/app/ai/models/store'
 import type { AIModelConnection } from '@/app/ai/models/types'
 
 const connection = {
@@ -112,5 +117,32 @@ describe('parseAIModelSettings', () => {
       fast: null,
       vision: null
     })
+  })
+})
+
+describe('saveModelProfileDraft', () => {
+  test('refuses a draft taken before the model was changed somewhere else', () => {
+    aiModelSettings.value = parseAIModelSettings(settings()) ?? aiModelSettings.value
+    const stale = createModelProfileDraft('model-a')
+    const current = createModelProfileDraft('model-a')
+    current.name = 'Renamed in the other window'
+    saveModelProfileDraft(current)
+
+    stale.maxOutputTokens = 4096
+
+    expect(() => saveModelProfileDraft(stale)).toThrow()
+    expect(aiModelSettings.value.models.find((model) => model.id === 'model-a')?.name).toBe(
+      'Renamed in the other window'
+    )
+  })
+
+  test('lets one editor save again after its own save', () => {
+    aiModelSettings.value = parseAIModelSettings(settings()) ?? aiModelSettings.value
+    const draft = createModelProfileDraft('model-a')
+    draft.name = 'First'
+    saveModelProfileDraft(draft)
+    draft.name = 'Second'
+
+    expect(saveModelProfileDraft(draft).name).toBe('Second')
   })
 })

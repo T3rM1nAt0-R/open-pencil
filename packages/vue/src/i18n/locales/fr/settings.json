@@ -76,6 +76,7 @@
   "customizeToolbar": "Personnaliser la barre d’outils…",
   "discardChanges": "Abandonner les modifications ?",
   "discardChangesDescription": "Vos modifications non enregistrées seront perdues.",
+  "saveInProgress": "Les réglages sont en cours d’enregistrement. Réessayez une fois l’enregistrement terminé.",
   "keepEditing": "Continuer à modifier",
   "discard": "Abandonner",
   "edit": "Modifier",

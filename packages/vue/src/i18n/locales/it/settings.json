@@ -76,6 +76,7 @@
   "customizeToolbar": "Personalizza barra degli strumenti…",
   "discardChanges": "Scartare le modifiche?",
   "discardChangesDescription": "Le modifiche non salvate andranno perse.",
+  "saveInProgress": "Le impostazioni sono in fase di salvataggio. Riprova al termine del salvataggio.",
   "keepEditing": "Continua a modificare",
   "discard": "Scarta",
   "edit": "Modifica",

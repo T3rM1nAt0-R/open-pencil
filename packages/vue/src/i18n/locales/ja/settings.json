@@ -76,6 +76,7 @@
   "customizeToolbar": "ツールバーをカスタマイズ…",
   "discardChanges": "変更を破棄しますか？",
   "discardChangesDescription": "保存されていない変更は失われます。",
+  "saveInProgress": "設定を保存しています。保存が終わってからもう一度お試しください。",
   "keepEditing": "編集を続ける",
   "discard": "破棄",
   "edit": "編集",

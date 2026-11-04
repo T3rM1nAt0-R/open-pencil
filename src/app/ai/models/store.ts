@@ -354,6 +354,13 @@ function draftForProfile(
   }
 }
 
+/** What a stored model looks like as a draft, to compare with the one a draft was taken from. */
+function storedFingerprint(profileId: string): string | null {
+  const profile = modelProfile(profileId)
+  const connection = profile ? modelConnection(profile.connectionId) : null
+  return profile && connection ? JSON.stringify(draftForProfile(profile, connection)) : null
+}
+
 function newProfileDraft(connection: AIModelConnection | null): AIModelProfileDraft {
   const providerID = connection?.providerID ?? DEFAULT_AI_PROVIDER
   const provider = AI_PROVIDERS.find((definition) => definition.id === providerID)
@@ -377,14 +384,15 @@ function newProfileDraft(connection: AIModelConnection | null): AIModelProfileDr
 export function createModelProfileDraft(profileId?: string): AIModelProfileDraft {
   const profile = profileId ? modelProfile(profileId) : null
   const profileConnection = profile ? modelConnection(profile.connectionId) : null
-  if (profile && profileConnection) return draftForProfile(profile, profileConnection)
+  if (profile && profileConnection) {
+    const draft = draftForProfile(profile, profileConnection)
+    return { ...draft, baseline: JSON.stringify(draft) }
+  }
   const designConnection = resolveAIModelRole('design')?.connection ?? null
   return newProfileDraft(designConnection ?? aiModelSettings.value.connections[0])
 }
 
-export function saveModelProfileDraft(draft: AIModelProfileDraft): AIModelProfile {
-  const provider = AI_PROVIDERS.find((definition) => definition.id === draft.providerID)
-  const effectiveModel = draft.customModelID.trim() || draft.modelID.trim()
+function assertDraftSavable(draft: AIModelProfileDraft, effectiveModel: string): void {
   if (!draft.name.trim()) throw new Error('Model name is required')
   // Agents choose their own model, and Pi falls back to its own default model.
   if (
@@ -400,6 +408,35 @@ export function saveModelProfileDraft(draft: AIModelProfileDraft): AIModelProfil
   ) {
     throw new Error('The Design model must support tools')
   }
+  if (draft.profileId && draft.baseline !== undefined) {
+    // The Home tab and the Settings window can each hold an editor for the same model.
+    const stored = storedFingerprint(draft.profileId)
+    if (stored !== null && stored !== draft.baseline) {
+      throw new Error(
+        'This model was changed in another Settings editor. Close this one and open it again to see the changes.'
+      )
+    }
+  }
+}
+
+function syncVisionAssignment(profile: AIModelProfile): void {
+  const { assignments } = aiModelSettings.value
+  if (
+    assignments.vision === null &&
+    assignments.design === profile.id &&
+    profile.capabilities.includes('vision')
+  ) {
+    assignments.vision = 'design'
+  }
+  if (assignments.vision === profile.id && !profile.capabilities.includes('vision')) {
+    assignments.vision = null
+  }
+}
+
+export function saveModelProfileDraft(draft: AIModelProfileDraft): AIModelProfile {
+  const provider = AI_PROVIDERS.find((definition) => definition.id === draft.providerID)
+  const effectiveModel = draft.customModelID.trim() || draft.modelID.trim()
+  assertDraftSavable(draft, effectiveModel)
   const connection = connectionForDraft(draft)
   const profile: AIModelProfile = {
     id: draft.profileId ?? createModelId(),
@@ -416,19 +453,8 @@ export function saveModelProfileDraft(draft: AIModelProfileDraft): AIModelProfil
   const index = aiModelSettings.value.models.findIndex((model) => model.id === profile.id)
   if (index === -1) aiModelSettings.value.models.push(profile)
   else aiModelSettings.value.models[index] = profile
-  if (
-    aiModelSettings.value.assignments.vision === null &&
-    aiModelSettings.value.assignments.design === profile.id &&
-    profile.capabilities.includes('vision')
-  ) {
-    aiModelSettings.value.assignments.vision = 'design'
-  }
-  if (
-    aiModelSettings.value.assignments.vision === profile.id &&
-    !profile.capabilities.includes('vision')
-  ) {
-    aiModelSettings.value.assignments.vision = null
-  }
+  syncVisionAssignment(profile)
+  draft.baseline = storedFingerprint(profile.id) ?? undefined
   return profile
 }
 

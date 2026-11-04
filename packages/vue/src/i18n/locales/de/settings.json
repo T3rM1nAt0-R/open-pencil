@@ -76,6 +76,7 @@
   "customizeToolbar": "Werkzeugleiste anpassen…",
   "discardChanges": "Änderungen verwerfen?",
   "discardChangesDescription": "Deine ungespeicherten Änderungen gehen verloren.",
+  "saveInProgress": "Die Einstellungen werden gerade gespeichert. Versuche es erneut, sobald das Speichern abgeschlossen ist.",
   "keepEditing": "Weiter bearbeiten",
   "discard": "Verwerfen",
   "edit": "Bearbeiten",

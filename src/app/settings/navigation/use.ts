@@ -23,7 +23,7 @@ interface SettingsFormGuard {
 }
 
 /** One navigation policy for every editor in the Settings window. */
-export function createSettingsNavigation() {
+export function createSettingsNavigation({ onBusy = noop }: { onBusy?: () => void } = {}) {
   const active = shallowRef<SettingsFormGuard | null>(null)
   const pending = shallowRef<{
     form: SettingsFormGuard
@@ -46,7 +46,10 @@ export function createSettingsNavigation() {
 
   function request(action: () => void, { closesWindow = false } = {}) {
     const form = active.value
-    if (form?.busy.value) return
+    if (form?.busy.value) {
+      onBusy()
+      return
+    }
     if (form?.dirty.value) pending.value = { form, action, closesWindow }
     else leave(form, action, closesWindow)
   }
@@ -86,8 +89,10 @@ export function createSettingsNavigation() {
 const navigationKey: InjectionKey<ReturnType<typeof createSettingsNavigation>> =
   Symbol('settings-navigation')
 
-export function provideSettingsNavigation() {
-  const navigation = createSettingsNavigation()
+export function provideSettingsNavigation(
+  options?: Parameters<typeof createSettingsNavigation>[0]
+) {
+  const navigation = createSettingsNavigation(options)
   provide(navigationKey, navigation)
   return navigation
 }

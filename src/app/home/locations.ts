@@ -2,9 +2,9 @@ import { computed } from 'vue'
 
 import { useHomeCloud } from '@/app/cloud/integration'
 import { recentFilesAvailable } from '@/app/recent-files/preferences'
-import { openSettingsDialog } from '@/app/settings/dialog'
+import { homeSettingsSection, type SettingsSection } from '@/app/settings/dialog'
 
-import { homeLocation, homeLocationChosen, type HomeLocation } from './location'
+import { homeLocation, homeLocationChosen, whenHomeMayChange, type HomeLocation } from './location'
 
 /** A Home location as the sidebar and the phone menu name it. */
 export type HomeLocationView =
@@ -12,11 +12,13 @@ export type HomeLocationView =
   | { kind: 'workspace'; id: string }
   | { kind: 'shared'; id: 'shared' }
   | { kind: 'storage'; id: 'storage' }
+  | { kind: 'settings'; id: 'settings' }
 
 const VIEWS = {
   recent: { kind: 'recent', id: 'recent' },
   shared: { kind: 'shared', id: 'shared' },
-  storage: { kind: 'storage', id: 'storage' }
+  storage: { kind: 'storage', id: 'storage' },
+  settings: { kind: 'settings', id: 'settings' }
 } as const satisfies Record<Exclude<HomeLocation['kind'], 'workspace'>, HomeLocationView>
 
 function toView(location: HomeLocation): HomeLocationView {
@@ -25,6 +27,24 @@ function toView(location: HomeLocation): HomeLocationView {
 
 function fromView(location: HomeLocationView): HomeLocation {
   return location.kind === 'workspace' ? location : { kind: location.kind }
+}
+
+/** Home shows Settings in place of the documents, at the section asked for. */
+export function showHomeSettings(section: SettingsSection): void {
+  if (homeLocation.value.kind === 'settings' && homeSettingsSection.value === section) return
+  whenHomeMayChange(() => {
+    homeSettingsSection.value = section
+    homeLocation.value = { kind: 'settings' }
+  })
+}
+
+/** Moves Home to a place, asking the shown page first unless that place is already shown. */
+export function selectHomeLocation(next: HomeLocationView): void {
+  const current = toView(homeLocation.value)
+  if (current.kind === next.kind && current.id === next.id) return
+  whenHomeMayChange(() => {
+    homeLocation.value = fromView(next)
+  })
 }
 
 /**
@@ -64,13 +84,11 @@ export function useHomeLocations() {
     workspace,
     serverId: cloud.serverId,
     active: computed(() => toView(location.value)),
-    select(next: HomeLocationView) {
-      homeLocation.value = fromView(next)
-    },
+    select: selectHomeLocation,
     connect: cloud.connect,
     openAccount: cloud.openAccount,
     newWorkspace: cloud.newWorkspace,
-    storageSettings: () => openSettingsDialog('storage'),
+    storageSettings: () => showHomeSettings('storage'),
     signOut: cloud.signOut
   }
 }

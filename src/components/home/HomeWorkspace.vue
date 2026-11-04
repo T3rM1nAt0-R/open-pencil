@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { useLocalStorage } from '@vueuse/core'
-import { computed, ref, shallowRef } from 'vue'
+import { computed, onScopeDispose, ref, shallowRef, useTemplateRef } from 'vue'
 
 import type { DocumentKind } from '@open-pencil/scene-graph'
 import { useDocumentWorkspace } from '@open-pencil/vue/document/workspace'
 import { useI18n } from '@open-pencil/vue/i18n'
 
 import { CLOUD_INCLUDED, CLOUD_STORAGE_PROVIDER_ID } from '@/app/cloud/integration'
+import { setHomeLeaveGuard } from '@/app/home/location'
 import { useHomeLocations } from '@/app/home/locations'
 import { useDateFormat } from '@/app/i18n/date'
 import {
@@ -24,7 +25,7 @@ import {
   useRecentFilesWorkspace
 } from '@/app/recent-files/workspace'
 import { useCredentialSettings } from '@/app/settings/credentials/preferences/use'
-import { openSettingsDialog } from '@/app/settings/dialog'
+import { homeSettingsSection } from '@/app/settings/dialog'
 import { createStoredDocument } from '@/app/storage/workspace/create'
 import { activeStorageLocation, createStorageWorkspaceSource } from '@/app/storage/workspace/source'
 import { openStorageDocumentInNewTab } from '@/app/tabs'
@@ -39,6 +40,7 @@ import RecoverySection from '@/components/home/recovery/RecoverySection.vue'
 import HomeSearchActions from '@/components/home/search/HomeSearchActions.vue'
 import HomeLocationMenu from '@/components/home/sidebar/HomeLocationMenu.vue'
 import HomeSidebar from '@/components/home/sidebar/HomeSidebar.vue'
+import SettingsWorkspace from '@/components/settings/SettingsWorkspace.vue'
 import AppButton from '@/components/ui/button/AppButton.vue'
 import IconButton from '@/components/ui/button/IconButton.vue'
 
@@ -51,6 +53,15 @@ const query = ref('')
 const openError = ref<string | null>(null)
 const storageConfigured = ref(storagePreferencesComplete(activeStorageProviderID.value))
 const places = useHomeLocations()
+const settingsWorkspace = useTemplateRef('settingsWorkspace')
+
+/** Leaving Settings with unsaved edits asks first, as it does between its sections. */
+setHomeLeaveGuard((proceed) => {
+  const request = settingsWorkspace.value?.request
+  if (places.location.value.kind === 'settings' && request) request(proceed)
+  else proceed()
+})
+onScopeDispose(() => setHomeLeaveGuard(null))
 
 /** A new document lands in the place Home shows: a Cloud workspace, the bucket, or a local file. */
 function newDocument(kind: DocumentKind) {
@@ -240,6 +251,7 @@ function formattedDate(updatedAt: string): string {
       />
     </template>
     <HomeSearchActions
+      v-if="places.location.value.kind !== 'settings'"
       v-model="query"
       :destination="newDesignTarget?.label ?? null"
       @new-document="newDocument"
@@ -250,6 +262,13 @@ function formattedDate(updatedAt: string): string {
     <RecoverySection :view="view" :snapshots="filteredRecoverable" />
     <!-- Nothing until Cloud says which workspace Home opens on. -->
     <template v-if="places.settling.value" />
+    <div
+      v-else-if="places.location.value.kind === 'settings'"
+      class="flex h-[calc(100vh-9rem)] min-h-[28rem] overflow-hidden rounded-lg border border-border"
+      data-test-id="home-settings-panel"
+    >
+      <SettingsWorkspace ref="settingsWorkspace" v-model:section="homeSettingsSection" />
+    </div>
     <CloudWorkspaceSection
       v-else-if="places.workspace.value && places.serverId.value"
       :server-id="places.serverId.value"
@@ -298,7 +317,7 @@ function formattedDate(updatedAt: string): string {
             <IconButton
               :label="settings.title"
               class="size-10 sm:size-7"
-              @click="openSettingsDialog('storage')"
+              @click="places.storageSettings"
             >
               <icon-lucide-settings-2 class="size-3.5" />
             </IconButton>
@@ -386,7 +405,7 @@ function formattedDate(updatedAt: string): string {
           class="rounded-lg border border-dashed border-border px-4 py-4 text-center text-xs text-muted sm:py-6"
         >
           <p>{{ storage.notConfigured }}</p>
-          <AppButton variant="outline" class="mt-3" @click="openSettingsDialog('storage')">
+          <AppButton variant="outline" class="mt-3" @click="places.storageSettings">
             {{ settings.title }}
           </AppButton>
         </div>

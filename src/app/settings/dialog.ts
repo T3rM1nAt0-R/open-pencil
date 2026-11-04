@@ -22,6 +22,8 @@ export type SettingsAnchor = 'toolbar'
 
 export const settingsDialogOpen = ref(false)
 export const settingsDialogSection = ref<SettingsSection>('general')
+/** The section Settings shows on the Home tab, apart from the one in the window. */
+export const homeSettingsSection = ref<SettingsSection>('general')
 /** The part of the open page to bring into view; the page clears it once shown. */
 export const settingsDialogAnchor = ref<SettingsAnchor | null>(null)
 
